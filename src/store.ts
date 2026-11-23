@@ -61,7 +61,10 @@ export function useWarehouse() {
     if (m.type === 'out' && m.qty > prod.qty) return `Omborda faqat ${prod.qty} ${prod.unit} bor`
     const delta = m.type === 'in' ? m.qty : m.type === 'out' ? -m.qty : m.qty
     if (prod.qty + delta < 0) return "Qoldiq manfiy bo'lib qoladi"
-    const mv: Movement = { ...m, id: uid(), productName: prod.name, date: new Date().toISOString() }
+    const mv: Movement = {
+      ...m, id: uid(), productName: prod.name, date: new Date().toISOString(),
+      ...(m.type === 'out' ? { cost: prod.buyPrice } : {}),
+    }
     setData((d) => ({
       ...d,
       products: d.products.map((x) =>

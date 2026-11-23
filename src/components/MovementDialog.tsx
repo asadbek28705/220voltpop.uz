@@ -62,7 +62,7 @@ export default function MovementDialog({ wh, initialType, initialProductId, onCl
         <Stack spacing={2} sx={{ mt: 1 }}>
           <ToggleButtonGroup exclusive fullWidth value={type} onChange={(_, v) => changeType(v)} size="small">
             <ToggleButton value="in" color="success">Kirim</ToggleButton>
-            <ToggleButton value="out" color="secondary">Chiqim</ToggleButton>
+            <ToggleButton value="out" color="primary">Chiqim</ToggleButton>
             <ToggleButton value="adjust">Inventarizatsiya</ToggleButton>
           </ToggleButtonGroup>
           <Autocomplete
@@ -113,7 +113,7 @@ export default function MovementDialog({ wh, initialType, initialProductId, onCl
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Bekor qilish</Button>
-        <Button variant="contained" onClick={save} color={type === 'in' ? 'success' : type === 'out' ? 'secondary' : 'primary'}>Saqlash</Button>
+        <Button variant="contained" onClick={save} color="primary">Saqlash</Button>
       </DialogActions>
     </Dialog>
   )

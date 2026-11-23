@@ -38,6 +38,7 @@ export interface Movement {
   type: MovementType
   qty: number // kirim/chiqim uchun musbat; tuzatish uchun farq (+/-)
   price: number // bir birlik narxi
+  cost?: number // sotuv paytidagi tannarx (foyda hisobi uchun)
   counterparty: string // yetkazib beruvchi yoki mijoz
   note: string
   date: string // ISO

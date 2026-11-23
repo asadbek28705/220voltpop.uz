@@ -10,11 +10,12 @@ import DeleteIcon from '@mui/icons-material/DeleteOutline'
 import InIcon from '@mui/icons-material/AddCircleOutline'
 import OutIcon from '@mui/icons-material/RemoveCircleOutline'
 import TuneIcon from '@mui/icons-material/Tune'
-import DownloadIcon from '@mui/icons-material/Download'
+import DownloadIcon from '@mui/icons-material/FileDownloadOutlined'
 import type { Warehouse } from '../store'
 import type { MovementType, Product } from '../types'
 import { download, fmtMoney, fmtNum, toCsv } from '../utils'
 import ProductDialog from './ProductDialog'
+import PageHeader from './PageHeader'
 
 interface Props { wh: Warehouse; onMovement: (t: MovementType, id?: string) => void }
 
@@ -46,7 +47,12 @@ export default function Products({ wh, onMovement }: Props) {
 
   return (
     <Stack spacing={2}>
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }}>
+      <PageHeader title="Tovarlar" subtitle="Ombordagi barcha tovarlar va qoldiqlar" actions={<>
+        <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>Excel</Button>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setEditing('new')}>Yangi tovar</Button>
+      </>} />
+      <Paper variant="outlined">
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} sx={{ p: 2 }}>
         <TextField size="small" placeholder="Qidirish: nomi, artikul yoki joyi" value={q} onChange={(e) => setQ(e.target.value)} sx={{ minWidth: 300 }}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> } }} />
         <TextField size="small" select label="Kategoriya" value={cat} onChange={(e) => setCat(e.target.value)} sx={{ minWidth: 240 }}>
@@ -54,13 +60,8 @@ export default function Products({ wh, onMovement }: Props) {
           {categories.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
         </TextField>
         <FormControlLabel control={<Switch checked={lowOnly} onChange={(e) => setLowOnly(e.target.checked)} />} label="Faqat kam qolganlar" />
-        <Stack direction="row" spacing={1} sx={{ ml: { md: 'auto !important' } }}>
-          <Button startIcon={<DownloadIcon />} onClick={exportCsv}>Excel (CSV)</Button>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setEditing('new')}>Yangi mahsulot</Button>
-        </Stack>
       </Stack>
-
-      <TableContainer component={Paper} variant="outlined">
+      <TableContainer>
         <Table size="small" stickyHeader>
           <TableHead>
             <TableRow>
@@ -90,7 +91,7 @@ export default function Products({ wh, onMovement }: Props) {
                   <TableCell>{p.location}</TableCell>
                   <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
                     <Tooltip title="Kirim"><IconButton size="small" color="success" onClick={() => onMovement('in', p.id)}><InIcon /></IconButton></Tooltip>
-                    <Tooltip title="Chiqim / Sotuv"><IconButton size="small" color="secondary" onClick={() => onMovement('out', p.id)}><OutIcon /></IconButton></Tooltip>
+                    <Tooltip title="Chiqim / Sotuv"><IconButton size="small" color="primary" onClick={() => onMovement('out', p.id)}><OutIcon /></IconButton></Tooltip>
                     <Tooltip title="Inventarizatsiya (qoldiqni tuzatish)"><IconButton size="small" onClick={() => onMovement('adjust', p.id)}><TuneIcon /></IconButton></Tooltip>
                     <Tooltip title="Tahrirlash"><IconButton size="small" onClick={() => setEditing(p)}><EditIcon /></IconButton></Tooltip>
                     <Tooltip title="O'chirish"><IconButton size="small" color="error" onClick={() => remove(p)}><DeleteIcon /></IconButton></Tooltip>
@@ -104,6 +105,7 @@ export default function Products({ wh, onMovement }: Props) {
           </TableBody>
         </Table>
       </TableContainer>
+      </Paper>
       <Typography variant="body2" color="text.secondary">
         Ko'rsatilgan: {list.length} ta · Jami tannarx: {fmtMoney(list.reduce((s, p) => s + p.qty * p.buyPrice, 0))}
       </Typography>

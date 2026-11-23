@@ -1,4 +1,4 @@
-import type { Product, WarehouseData } from './types'
+import type { Movement, Product, WarehouseData } from './types'
 import { DEFAULT_CATEGORIES } from './types'
 import { uid } from './utils'
 
@@ -9,10 +9,40 @@ const p = (
 
 const C = DEFAULT_CATEGORIES
 
-export const seedData = (): WarehouseData => ({
-  categories: [...C],
-  movements: [],
-  products: [
+const CUSTOMERS = ['Chakana mijoz', 'Chakana mijoz', 'Chakana mijoz', 'Usta Akmal', 'Obyekt: Yunusobod 12-uy', 'Qurilish brigadasi', 'Usta Jasur']
+const SUPPLIERS = ['Sement zavodi', 'Santexnika ulgurji', "G'isht zavodi", "Bo'yoq distribyutori"]
+
+function sampleMovements(products: Product[]): Movement[] {
+  const out: Movement[] = []
+  const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)]
+  const qtyFor = (pr: Product) =>
+    pr.buyPrice < 2000 ? 50 * (1 + Math.floor(Math.random() * 10)) : pr.buyPrice < 30000 ? 2 + Math.floor(Math.random() * 15) : 1 + Math.floor(Math.random() * 3)
+  const now = new Date()
+  for (let day = 89; day >= 0; day--) {
+    const base = new Date(now)
+    base.setDate(now.getDate() - day)
+    const sales = Math.floor(Math.random() * 5)
+    for (let i = 0; i < sales; i++) {
+      const pr = pick(products)
+      const d = new Date(base); d.setHours(9 + Math.floor(Math.random() * 9), Math.floor(Math.random() * 60))
+      if (d > now) continue
+      out.push({ id: uid(), productId: pr.id, productName: pr.name, type: 'out', qty: qtyFor(pr), price: pr.sellPrice, cost: pr.buyPrice,
+        counterparty: pick(CUSTOMERS), note: '', date: d.toISOString() })
+    }
+    if (day % 9 === 0) {
+      for (const pr of products.filter(() => Math.random() < 0.35)) {
+        const d = new Date(base); d.setHours(8, 30)
+        if (d > now) continue
+        out.push({ id: uid(), productId: pr.id, productName: pr.name, type: 'in', qty: qtyFor(pr) * 4, price: pr.buyPrice,
+          counterparty: pick(SUPPLIERS), note: '', date: d.toISOString() })
+      }
+    }
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date))
+}
+
+export const seedData = (): WarehouseData => {
+  const products = [
     p('Sement M400 (50 kg)', 'SEM-400', C[0], 'qop', 52000, 60000, 120, 30, 'A-1'),
     p('Shpaklyovka (25 kg)', 'SHP-25', C[0], 'qop', 68000, 80000, 18, 20, 'A-2'),
     p("Pishgan g'isht", 'GSH-01', C[1], 'dona', 1100, 1400, 5000, 1000, 'Hovli'),
@@ -27,5 +57,6 @@ export const seedData = (): WarehouseData => ({
     p('Rakovina 60 sm', 'RKV-60', C[4], 'dona', 320000, 420000, 8, 3, 'D-2'),
     p("Emulsiya bo'yoq oq (10 l)", 'BOY-10', C[5], 'pachka', 145000, 180000, 25, 10, 'E-1'),
     p('Shurup 4x50 (1 kg)', 'SHR-450', C[8], 'kg', 28000, 36000, 40, 10, 'F-1'),
-  ],
-})
+  ]
+  return { categories: [...C], products, movements: sampleMovements(products) }
+}

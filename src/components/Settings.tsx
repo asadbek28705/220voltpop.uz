@@ -3,6 +3,7 @@ import { Alert, Button, Paper, Stack, Typography } from '@mui/material'
 import type { Warehouse } from '../store'
 import type { WarehouseData } from '../types'
 import { download } from '../utils'
+import PageHeader from './PageHeader'
 
 export default function Settings({ wh }: { wh: Warehouse }) {
   const fileRef = useRef<HTMLInputElement>(null)
@@ -23,11 +24,12 @@ export default function Settings({ wh }: { wh: Warehouse }) {
   }
 
   return (
-    <Stack spacing={2} sx={{ maxWidth: 700 }}>
+    <Stack spacing={2} sx={{ maxWidth: 760 }}>
+      <PageHeader title="Sozlamalar" subtitle="Zaxira nusxa va ma'lumotlarni boshqarish" />
       <Alert severity="info">
         Ma'lumotlar shu kompyuterdagi brauzerda saqlanadi. Har kuni yoki haftada bir marta zaxira nusxa oling.
       </Alert>
-      <Paper variant="outlined" sx={{ p: 2 }}>
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
         <Typography variant="h6" gutterBottom>Zaxira nusxa</Typography>
         <Stack direction="row" spacing={2}>
           <Button variant="contained" onClick={backup}>Zaxira yuklab olish</Button>
@@ -36,7 +38,7 @@ export default function Settings({ wh }: { wh: Warehouse }) {
             onChange={(e) => { const f = e.target.files?.[0]; if (f) restore(f); e.target.value = '' }} />
         </Stack>
       </Paper>
-      <Paper variant="outlined" sx={{ p: 2 }}>
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
         <Typography variant="h6" gutterBottom>Ma'lumotlarni tozalash</Typography>
         <Stack direction="row" spacing={2}>
           <Button color="error" variant="outlined"
