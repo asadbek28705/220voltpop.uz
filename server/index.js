@@ -136,10 +136,10 @@ app.post('/api/users/:id/reset', need('admin'), read((req) => auth.resetPassword
 function forSeller(d) {
   return {
     ...d,
-    products: d.products.map((p) => ({ ...p, buyPrice: 0 })),
+    products: d.products.map((p) => ({ ...p, buyPrice: 0, buyPriceUsd: 0, markup: 0 })),
     movements: d.movements
       .filter((m) => m.type === 'out' || m.type === 'in')
-      .map((m) => ({ ...m, cost: null, price: m.type === 'in' ? 0 : m.price })),
+      .map((m) => ({ ...m, cost: null, price: m.type === 'in' ? 0 : m.price, priceUsd: null })),
     expenses: [],
   }
 }
@@ -159,7 +159,7 @@ app.post('/api/movements', need('seller'), write((req) => {
   const b = { ...req.body }
   if (!isAdmin(req)) {
     if (!['in', 'out'].includes(b.type)) throw new HttpError("Bu amal uchun ruxsat yo'q", 403)
-    if (b.type === 'in') b.price = 0 // kelish narxini sotuvchi ko'rmaydi — joriy narx olinadi
+    if (b.type === 'in') { b.price = 0; b.priceUsd = 0; b.sellPrice = 0 } // kelish narxini sotuvchi ko'rmaydi — joriy narx olinadi
   }
   const r = store.addMovement(b, seller(req))
   tg.onMovement(r.movement)
@@ -201,6 +201,23 @@ app.delete('/api/expenses/:id', admin, write((req) => {
   return { ok: true }
 }))
 app.put('/api/settings', admin, write((req) => store.saveSettings(req.body)))
+app.put('/api/rate', admin, write((req) => {
+  const r = store.setRate(req.body ?? {})
+  tg.onRate?.(r, seller(req))
+  return r
+}))
+/** Markaziy bank (cbu.uz) rasmiy kursi */
+app.get('/api/rate/cbu', admin, async (_req, res) => {
+  try {
+    const r = await fetch('https://cbu.uz/uz/arkhiv-kursov-valyut/json/USD/', { signal: AbortSignal.timeout(8000) })
+    const [usd] = await r.json()
+    const rate = Number(usd?.Rate)
+    if (!(rate > 0)) throw new Error()
+    res.json({ rate, date: usd.Date })
+  } catch {
+    res.status(502).json({ error: "Markaziy bank saytidan kursni olib bo'lmadi. Qo'lda kiriting." })
+  }
+})
 app.post('/api/import', admin, write((req) => store.importAll(req.body)))
 app.post('/api/reset', admin, write(() => store.reset()))
 app.post('/api/clear', admin, write(() => store.clear()))

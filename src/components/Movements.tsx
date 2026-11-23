@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   Button, Chip, IconButton, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead,
-  TableRow, TextField, Tooltip,
+  TableRow, TextField, Tooltip, Typography,
 } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import UndoIcon from '@mui/icons-material/Undo'
@@ -14,7 +14,7 @@ import ReceiptIcon from '@mui/icons-material/ReceiptLongOutlined'
 import type { Warehouse } from '../store'
 import { useIsAdmin } from '../auth'
 import type { Movement, MovementType } from '../types'
-import { download, fmtDate, fmtMoney, fmtNum, toCsv } from '../utils'
+import { download, fmtDate, fmtMoney, fmtNum, fmtUsd, toCsv } from '../utils'
 import { daysAgo, inRange, profitOf, today } from '../stats'
 import PageHeader from './PageHeader'
 import ReceiptDialog from './ReceiptDialog'
@@ -125,7 +125,8 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
                   {!fixedType && <TableCell><Chip size="small" variant="outlined" label={label[m.type]} color={color[m.type]} /></TableCell>}
                   <TableCell sx={{ fontWeight: 500 }}>{m.productName}</TableCell>
                   <TableCell align="right">{m.type === 'adjust' && m.qty > 0 ? '+' : ''}{fmtNum(m.qty)}</TableCell>
-                  {showMoney && <TableCell align="right">{m.type === 'adjust' ? '' : fmtMoney(m.price)}</TableCell>}
+                  {showMoney && <TableCell align="right">{m.type === 'adjust' ? '' : fmtMoney(m.price)}
+                    {m.priceUsd ? <Typography variant="caption" display="block" color="text.secondary">{fmtUsd(m.priceUsd)} × {fmtNum(m.rate ?? 0)}</Typography> : null}</TableCell>}
                   {showMoney && <TableCell align="right" sx={{ fontWeight: 600 }}>{m.type === 'adjust' ? '' : fmtMoney(m.qty * m.price)}</TableCell>}
                   {showMoney && <TableCell>{m.counterparty}</TableCell>}
                   {t === 'out' && <TableCell>{paymentLabel(m.payment)}</TableCell>}

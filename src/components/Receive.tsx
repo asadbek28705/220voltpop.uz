@@ -15,7 +15,8 @@ import type { Cart } from '../hooks/useCart'
 import type { Product } from '../types'
 import { attempt } from '../api'
 import { beep } from '../device'
-import { fmtMoney, fmtNum } from '../utils'
+import { fmtMoney, fmtNum, fmtUsd, sellFrom, toUzs } from '../utils'
+import RateDialog from './RateDialog'
 import PageHeader from './PageHeader'
 import CameraScanner from './CameraScanner'
 
@@ -35,10 +36,22 @@ export default function Receive({ wh, list, onUnknownCode, onDone }: Props) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
+  const [rateOpen, setRateOpen] = useState(false)
+  const rate = wh.data.settings.usdRate ?? 0
   const lines = list.items
     .map((it) => ({ ...it, product: products.find((p) => p.id === it.productId) }))
     .filter((l): l is typeof l & { product: Product } => !!l.product)
-  const total = lines.reduce((s, l) => s + l.qty * l.price, 0)
+    .map((l) => {
+      // Dollar tovar: $ narx × kurs = so'mdagi tannarx; ustama bo'lsa sotuv narxi shundan
+      const usd = l.product.currency === 'USD'
+      const priceUsd = usd ? Number(l.priceUsd ?? l.product.buyPriceUsd) || 0 : 0  // yozish paytida "12." satr bo'lishi mumkin
+      const cost = usd ? toUzs(priceUsd, rate) : l.price
+      const autoSell = usd && l.product.markup > 0 && cost > 0 ? sellFrom(cost, l.product.markup) : 0
+      return { ...l, usd, priceUsd, cost, autoSell }
+    })
+  const total = lines.reduce((s, l) => s + l.qty * l.cost, 0)
+  const totalUsd = lines.reduce((s, l) => s + (l.usd ? l.qty * l.priceUsd : 0), 0)
+  const needRate = admin && lines.some((l) => l.usd) && !(rate > 0)
   const suppliers = [...new Set(wh.data.movements.filter((m) => m.type === 'in' && m.counterparty).map((m) => m.counterparty))]
 
   const addProduct = (p: Product) => { list.add(p); beep(true); setError('') }
@@ -52,9 +65,10 @@ export default function Receive({ wh, list, onUnknownCode, onDone }: Props) {
     setError('')
     if (!lines.length) return
     if (lines.some((l) => !(l.qty > 0))) return setError("Miqdor 0 dan katta bo'lishi kerak")
+    if (needRate) return setError('Avval dollar kursini kiriting')
     setBusy(true)
     const r = await attempt(() => wh.receive({
-      items: lines.map((l) => ({ productId: l.productId, qty: l.qty, price: l.price, sellPrice: l.sellPrice })),
+      items: lines.map((l) => ({ productId: l.productId, qty: l.qty, price: l.cost, priceUsd: l.usd ? l.priceUsd : undefined, sellPrice: l.sellPrice })),
       counterparty: supplier.trim(), note: note.trim(),
     }))
     setBusy(false)
@@ -94,7 +108,7 @@ export default function Receive({ wh, list, onUnknownCode, onDone }: Props) {
                       <Typography>{p.name}</Typography>
                       <Typography variant="caption" color="text.secondary">{p.sku} · omborda {fmtNum(p.qty)} {p.unit}</Typography>
                     </Box>
-                    {admin && <Typography color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>{fmtMoney(p.buyPrice)}</Typography>}
+                    {admin && <Typography color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>{p.currency === 'USD' ? fmtUsd(p.buyPriceUsd) : fmtMoney(p.buyPrice)}</Typography>}
                   </Stack>
                 </li>
               )}
@@ -119,7 +133,10 @@ export default function Receive({ wh, list, onUnknownCode, onDone }: Props) {
             <Card key={l.productId} sx={{ p: 1.5 }}>
               <Stack direction="row" alignItems="flex-start" spacing={1}>
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                  <Typography sx={{ fontWeight: 600 }}>{l.product.name}</Typography>
+                  <Typography sx={{ fontWeight: 600 }}>
+                    {l.product.name}
+                    {l.usd && <Box component="span" sx={{ ml: 1, px: 0.75, borderRadius: 1, fontSize: 12, bgcolor: 'success.main', color: '#fff' }}>$</Box>}
+                  </Typography>
                   <Typography variant="caption" color="text.secondary">
                     Hozir omborda: {fmtNum(l.product.qty)} {l.product.unit} → qabuldan keyin: <b>{fmtNum(l.product.qty + l.qty)}</b>
                   </Typography>
@@ -135,11 +152,20 @@ export default function Receive({ wh, list, onUnknownCode, onDone }: Props) {
                   <IconButton size="small" onClick={() => list.update(l.productId, { qty: l.qty + 1 })}><AddIcon fontSize="small" /></IconButton>
                 </Stack>
                 <Typography color="text.secondary">{l.product.unit}</Typography>
-                {admin && <TextField size="small" label="Kelish narxi" value={l.price} inputMode="decimal" sx={{ width: 150 }}
-                  onChange={(e) => { const v = num(e.target.value); if (!isNaN(v)) list.update(l.productId, { price: v }) }} />}
-                {admin && <TextField size="small" label="Sotuv narxi" value={l.sellPrice ?? l.product.sellPrice} inputMode="decimal" sx={{ width: 150 }}
+                {admin && (l.usd
+                  ? <TextField size="small" label="Kelish narxi ($)" value={l.priceUsd ?? (l.product.buyPriceUsd || '')} inputMode="decimal" sx={{ width: 150 }}
+                      helperText={rate > 0 ? `= ${fmtMoney(l.cost)}` : 'kurs yo\'q'} error={!(rate > 0)}
+                      onChange={(e) => { const s = e.target.value.replace(',', '.'); if (/^\d*\.?\d*$/.test(s)) list.update(l.productId, { priceUsd: s as unknown as number }) }}
+                      onBlur={() => list.update(l.productId, { priceUsd: Number(l.priceUsd) || 0 })} />
+                  : <TextField size="small" label="Kelish narxi" value={l.price} inputMode="decimal" sx={{ width: 150 }}
+                      onChange={(e) => { const v = num(e.target.value); if (!isNaN(v)) list.update(l.productId, { price: v }) }} />)}
+                {admin && <TextField size="small" label="Sotuv narxi (so'm)" value={l.sellPrice ?? (l.autoSell || l.product.sellPrice)} inputMode="decimal" sx={{ width: 150 }}
+                  helperText={l.autoSell && l.sellPrice == null ? `+${l.product.markup}% avtomatik` : l.usd ? ' ' : undefined}
                   onChange={(e) => { const v = num(e.target.value); if (!isNaN(v)) list.update(l.productId, { sellPrice: v }) }} />}
-                {admin && <Typography sx={{ ml: 'auto !important', fontWeight: 700 }}>{fmtMoney(l.qty * l.price)}</Typography>}
+                {admin && <Box sx={{ ml: 'auto !important', textAlign: 'right' }}>
+                  <Typography sx={{ fontWeight: 700 }}>{fmtMoney(l.qty * l.cost)}</Typography>
+                  {l.usd && <Typography variant="caption" color="text.secondary">{fmtUsd(l.qty * l.priceUsd)}</Typography>}
+                </Box>}
               </Stack>
             </Card>
           ))}
@@ -153,6 +179,17 @@ export default function Receive({ wh, list, onUnknownCode, onDone }: Props) {
               <TextField size="small" label="Izoh (nakladnoy raqami va h.k.)" value={note} onChange={(e) => setNote(e.target.value)} />
               <Divider />
               <Stack direction="row" justifyContent="space-between"><Typography color="text.secondary">Tovar turlari</Typography><Typography>{lines.length}</Typography></Stack>
+              {admin && lines.some((l) => l.usd) && (
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography color="text.secondary">Dollar kursi</Typography>
+                  <Button size="small" color={rate > 0 ? 'inherit' : 'warning'} variant="outlined" onClick={() => setRateOpen(true)}>
+                    {rate > 0 ? `1$ = ${fmtMoney(rate)}` : 'Kiritish'}
+                  </Button>
+                </Stack>
+              )}
+              {admin && totalUsd > 0 && (
+                <Stack direction="row" justifyContent="space-between"><Typography color="text.secondary">Shundan dollarda</Typography><Typography sx={{ fontWeight: 600 }}>{fmtUsd(totalUsd)}</Typography></Stack>
+              )}
               {admin && <Stack direction="row" justifyContent="space-between" alignItems="baseline">
                 <Typography variant="h6">Jami</Typography>
                 <Typography variant="h5" sx={{ color: 'primary.main' }}>{fmtMoney(total)}</Typography>
@@ -185,6 +222,7 @@ export default function Receive({ wh, list, onUnknownCode, onDone }: Props) {
         </Paper>
       )}
 
+      {rateOpen && <RateDialog wh={wh} onClose={() => setRateOpen(false)} />}
       <CameraScanner open={camera} continuous title="Qabul: skaner qiling" onClose={() => setCamera(false)} onScan={addByCode} />
     </Box>
   )

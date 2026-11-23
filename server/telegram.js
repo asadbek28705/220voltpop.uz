@@ -115,7 +115,8 @@ export class Telegram {
     const unit = p?.unit ?? ''
     if (m.type === 'out') return this.onSale(m.saleId)
     if (m.type === 'in' && c.notifyIncoming) {
-      let t = `📥 <b>Kirim</b>\n${esc(m.productName)} — ${qtyFmt(m.qty)} ${esc(unit)} × ${money(m.price)}\n💰 Summa: <b>${money(m.qty * m.price)}</b>`
+      let t = `📥 <b>Kirim</b>\n${esc(m.productName)} — ${qtyFmt(m.qty)} ${esc(unit)} × ${m.priceUsd ? `$${m.priceUsd} (${money(m.price)})` : money(m.price)}\n💰 Summa: <b>${money(m.qty * m.price)}</b>`
+      if (m.rate) t += `\n💵 Kurs: 1$ = ${money(m.rate)}`
       if (m.counterparty) t += `\n🚚 Ta'minotchi: ${esc(m.counterparty)}`
       if (m.seller) t += `\n🧑‍💼 Qabul qildi: ${esc(m.seller)}`
       if (p) t += `\n📦 Yangi qoldiq: ${qtyFmt(p.qty)} ${esc(unit)}`
@@ -139,13 +140,23 @@ export class Telegram {
     const total = lines.reduce((s, m) => s + m.qty * m.price, 0)
     let t = `📥 <b>Kirim — nakladnoy №${esc(batchId)}</b>\n`
     const shown = lines.slice(0, 40)
-    t += shown.map((m, i) => `${i + 1}. ${esc(m.productName)} — ${qtyFmt(m.qty)} ${esc(m.unit ?? '')} × ${money(m.price)}`).join('\n')
+    t += shown.map((m, i) => `${i + 1}. ${esc(m.productName)} — ${qtyFmt(m.qty)} ${esc(m.unit ?? '')} × ${m.priceUsd ? `$${m.priceUsd} (${money(m.price)})` : money(m.price)}`).join('\n')
     if (lines.length > shown.length) t += `\n… yana ${lines.length - shown.length} ta`
     t += `\n\n💰 <b>Jami: ${money(total)}</b>\n📦 Tovar turlari: ${lines.length}`
+    const usdTotal = lines.reduce((s, m) => s + (m.priceUsd ? m.qty * m.priceUsd : 0), 0)
+    if (usdTotal > 0) t += `\n💵 Shundan dollarda: $${Math.round(usdTotal * 100) / 100} (kurs ${money(lines.find((m) => m.rate).rate)})`
     if (f.counterparty) t += `\n🚚 Ta'minotchi: ${esc(f.counterparty)}`
     if (f.note) t += `\n📝 ${esc(f.note)}`
     if (f.seller) t += `\n🧑‍💼 Qabul qildi: ${esc(f.seller)}`
     t += `\n🕒 ${hm(f.date)}`
+    this.fire(t)
+  }
+
+  onRate(r, who) {
+    if (!this.ready) return
+    let t = `💵 <b>Dollar kursi: 1$ = ${money(r.rate)}</b>\nDollardagi ${r.products} ta tovar tannarxi qayta hisoblandi`
+    if (r.repriced) t += `\n🏷 ${r.repriced} ta tovarning sotuv narxi yangilandi`
+    if (who) t += `\n🧑‍💼 ${esc(who)}`
     this.fire(t)
   }
 

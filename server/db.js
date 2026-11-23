@@ -34,11 +34,19 @@ export function openDb(file) {
   // Migratsiya: kirim nakladnoylarini guruhlash uchun
   const cols = db.prepare('PRAGMA table_info(movements)').all().map((c) => c.name)
   if (!cols.includes('batchId')) db.exec('ALTER TABLE movements ADD COLUMN batchId TEXT')
+  if (!cols.includes('priceUsd')) db.exec('ALTER TABLE movements ADD COLUMN priceUsd REAL; ALTER TABLE movements ADD COLUMN rate REAL;')
+  // Migratsiya: dollarda sotib olinadigan tovarlar
+  const pcols = db.prepare('PRAGMA table_info(products)').all().map((c) => c.name)
+  if (!pcols.includes('currency')) db.exec(`
+    ALTER TABLE products ADD COLUMN currency TEXT NOT NULL DEFAULT 'UZS';
+    ALTER TABLE products ADD COLUMN buyPriceUsd REAL NOT NULL DEFAULT 0;
+    ALTER TABLE products ADD COLUMN markup REAL NOT NULL DEFAULT 0;
+  `)
   return new Store(db)
 }
 
-const PRODUCT_COLS = ['id', 'name', 'sku', 'barcode', 'category', 'unit', 'buyPrice', 'sellPrice', 'qty', 'minQty', 'location', 'createdAt']
-const MOVE_COLS = ['id', 'productId', 'productName', 'type', 'qty', 'price', 'cost', 'counterparty', 'note', 'date', 'saleId', 'payment', 'seller', 'batchId', 'rev']
+const PRODUCT_COLS = ['id', 'name', 'sku', 'barcode', 'category', 'unit', 'buyPrice', 'sellPrice', 'qty', 'minQty', 'location', 'createdAt', 'currency', 'buyPriceUsd', 'markup']
+const MOVE_COLS = ['id', 'productId', 'productName', 'type', 'qty', 'price', 'cost', 'counterparty', 'note', 'date', 'saleId', 'payment', 'seller', 'batchId', 'priceUsd', 'rate', 'rev']
 
 export class HttpError extends Error {
   constructor(message, status = 400) { super(message); this.status = status }
@@ -50,6 +58,9 @@ const num = (v) => {
 }
 const str = (v) => (v == null ? '' : String(v)).trim()
 const round = (n) => Math.round(n * 1000) / 1000
+const roundUsd = (n) => Math.round(n * 10000) / 10000
+/** Sotuv narxi: 100 so'mga yuqoriga yaxlitlanadi */
+export const sellFrom = (costUzs, markup) => Math.ceil((costUzs * (1 + markup / 100)) / 100) * 100
 
 class Store {
   constructor(db) {
@@ -96,7 +107,7 @@ class Store {
     const v = this.bump()
     for (const c of categories.length ? categories : DEFAULT_CATEGORIES) this.ensureCategory(c)
     for (const p of products) {
-      this.insertProduct({ ...p, sku: str(p.sku), barcode: str(p.barcode), location: str(p.location), createdAt: p.createdAt ?? new Date().toISOString() })
+      this.insertProduct({ currency: 'UZS', buyPriceUsd: 0, markup: 0, ...p, sku: str(p.sku), barcode: str(p.barcode), location: str(p.location), createdAt: p.createdAt ?? new Date().toISOString() })
       this.ensureCategory(p.category)
     }
     for (const m of movements) this.insertMovement({ cost: null, saleId: null, payment: null, seller: null, ...m, rev: v })
@@ -118,7 +129,33 @@ class Store {
     return { full, epoch: this.epoch, version: this.version, products, categories, movements, deleted, expenses, settings: this.settings() }
   }
 
-  settings() { return JSON.parse(this.getMeta('settings') ?? '{}') }
+  settings() { return { usdRate: 0, rateDate: '', ...JSON.parse(this.getMeta('settings') ?? '{}') } }
+  get rate() { return num(this.settings().usdRate) }
+  needRate() {
+    const r = this.rate
+    if (!(r > 0)) throw new HttpError("Avval dollar kursini kiriting (Tovarlar → Dollar kursi)")
+    return r
+  }
+
+  /** Dollar kursini o'zgartirish: $ tovarlarning tannarxi qayta hisoblanadi, xohlansa sotuv narxi ham */
+  setRate(b) {
+    return this.tx(() => {
+      const rate = num(b.rate)
+      if (!(rate >= 1000 && rate <= 100000)) throw new HttpError("Kurs noto'g'ri (masalan: 12650)")
+      const next = { ...this.settings(), usdRate: rate, rateDate: new Date().toISOString() }
+      this.setMeta('settings', JSON.stringify(next))
+      const usd = this.db.prepare("SELECT * FROM products WHERE currency = 'USD' AND buyPriceUsd > 0").all()
+      let repriced = 0
+      for (const p of usd) {
+        const cost = Math.round(p.buyPriceUsd * rate)
+        let sell = p.sellPrice
+        if (b.updateSellPrices && p.markup > 0) { sell = sellFrom(cost, p.markup); repriced++ }
+        this.db.prepare('UPDATE products SET buyPrice = ?, sellPrice = ? WHERE id = ?').run(cost, sell, p.id)
+      }
+      this.bump()
+      return { rate, products: usd.length, repriced }
+    })
+  }
 
   // ---------- yozish ----------
   saveSettings(s) {
@@ -146,9 +183,15 @@ class Store {
     const p = {
       name: str(b.name), sku: str(b.sku), barcode: str(b.barcode), category: str(b.category), unit: str(b.unit) || 'dona',
       buyPrice: num(b.buyPrice), sellPrice: num(b.sellPrice), minQty: num(b.minQty), location: str(b.location),
+      currency: b.currency === 'USD' ? 'USD' : 'UZS', buyPriceUsd: 0, markup: Math.max(0, num(b.markup)),
     }
     if (!p.name) throw new HttpError('Tovar nomini kiriting')
     if (!p.category) throw new HttpError('Kategoriyani tanlang')
+    if (p.currency === 'USD') {
+      p.buyPriceUsd = roundUsd(Math.max(0, num(b.buyPriceUsd)))
+      if (p.buyPriceUsd > 0) p.buyPrice = Math.round(p.buyPriceUsd * this.needRate())
+      if (p.markup > 0 && !(p.sellPrice > 0) && p.buyPrice > 0) p.sellPrice = sellFrom(p.buyPrice, p.markup)
+    }
     return p
   }
 
@@ -161,8 +204,10 @@ class Store {
       this.ensureCategory(p.category)
       const v = this.bump()
       if (created.qty > 0) {
+        const usd = created.currency === 'USD'
         this.insertMovement({ id: randomUUID(), productId: created.id, productName: created.name, type: 'in', qty: created.qty,
-          price: created.buyPrice, counterparty: '', note: "Boshlang'ich qoldiq", date: new Date().toISOString(), seller, rev: v })
+          price: created.buyPrice, counterparty: '', note: "Boshlang'ich qoldiq", date: new Date().toISOString(), seller,
+          priceUsd: usd ? created.buyPriceUsd : null, rate: usd ? this.rate : null, rev: v })
       }
       return created
     })
@@ -173,8 +218,8 @@ class Store {
       this.product(id)
       const p = this.cleanProduct(b)
       this.checkUnique(p, id)
-      this.db.prepare(`UPDATE products SET name=?, sku=?, barcode=?, category=?, unit=?, buyPrice=?, sellPrice=?, minQty=?, location=? WHERE id=?`)
-        .run(p.name, p.sku, p.barcode, p.category, p.unit, p.buyPrice, p.sellPrice, p.minQty, p.location, id)
+      this.db.prepare(`UPDATE products SET name=?, sku=?, barcode=?, category=?, unit=?, buyPrice=?, sellPrice=?, minQty=?, location=?, currency=?, buyPriceUsd=?, markup=? WHERE id=?`)
+        .run(p.name, p.sku, p.barcode, p.category, p.unit, p.buyPrice, p.sellPrice, p.minQty, p.location, p.currency, p.buyPriceUsd, p.markup, id)
       this.ensureCategory(p.category)
       this.bump()
       return this.product(id)
@@ -203,20 +248,44 @@ class Store {
       if (type === 'adjust' && qty === 0) throw new HttpError("Qoldiq o'zgarmadi")
       const delta = type === 'out' ? -qty : qty
       if (prod.qty + delta < -1e-9) throw new HttpError(`Omborda faqat ${prod.qty} ${prod.unit} bor`)
-      const price = type === 'in' && !(num(b.price) > 0) ? prod.buyPrice : num(b.price)
+      let price = num(b.price)
+      let usd = null
+      if (type === 'in') {
+        usd = this.inPrice(prod, b)
+        price = usd ? usd.price : price > 0 ? price : prod.buyPrice
+      }
       const v = this.bump()
       let saleId = null
       if (type === 'out') saleId = this.nextReceipt()
       this.db.prepare('UPDATE products SET qty = ? WHERE id = ?').run(round(prod.qty + delta), prod.id)
-      if (type === 'in' && price > 0) this.db.prepare('UPDATE products SET buyPrice = ? WHERE id = ?').run(price, prod.id)
+      if (type === 'in') this.applyInPrice(prod, price, usd, b.sellPrice)
       const m = {
         id: randomUUID(), productId: prod.id, productName: prod.name, type, qty, price: type === 'adjust' ? 0 : price,
         cost: type === 'out' ? prod.buyPrice : null, counterparty: str(b.counterparty), note: str(b.note),
-        date: new Date().toISOString(), saleId, payment: type === 'out' ? str(b.payment) || 'naqd' : null, seller, rev: v,
+        date: new Date().toISOString(), saleId, payment: type === 'out' ? str(b.payment) || 'naqd' : null, seller,
+        priceUsd: usd?.priceUsd ?? null, rate: usd?.rate ?? null, rev: v,
       }
       this.insertMovement(m)
       return { movement: m, saleId }
     })
+  }
+
+  /** Dollar tovar kirimi: $ narx → so'm (joriy kurs bo'yicha). So'mdagi tovar uchun null. */
+  inPrice(p, b) {
+    if (p.currency !== 'USD') return null
+    const rate = this.needRate()
+    const priceUsd = num(b.priceUsd) > 0 ? roundUsd(num(b.priceUsd)) : p.buyPriceUsd
+    if (!(priceUsd > 0)) return null
+    return { priceUsd, rate, price: Math.round(priceUsd * rate) }
+  }
+
+  /** Kirimdan keyin tovarning kelish narxi va (kerak bo'lsa) sotuv narxini yangilash */
+  applyInPrice(p, price, usd, sellPrice) {
+    if (price > 0) this.db.prepare('UPDATE products SET buyPrice = ? WHERE id = ?').run(price, p.id)
+    if (usd) this.db.prepare('UPDATE products SET buyPriceUsd = ? WHERE id = ?').run(usd.priceUsd, p.id)
+    let sell = num(sellPrice)
+    if (!(sell > 0) && usd && p.markup > 0) sell = sellFrom(price, p.markup)
+    if (sell > 0) this.db.prepare('UPDATE products SET sellPrice = ? WHERE id = ?').run(sell, p.id)
   }
 
   nextReceipt() {
@@ -340,15 +409,15 @@ class Store {
       for (const it of items) {
         const p = this.product(it.productId)
         const qty = num(it.qty)
-        // Narx berilmasa (sotuvchi kiritganda) — joriy kelish narxi
-        const price = num(it.price) > 0 ? num(it.price) : p.buyPrice
+        // Dollar tovar: $ narx kursga ko'paytiriladi. Narx berilmasa (sotuvchi kiritganda) — joriy kelish narxi
+        const usd = this.inPrice(p, it)
+        const price = usd ? usd.price : num(it.price) > 0 ? num(it.price) : p.buyPrice
         this.db.prepare('UPDATE products SET qty = ? WHERE id = ?').run(round(p.qty + qty), p.id)
-        if (price > 0) this.db.prepare('UPDATE products SET buyPrice = ? WHERE id = ?').run(price, p.id)
-        const sell = num(it.sellPrice)
-        if (sell > 0) this.db.prepare('UPDATE products SET sellPrice = ? WHERE id = ?').run(sell, p.id)
+        this.applyInPrice(p, price, usd, it.sellPrice)
         this.insertMovement({
           id: randomUUID(), productId: p.id, productName: p.name, type: 'in', qty, price,
-          counterparty: str(b.counterparty), note: str(b.note), date, seller, batchId, rev: v,
+          counterparty: str(b.counterparty), note: str(b.note), date, seller, batchId,
+          priceUsd: usd?.priceUsd ?? null, rate: usd?.rate ?? null, rev: v,
         })
       }
       return { batchId }

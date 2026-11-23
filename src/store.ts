@@ -17,9 +17,11 @@ export interface MovementInput {
   counterparty: string
   note: string
   payment?: string
+  priceUsd?: number
 }
 
 export type ProductInput = Omit<Product, 'id' | 'createdAt' | 'qty'> & { id?: string; qty?: number }
+export interface RateResult { rate: number; products: number; repriced: number }
 
 const EMPTY: WarehouseData = {
   products: [], movements: [], categories: [], expenses: [],
@@ -93,6 +95,8 @@ export function useWarehouse() {
   const deleteExpense = useCallback((id: string) => mutate('DELETE', `/expenses/${id}`), [mutate])
   const nextBarcode = useCallback(() => mutate<{ barcode: string }>('POST', '/barcodes/next'), [mutate])
   const generateBarcodes = useCallback((ids?: string[]) => mutate<{ count: number }>('POST', '/barcodes/generate', { ids }), [mutate])
+  const setRate = useCallback((rate: number, updateSellPrices: boolean) =>
+    mutate<RateResult>('PUT', '/rate', { rate, updateSellPrices }), [mutate])
   const saveSettings = useCallback((s: ShopSettings) => mutate('PUT', '/settings', s), [mutate])
   const replaceAll = useCallback((d: WarehouseData) => mutate('POST', '/import', d), [mutate])
   const reset = useCallback(() => mutate('POST', '/reset'), [mutate])
@@ -106,7 +110,7 @@ export function useWarehouse() {
 
   return {
     data, loading, online, refresh, findByCode,
-    saveProduct, deleteProduct, addMovement, deleteMovement, sell, receive, addExpense, deleteExpense, nextBarcode, generateBarcodes, saveSettings, replaceAll, reset, clearAll,
+    saveProduct, deleteProduct, addMovement, deleteMovement, sell, receive, addExpense, deleteExpense, nextBarcode, generateBarcodes, setRate, saveSettings, replaceAll, reset, clearAll,
   }
 }
 

@@ -3,6 +3,13 @@ export const uid = () => Date.now().toString(36) + Math.random().toString(36).sl
 export const fmtMoney = (n: number) =>
   Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + " so'm"
 
+export const fmtUsd = (n: number) => '$' + (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })
+
+/** Dollar → so'm tannarx */
+export const toUzs = (usd: number, rate: number) => Math.round(usd * rate)
+/** Sotuv narxi tannarx + ustamadan: 100 so'mga yuqoriga yaxlitlanadi (serverdagi bilan bir xil) */
+export const sellFrom = (costUzs: number, markup: number) => Math.ceil((costUzs * (1 + markup / 100)) / 100) * 100
+
 export const fmtNum = (n: number) => {
   const r = Math.round(n * 100) / 100
   const [i, d] = r.toString().split('.')

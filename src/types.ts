@@ -15,7 +15,12 @@ export interface Product {
   minQty: number
   location: string
   createdAt: string
+  currency: Currency // qaysi valyutada sotib olinadi
+  buyPriceUsd: number // dollar tovar uchun kelish narxi ($)
+  markup: number // ustama %, 0 — sotuv narxi qo'lda
 }
+
+export type Currency = 'UZS' | 'USD'
 
 export type MovementType = 'in' | 'out' | 'adjust'
 
@@ -42,6 +47,8 @@ export interface Movement {
   payment?: Payment | null
   seller?: string | null
   batchId?: string | null // kirim nakladnoyi raqami
+  priceUsd?: number | null // dollar kirimda: $ narx
+  rate?: number | null // kirim paytidagi kurs
 }
 
 export interface ShopSettings {
@@ -49,6 +56,8 @@ export interface ShopSettings {
   address: string
   phone: string
   receiptFooter: string
+  usdRate?: number // 1$ = ? so'm
+  rateDate?: string
 }
 
 export interface Expense {
@@ -80,4 +89,5 @@ export interface CartItem {
   qty: number
   price: number
   sellPrice?: number // faqat kirimda: yangi sotuv narxi
+  priceUsd?: number // faqat kirimda: dollar tovarning $ narxi
 }

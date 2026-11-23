@@ -13,15 +13,29 @@ import TuneIcon from '@mui/icons-material/Tune'
 import DownloadIcon from '@mui/icons-material/FileDownloadOutlined'
 import type { Warehouse } from '../store'
 import { useIsAdmin } from '../auth'
-import type { MovementType, Product } from '../types'
-import { download, fmtMoney, fmtNum, toCsv } from '../utils'
+import type { Currency, MovementType, Product } from '../types'
+import { download, fmtDate, fmtMoney, fmtNum, fmtUsd, toCsv } from '../utils'
+import RateDialog from './RateDialog'
+import { Alert, Snackbar } from '@mui/material'
 import ProductDialog from './ProductDialog'
 import PageHeader from './PageHeader'
 
-interface Props { wh: Warehouse; onMovement: (t: MovementType, id?: string) => void }
+interface Props { wh: Warehouse; onMovement: (t: MovementType, id?: string) => void; currency?: Currency }
 
-export default function Products({ wh, onMovement }: Props) {
-  const { products, categories } = wh.data
+const TITLES = {
+  all: { title: 'Tovarlar', subtitle: 'Ombordagi barcha tovarlar va qoldiqlar' },
+  USD: { title: 'Dollarda olinadigan tovarlar', subtitle: "Dollarda sotib olinadi, so'mda sotiladi — tannarx kurs bo'yicha hisoblanadi" },
+  UZS: { title: "So'mda olinadigan tovarlar", subtitle: "So'mda sotib olinadigan tovarlar" },
+}
+
+export default function Products({ wh, onMovement, currency }: Props) {
+  const { categories, settings } = wh.data
+  const products = useMemo(() => wh.data.products.filter((p) => !currency || (p.currency ?? 'UZS') === currency), [wh.data.products, currency])
+  const [rateOpen, setRateOpen] = useState(false)
+  const [toast, setToast] = useState('')
+  const rate = settings.usdRate ?? 0
+  const t = TITLES[currency ?? 'all']
+  const usdCount = wh.data.products.filter((p) => p.currency === 'USD').length
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('')
   const [lowOnly, setLowOnly] = useState(false)
@@ -38,9 +52,10 @@ export default function Products({ wh, onMovement }: Props) {
   }, [products, q, cat, lowOnly])
 
   const exportCsv = () => {
-    const rows: (string | number)[][] = [['Nomi', 'Artikul', 'Shtrix-kod', 'Kategoriya', 'Birlik', 'Qoldiq', 'Minimal', 'Kelish narxi', 'Sotuv narxi', 'Joyi']]
-    list.forEach((p) => rows.push([p.name, p.sku, p.barcode, p.category, p.unit, p.qty, p.minQty, p.buyPrice, p.sellPrice, p.location]))
-    download(`mahsulotlar-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(rows), 'text/csv;charset=utf-8')
+    const rows: (string | number)[][] = [['Nomi', 'Artikul', 'Shtrix-kod', 'Kategoriya', 'Birlik', 'Qoldiq', 'Minimal', 'Valyuta', 'Kelish narxi ($)', "Kelish narxi (so'm)", 'Ustama %', 'Sotuv narxi', 'Joyi']]
+    list.forEach((p) => rows.push([p.name, p.sku, p.barcode, p.category, p.unit, p.qty, p.minQty, p.currency === 'USD' ? 'USD' : "so'm",
+      p.currency === 'USD' ? p.buyPriceUsd : '', p.buyPrice, p.markup || '', p.sellPrice, p.location]))
+    download(`${currency === 'USD' ? 'dollar-' : currency === 'UZS' ? 'som-' : ''}mahsulotlar-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(rows), 'text/csv;charset=utf-8')
   }
 
   const remove = (p: Product) => {
@@ -49,10 +64,27 @@ export default function Products({ wh, onMovement }: Props) {
 
   return (
     <Stack spacing={2}>
-      <PageHeader title="Tovarlar" subtitle="Ombordagi barcha tovarlar va qoldiqlar" actions={<>
+      <PageHeader title={t.title} subtitle={t.subtitle} actions={<>
+        {admin && currency !== 'UZS' && (
+          <Tooltip title={settings.rateDate ? `Yangilangan: ${fmtDate(settings.rateDate)}` : ''}>
+            <Button variant="outlined" color={rate > 0 ? 'inherit' : 'warning'} onClick={() => setRateOpen(true)}>
+              💵 {rate > 0 ? `1$ = ${fmtMoney(rate)}` : 'Dollar kursi'}
+            </Button>
+          </Tooltip>
+        )}
         {admin && <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>Excel</Button>}
         {admin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => setEditing('new')}>Yangi tovar</Button>}
       </>} />
+      {admin && currency === 'USD' && !(rate > 0) && (
+        <Alert severity="warning" action={<Button color="inherit" onClick={() => setRateOpen(true)}>Kiritish</Button>}>
+          Dollar kursi kiritilmagan — dollardagi tovarlarning tannarxini hisoblab bo'lmaydi.
+        </Alert>
+      )}
+      {admin && !currency && usdCount > 0 && rate > 0 && (
+        <Typography variant="body2" color="text.secondary">
+          {usdCount} ta tovar dollarda olinadi — «Dollarda olinadigan» bo'limida alohida ko'rish mumkin.
+        </Typography>
+      )}
       <Paper variant="outlined">
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} sx={{ p: 2 }}>
         <TextField size="small" placeholder="Qidirish: nomi, artikul, shtrix-kod" value={q} onChange={(e) => setQ(e.target.value)} sx={{ minWidth: 300 }}
@@ -83,12 +115,23 @@ export default function Products({ wh, onMovement }: Props) {
               const status = p.qty === 0 ? 'error' : p.qty <= p.minQty ? 'warning' : 'success'
               return (
                 <TableRow key={p.id} hover>
-                  <TableCell sx={{ fontWeight: 500 }}>{p.name}</TableCell>
+                  <TableCell sx={{ fontWeight: 500 }}>
+                    {p.name}
+                    {!currency && p.currency === 'USD' && <Chip size="small" label="$" color="success" variant="outlined" sx={{ ml: 1, height: 20 }} />}
+                  </TableCell>
                   <TableCell>{p.sku}{p.barcode && <Typography variant="caption" display="block" color="text.secondary">{p.barcode}</Typography>}</TableCell>
                   <TableCell><Typography variant="body2" color="text.secondary">{p.category}</Typography></TableCell>
                   <TableCell align="right"><Chip size="small" variant="outlined" color={status} label={`${fmtNum(p.qty)} ${p.unit}`} /></TableCell>
-                  {admin && <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{fmtMoney(p.buyPrice)}</TableCell>}
-                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{fmtMoney(p.sellPrice)}</TableCell>
+                  {admin && <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                    {p.currency === 'USD' ? <>
+                      <b>{fmtUsd(p.buyPriceUsd)}</b>
+                      <Typography variant="caption" display="block" color="text.secondary">{fmtMoney(p.buyPrice)}</Typography>
+                    </> : fmtMoney(p.buyPrice)}
+                  </TableCell>}
+                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                    {fmtMoney(p.sellPrice)}
+                    {admin && p.markup > 0 && <Typography variant="caption" display="block" color="text.secondary">+{p.markup}%</Typography>}
+                  </TableCell>
                   {admin && <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{fmtMoney(p.qty * p.buyPrice)}</TableCell>}
                   <TableCell>{p.location}</TableCell>
                   <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
@@ -114,7 +157,11 @@ export default function Products({ wh, onMovement }: Props) {
         Ko'rsatilgan: {list.length} ta{admin && <> · Jami tannarx: {fmtMoney(list.reduce((s, p) => s + p.qty * p.buyPrice, 0))}</>}
       </Typography>
 
-      {editing && <ProductDialog wh={wh} product={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} />}
+      {editing && <ProductDialog wh={wh} product={editing === 'new' ? undefined : editing} defaultCurrency={currency} onClose={() => setEditing(null)} />}
+      {rateOpen && <RateDialog wh={wh} onClose={() => setRateOpen(false)} onDone={setToast} />}
+      <Snackbar open={!!toast} autoHideDuration={5000} onClose={() => setToast('')} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity="success" variant="filled" onClose={() => setToast('')}>{toast}</Alert>
+      </Snackbar>
     </Stack>
   )
 }

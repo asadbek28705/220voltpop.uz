@@ -13,6 +13,8 @@ import SettingsIcon from '@mui/icons-material/SettingsOutlined'
 import ExpenseIcon from '@mui/icons-material/MoneyOffOutlined'
 import LabelIcon from '@mui/icons-material/QrCode2Outlined'
 import ScanIcon from '@mui/icons-material/QrCodeScanner'
+import UsdIcon from '@mui/icons-material/AttachMoneyOutlined'
+import UzsIcon from '@mui/icons-material/PaymentsOutlined'
 import { useWarehouse } from './store'
 import { api } from './api'
 import { MeContext, useMe, type Me } from './auth'
@@ -49,6 +51,8 @@ const NAV: NavGroup[] = [
   {
     title: 'OMBOR', items: [
       { key: 'products', label: 'Tovarlar', icon: <BoxIcon fontSize="small" /> },
+      { key: 'products-usd', label: 'Dollarda olinadigan', icon: <UsdIcon fontSize="small" /> },
+      { key: 'products-uzs', label: "So'mda olinadigan", icon: <UzsIcon fontSize="small" /> },
       { key: 'receive', label: 'Skaner bilan qabul', icon: <ReceiveIcon fontSize="small" /> },
       { key: 'incoming', label: 'Kirim', icon: <InIcon fontSize="small" /> },
       { key: 'audit', admin: true, label: 'Inventarizatsiya', icon: <TuneIcon fontSize="small" /> },
@@ -188,6 +192,8 @@ function Main({ mode, onToggleMode }: { mode: 'light' | 'dark'; onToggleMode: ()
           <Receive wh={wh} list={receiving} onUnknownCode={(code) => (admin ? setNewProduct({ barcode: code, forReceive: true }) : setScan({ code }))} onDone={setToast} />
         )}
         {page === 'products' && <Products wh={wh} onMovement={(t, id) => setMv({ type: t, productId: id })} />}
+        {page === 'products-usd' && <Products key="usd" wh={wh} currency="USD" onMovement={(t, id) => setMv({ type: t, productId: id })} />}
+        {page === 'products-uzs' && <Products key="uzs" wh={wh} currency="UZS" onMovement={(t, id) => setMv({ type: t, productId: id })} />}
         {page === 'incoming' && (
           <Movements wh={wh} fixedType="in" title="Kirim" subtitle="Ta'minotchilardan qabul qilingan tovarlar" newLabel="Yangi kirim" onNew={() => setMv({ type: 'in' })} />
         )}
