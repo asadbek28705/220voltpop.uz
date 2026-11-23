@@ -4,6 +4,8 @@ import {
   useMediaQuery, useTheme,
 } from '@mui/material'
 import CameraIcon from '@mui/icons-material/QrCodeScanner'
+import AutoIcon from '@mui/icons-material/AutoFixHighOutlined'
+import { Tooltip } from '@mui/material'
 import type { Warehouse } from '../store'
 import type { Product, Unit } from '../types'
 import { UNITS } from '../types'
@@ -56,8 +58,19 @@ export default function ProductDialog({ wh, product, initialBarcode, noInitialQt
         <Stack spacing={2} sx={{ mt: 1 }}>
           <TextField label="Nomi *" value={f.name} onChange={set('name')} autoFocus />
           <TextField label="Shtrix-kod" value={f.barcode} onChange={set('barcode')} inputMode="numeric"
-            helperText="Aparat bilan shu maydonga skaner qiling yoki kamerani bosing"
-            slotProps={{ input: { endAdornment: <InputAdornment position="end"><IconButton onClick={() => setCamera(true)} edge="end"><CameraIcon /></IconButton></InputAdornment> } }} />
+            helperText="Skaner qiling, kamerani bosing yoki kodi bo'lmasa ✨ — dastur o'zi yaratadi"
+            slotProps={{ input: { endAdornment: (
+              <InputAdornment position="end">
+                {!f.barcode && (
+                  <Tooltip title="Ichki shtrix-kod yaratish">
+                    <IconButton onClick={async () => { const r = await attempt(() => wh.nextBarcode()); if (r.ok) setF((s) => ({ ...s, barcode: r.value.barcode })); else setErr(r.error) }}>
+                      <AutoIcon />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                <IconButton onClick={() => setCamera(true)} edge="end"><CameraIcon /></IconButton>
+              </InputAdornment>
+            ) } }} />
           <Stack direction="row" spacing={2}>
             <TextField label="Artikul / kod" value={f.sku} onChange={set('sku')} fullWidth />
             <TextField select label="Birlik" value={f.unit} onChange={set('unit')} sx={{ minWidth: 130 }}>

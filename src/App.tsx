@@ -11,6 +11,7 @@ import ChartIcon from '@mui/icons-material/BarChartOutlined'
 import HistoryIcon from '@mui/icons-material/ReceiptLongOutlined'
 import SettingsIcon from '@mui/icons-material/SettingsOutlined'
 import ExpenseIcon from '@mui/icons-material/MoneyOffOutlined'
+import LabelIcon from '@mui/icons-material/QrCode2Outlined'
 import ScanIcon from '@mui/icons-material/QrCodeScanner'
 import { useWarehouse } from './store'
 import type { MovementType, Product } from './types'
@@ -26,6 +27,7 @@ import Products from './components/Products'
 import Movements from './components/Movements'
 import Reports from './components/Reports'
 import Expenses from './components/Expenses'
+import Labels from './components/Labels'
 import ExpenseDialog from './components/ExpenseDialog'
 import Settings from './components/Settings'
 import MovementDialog from './components/MovementDialog'
@@ -47,6 +49,7 @@ const NAV: NavGroup[] = [
       { key: 'receive', label: 'Skaner bilan qabul', icon: <ReceiveIcon fontSize="small" /> },
       { key: 'incoming', label: 'Kirim', icon: <InIcon fontSize="small" /> },
       { key: 'audit', label: 'Inventarizatsiya', icon: <TuneIcon fontSize="small" /> },
+      { key: 'labels', label: 'Shtrix-kod chop etish', icon: <LabelIcon fontSize="small" /> },
     ],
   },
   {
@@ -148,6 +151,7 @@ export default function App() {
         )}
         {page === 'reports' && <Reports wh={wh} />}
         {page === 'expenses' && <Expenses wh={wh} />}
+        {page === 'labels' && <Labels wh={wh} />}
         {page === 'history' && <Movements wh={wh} title="Barcha harakatlar" subtitle="Kirim, chiqim va inventarizatsiya tarixi" />}
         {page === 'settings' && <Settings wh={wh} onSellerChange={setSeller} />}
       </Layout>

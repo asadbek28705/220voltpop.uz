@@ -261,6 +261,32 @@ class Store {
     })
   }
 
+  // ---------- ichki shtrix-kodlar ----------
+  /** EAN-13: "200" + 9 xonali tartib raqami + nazorat raqami. 200–299 do'kon ichki kodlari uchun ajratilgan. */
+  nextBarcode() {
+    for (;;) {
+      const n = Number(this.getMeta('barcodeSeq') ?? 0) + 1
+      this.setMeta('barcodeSeq', n)
+      const base = '200' + String(n).padStart(9, '0')
+      const sum = [...base].reduce((s, d, i) => s + Number(d) * (i % 2 ? 3 : 1), 0)
+      const code = base + ((10 - (sum % 10)) % 10)
+      if (!this.db.prepare('SELECT 1 FROM products WHERE barcode = ?').get(code)) return code
+    }
+  }
+
+  reserveBarcode() { return this.tx(() => ({ barcode: this.nextBarcode() })) }
+
+  /** Shtrix-kodi yo'q tovarlarga kod berish (ids berilmasa — hammasiga) */
+  generateBarcodes(ids) {
+    return this.tx(() => {
+      const rows = this.db.prepare("SELECT id FROM products WHERE barcode = ''").all().map((r) => r.id)
+      const target = Array.isArray(ids) && ids.length ? rows.filter((id) => ids.includes(id)) : rows
+      for (const id of target) this.db.prepare('UPDATE products SET barcode = ? WHERE id = ?').run(this.nextBarcode(), id)
+      if (target.length) this.bump()
+      return { count: target.length }
+    })
+  }
+
   // ---------- xarajatlar ----------
   insertExpense(e) {
     const cols = ['id', 'date', 'category', 'amount', 'note', 'payment', 'seller', 'createdAt']

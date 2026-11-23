@@ -27,3 +27,28 @@
   body.printing-receipt { margin: 0; }
 }
 @page { margin: 4mm; }
+
+/* ---- Shtrix-kod etiketkalari ---- */
+.label {
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #fff;
+  color: #000;
+  font-family: Inter, Arial, sans-serif;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.label-shop { font-size: 6pt; text-align: center; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.label-name {
+  font-weight: 600; line-height: 1.15; text-align: center;
+  display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden;
+}
+.label-price { font-weight: 800; text-align: center; line-height: 1.1; }
+.label-code { flex: 1; display: flex; align-items: flex-end; justify-content: center; min-height: 0; }
+.label-code svg { max-height: 100%; }
+.labels-roll .label { page-break-after: always; break-after: page; }
+.labels-sheet { display: grid; }
+.labels-preview .label { outline: 1px dashed #bbb; }

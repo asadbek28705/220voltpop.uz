@@ -97,6 +97,8 @@ app.post('/api/receive', write((req) => {
   tg.onReceive(r.batchId)
   return r
 }))
+app.post('/api/barcodes/next', write(() => store.reserveBarcode()))
+app.post('/api/barcodes/generate', write((req) => store.generateBarcodes(req.body?.ids)))
 app.post('/api/expenses', write((req) => {
   const e = store.addExpense(req.body, seller(req))
   tg.onExpense(e)

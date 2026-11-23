@@ -91,6 +91,8 @@ export function useWarehouse() {
   const addExpense = useCallback((e: { category: string; amount: number; note: string; payment: string; date?: string }) =>
     mutate<Expense>('POST', '/expenses', e), [mutate])
   const deleteExpense = useCallback((id: string) => mutate('DELETE', `/expenses/${id}`), [mutate])
+  const nextBarcode = useCallback(() => mutate<{ barcode: string }>('POST', '/barcodes/next'), [mutate])
+  const generateBarcodes = useCallback((ids?: string[]) => mutate<{ count: number }>('POST', '/barcodes/generate', { ids }), [mutate])
   const saveSettings = useCallback((s: ShopSettings) => mutate('PUT', '/settings', s), [mutate])
   const replaceAll = useCallback((d: WarehouseData) => mutate('POST', '/import', d), [mutate])
   const reset = useCallback(() => mutate('POST', '/reset'), [mutate])
@@ -104,7 +106,7 @@ export function useWarehouse() {
 
   return {
     data, loading, online, refresh, findByCode,
-    saveProduct, deleteProduct, addMovement, deleteMovement, sell, receive, addExpense, deleteExpense, saveSettings, replaceAll, reset, clearAll,
+    saveProduct, deleteProduct, addMovement, deleteMovement, sell, receive, addExpense, deleteExpense, nextBarcode, generateBarcodes, saveSettings, replaceAll, reset, clearAll,
   }
 }
 
