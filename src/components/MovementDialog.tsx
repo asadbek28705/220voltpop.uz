@@ -1,16 +1,18 @@
 import { useState } from 'react'
 import {
-  Alert, Autocomplete, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField,
+  useMediaQuery, useTheme, Alert, Autocomplete, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField,
   ToggleButton, ToggleButtonGroup, Typography,
 } from '@mui/material'
 import type { Warehouse } from '../store'
 import type { MovementType } from '../types'
 import { fmtMoney, fmtNum } from '../utils'
+import { attempt } from '../api'
 
 interface Props { wh: Warehouse; initialType: MovementType; initialProductId?: string; onClose: () => void }
 
 export default function MovementDialog({ wh, initialType, initialProductId, onClose }: Props) {
   const { products } = wh.data
+  const fullScreen = useMediaQuery(useTheme().breakpoints.down('sm'))
   const [type, setType] = useState<MovementType>(initialType)
   const [productId, setProductId] = useState(initialProductId ?? '')
   const prod = products.find((p) => p.id === productId) ?? null
@@ -42,21 +44,24 @@ export default function MovementDialog({ wh, initialType, initialProductId, onCl
     if (type === 'adjust' && p) setQty(String(p.qty))
   }
 
-  const save = () => {
+  const [busy, setBusy] = useState(false)
+  const save = async () => {
     if (!prod) return setErr('Mahsulotni tanlang')
     if (qty.trim() === '' || isNaN(num(qty))) return setErr("Miqdorni to'g'ri kiriting")
     // Inventarizatsiyada foydalanuvchi haqiqiy qoldiqni kiritadi, biz farqni saqlaymiz
     const amount = type === 'adjust' ? q - prod.qty : q
     if (type === 'adjust' && amount === 0) return setErr("Qoldiq o'zgarmadi")
-    const e = wh.addMovement({ productId: prod.id, type, qty: amount, price: pr, counterparty: counterparty.trim(), note: note.trim() })
-    if (e) return setErr(e)
+    setBusy(true)
+    const r = await attempt(() => wh.addMovement({ productId: prod.id, type, qty: amount, price: pr, counterparty: counterparty.trim(), note: note.trim() }))
+    setBusy(false)
+    if (!r.ok) return setErr(r.error)
     onClose()
   }
 
   const titles: Record<MovementType, string> = { in: 'Kirim (omborga qabul)', out: 'Chiqim / Sotuv', adjust: 'Inventarizatsiya' }
 
   return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm" fullScreen={fullScreen}>
       <DialogTitle>{titles[type]}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
@@ -70,6 +75,7 @@ export default function MovementDialog({ wh, initialType, initialProductId, onCl
             value={prod}
             onChange={(_, v) => changeProduct(v?.id ?? '')}
             getOptionLabel={(p) => `${p.name}${p.sku ? ' (' + p.sku + ')' : ''}`}
+            filterOptions={(opts, { inputValue }) => { const q = inputValue.trim().toLowerCase(); return opts.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.barcode.includes(q)) }}
             renderOption={(props, p) => (
               <li {...props} key={p.id}>
                 <Stack sx={{ width: '100%' }} direction="row" justifyContent="space-between">
@@ -113,7 +119,7 @@ export default function MovementDialog({ wh, initialType, initialProductId, onCl
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Bekor qilish</Button>
-        <Button variant="contained" onClick={save} color="primary">Saqlash</Button>
+        <Button variant="contained" onClick={save} color="primary" disabled={busy}>Saqlash</Button>
       </DialogActions>
     </Dialog>
   )

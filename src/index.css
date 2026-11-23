@@ -1,4 +1,29 @@
+#print-root { display: none; }
+
+.receipt {
+  width: 72mm;
+  margin: 0 auto;
+  padding: 2mm 0;
+  font-family: 'Courier New', ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #000;
+}
+.receipt .r-center { text-align: center; }
+.receipt .r-bold { font-weight: 700; }
+.receipt .r-big { font-size: 14px; }
+.receipt .r-row { display: flex; justify-content: space-between; gap: 8px; }
+.receipt .r-sep { border-top: 1px dashed #000; margin: 6px 0; }
+.receipt .r-item { margin-bottom: 4px; }
+
+/* Ekranda chekni ko'rsatish (oldindan ko'rish oynasida) */
+.receipt-preview .receipt { background: #fff; padding: 12px; border-radius: 8px; }
+
 @media print {
   .no-print { display: none !important; }
   body { background: #fff !important; }
+  body.printing-receipt > *:not(#print-root) { display: none !important; }
+  body.printing-receipt #print-root { display: block !important; }
+  body.printing-receipt { margin: 0; }
 }
+@page { margin: 4mm; }

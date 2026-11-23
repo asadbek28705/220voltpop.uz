@@ -1,16 +1,24 @@
 import { useState } from 'react'
-import { Alert, Autocomplete, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField } from '@mui/material'
+import {
+  Alert, Autocomplete, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, InputAdornment, MenuItem, Stack, TextField,
+  useMediaQuery, useTheme,
+} from '@mui/material'
+import CameraIcon from '@mui/icons-material/QrCodeScanner'
 import type { Warehouse } from '../store'
 import type { Product, Unit } from '../types'
 import { UNITS } from '../types'
+import { attempt } from '../api'
+import CameraScanner from './CameraScanner'
 
-interface Props { wh: Warehouse; product?: Product; onClose: () => void }
+interface Props { wh: Warehouse; product?: Product; initialBarcode?: string; onClose: () => void; onSaved?: (p: Product) => void }
 
-export default function ProductDialog({ wh, product, onClose }: Props) {
+export default function ProductDialog({ wh, product, initialBarcode, onClose, onSaved }: Props) {
   const isNew = !product
+  const fullScreen = useMediaQuery(useTheme().breakpoints.down('sm'))
   const [f, setF] = useState({
     name: product?.name ?? '',
     sku: product?.sku ?? '',
+    barcode: product?.barcode ?? initialBarcode ?? '',
     category: product?.category ?? '',
     unit: (product?.unit ?? 'dona') as Unit,
     buyPrice: product ? String(product.buyPrice) : '',
@@ -20,32 +28,39 @@ export default function ProductDialog({ wh, product, onClose }: Props) {
     qty: '0',
   })
   const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [camera, setCamera] = useState(false)
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value })
 
-  const save = () => {
-    if (!f.name.trim()) return setErr('Mahsulot nomini kiriting')
+  const save = async () => {
+    if (!f.name.trim()) return setErr('Tovar nomini kiriting')
     if (!f.category.trim()) return setErr('Kategoriyani tanlang')
     const num = (s: string) => Number(s.replace(/\s/g, '').replace(',', '.')) || 0
-    const dup = wh.data.products.find((p) => p.sku && p.sku.toLowerCase() === f.sku.trim().toLowerCase() && p.id !== product?.id)
-    if (dup) return setErr(`Bu artikul "${dup.name}" mahsulotida ishlatilgan`)
-    wh.saveProduct({
+    setBusy(true)
+    const r = await attempt(() => wh.saveProduct({
       id: product?.id,
-      name: f.name.trim(), sku: f.sku.trim(), category: f.category.trim(), unit: f.unit,
+      name: f.name.trim(), sku: f.sku.trim(), barcode: f.barcode.trim(), category: f.category.trim(), unit: f.unit,
       buyPrice: num(f.buyPrice), sellPrice: num(f.sellPrice), minQty: num(f.minQty), location: f.location.trim(),
       qty: isNew ? num(f.qty) : undefined,
-    })
+    }))
+    setBusy(false)
+    if (!r.ok) return setErr(r.error)
+    onSaved?.(r.value)
     onClose()
   }
 
   return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{isNew ? 'Yangi mahsulot' : 'Mahsulotni tahrirlash'}</DialogTitle>
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm" fullScreen={fullScreen}>
+      <DialogTitle>{isNew ? 'Yangi tovar' : 'Tovarni tahrirlash'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <TextField label="Nomi *" value={f.name} onChange={set('name')} autoFocus />
+          <TextField label="Shtrix-kod" value={f.barcode} onChange={set('barcode')} inputMode="numeric"
+            helperText="Aparat bilan shu maydonga skaner qiling yoki kamerani bosing"
+            slotProps={{ input: { endAdornment: <InputAdornment position="end"><IconButton onClick={() => setCamera(true)} edge="end"><CameraIcon /></IconButton></InputAdornment> } }} />
           <Stack direction="row" spacing={2}>
             <TextField label="Artikul / kod" value={f.sku} onChange={set('sku')} fullWidth />
-            <TextField select label="O'lchov birligi" value={f.unit} onChange={set('unit')} sx={{ minWidth: 160 }}>
+            <TextField select label="Birlik" value={f.unit} onChange={set('unit')} sx={{ minWidth: 130 }}>
               {UNITS.map((u) => <MenuItem key={u} value={u}>{u}</MenuItem>)}
             </TextField>
           </Stack>
@@ -56,18 +71,19 @@ export default function ProductDialog({ wh, product, onClose }: Props) {
             <TextField label="Kelish narxi (so'm)" value={f.buyPrice} onChange={set('buyPrice')} fullWidth inputMode="decimal" />
             <TextField label="Sotuv narxi (so'm)" value={f.sellPrice} onChange={set('sellPrice')} fullWidth inputMode="decimal" />
           </Stack>
-          <Stack direction="row" spacing={2}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             {isNew && <TextField label="Boshlang'ich qoldiq" value={f.qty} onChange={set('qty')} fullWidth inputMode="decimal" />}
-            <TextField label="Minimal qoldiq (ogohlantirish)" value={f.minQty} onChange={set('minQty')} fullWidth inputMode="decimal" />
-            <TextField label="Joyi (javon/qator)" value={f.location} onChange={set('location')} fullWidth />
+            <TextField label="Minimal qoldiq" value={f.minQty} onChange={set('minQty')} fullWidth inputMode="decimal" />
+            <TextField label="Joyi (javon)" value={f.location} onChange={set('location')} fullWidth />
           </Stack>
           {err && <Alert severity="error">{err}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Bekor qilish</Button>
-        <Button variant="contained" onClick={save}>Saqlash</Button>
+        <Button variant="contained" onClick={save} disabled={busy}>Saqlash</Button>
       </DialogActions>
+      <CameraScanner open={camera} onClose={() => setCamera(false)} onScan={(code) => setF((s) => ({ ...s, barcode: code }))} />
     </Dialog>
   )
 }

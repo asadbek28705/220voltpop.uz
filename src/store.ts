@@ -1,16 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
-import type { Movement, MovementType, Product, WarehouseData } from './types'
-import { seedData } from './seed'
-import { uid } from './utils'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { CartItem, Movement, MovementType, Product, ShopSettings, WarehouseData } from './types'
+import { api } from './api'
 
-const KEY = 'ombor-data-v1'
-
-function load(): WarehouseData {
-  try {
-    const raw = localStorage.getItem(KEY)
-    if (raw) return JSON.parse(raw) as WarehouseData
-  } catch { /* buzilgan ma'lumot — yangidan boshlaymiz */ }
-  return seedData()
+interface DataResponse extends WarehouseData {
+  full: boolean
+  epoch: string
+  version: number
+  deleted: string[]
 }
 
 export interface MovementInput {
@@ -20,86 +16,91 @@ export interface MovementInput {
   price: number
   counterparty: string
   note: string
+  payment?: string
+}
+
+export type ProductInput = Omit<Product, 'id' | 'createdAt' | 'qty'> & { id?: string; qty?: number }
+
+const EMPTY: WarehouseData = {
+  products: [], movements: [], categories: [],
+  settings: { shopName: '', address: '', phone: '', receiptFooter: '' },
 }
 
 export function useWarehouse() {
-  const [data, setData] = useState<WarehouseData>(load)
+  const [data, setData] = useState<WarehouseData>(EMPTY)
+  const [loading, setLoading] = useState(true)
+  const [online, setOnline] = useState(true)
+  const sync = useRef({ version: 0, epoch: '', busy: false, again: false })
 
-  useEffect(() => {
-    localStorage.setItem(KEY, JSON.stringify(data))
-  }, [data])
-
-  const saveProduct = useCallback((prod: Omit<Product, 'id' | 'createdAt' | 'qty'> & { id?: string; qty?: number }) => {
-    setData((d) => {
-      if (prod.id) {
-        return { ...d, products: d.products.map((x) => (x.id === prod.id ? { ...x, ...prod, qty: x.qty } as Product : x)) }
-      }
-      const created: Product = { ...prod, id: uid(), qty: 0, createdAt: new Date().toISOString() } as Product
-      const movements = [...d.movements]
-      const startQty = prod.qty ?? 0
-      if (startQty > 0) {
-        created.qty = startQty
-        movements.unshift({
-          id: uid(), productId: created.id, productName: created.name, type: 'in', qty: startQty,
-          price: created.buyPrice, counterparty: '', note: "Boshlang'ich qoldiq", date: new Date().toISOString(),
-        })
-      }
-      const categories = d.categories.includes(prod.category) ? d.categories : [...d.categories, prod.category]
-      return { ...d, products: [created, ...d.products], movements, categories }
-    })
-  }, [])
-
-  const deleteProduct = useCallback((id: string) => {
-    setData((d) => ({ ...d, products: d.products.filter((x) => x.id !== id) }))
-  }, [])
-
-  /** Kirim / chiqim / inventarizatsiya. Xato bo'lsa matn qaytaradi. */
-  const addMovement = useCallback((m: MovementInput): string | null => {
-    const prod = data.products.find((x) => x.id === m.productId)
-    if (!prod) return 'Mahsulot topilmadi'
-    if (m.type !== 'adjust' && !(m.qty > 0)) return "Miqdor 0 dan katta bo'lishi kerak"
-    if (m.type === 'out' && m.qty > prod.qty) return `Omborda faqat ${prod.qty} ${prod.unit} bor`
-    const delta = m.type === 'in' ? m.qty : m.type === 'out' ? -m.qty : m.qty
-    if (prod.qty + delta < 0) return "Qoldiq manfiy bo'lib qoladi"
-    const mv: Movement = {
-      ...m, id: uid(), productName: prod.name, date: new Date().toISOString(),
-      ...(m.type === 'out' ? { cost: prod.buyPrice } : {}),
+  /** Serverdan faqat o'zgarganlarini oladi */
+  const refresh = useCallback(async () => {
+    const s = sync.current
+    if (s.busy) { s.again = true; return }
+    s.busy = true
+    try {
+      const d = await api<DataResponse>('GET', `/data?since=${s.version}&epoch=${encodeURIComponent(s.epoch)}`)
+      setData((prev) => {
+        let movements: Movement[]
+        if (d.full) movements = d.movements
+        else {
+          const drop = new Set([...d.deleted, ...d.movements.map((m) => m.id)])
+          movements = [...d.movements, ...prev.movements.filter((m) => !drop.has(m.id))]
+          if (d.movements.length) movements.sort((a, b) => b.date.localeCompare(a.date))
+        }
+        return { products: d.products, categories: d.categories, settings: d.settings, movements }
+      })
+      s.version = d.version
+      s.epoch = d.epoch
+      setOnline(true)
+    } catch {
+      setOnline(false)
+    } finally {
+      s.busy = false
+      setLoading(false)
+      if (s.again) { s.again = false; refresh() }
     }
-    setData((d) => ({
-      ...d,
-      products: d.products.map((x) =>
-        x.id === m.productId
-          ? { ...x, qty: Math.round((x.qty + delta) * 1000) / 1000, ...(m.type === 'in' && m.price > 0 ? { buyPrice: m.price } : {}) }
-          : x,
-      ),
-      movements: [mv, ...d.movements],
-    }))
-    return null
+  }, [])
+
+  // Boshqa qurilmalardagi o'zgarishlarni real vaqtda olish
+  useEffect(() => {
+    refresh()
+    const es = new EventSource('/api/events')
+    es.onmessage = (e) => {
+      const { version, epoch } = JSON.parse(e.data)
+      if (version !== sync.current.version || epoch !== sync.current.epoch) refresh()
+    }
+    es.onopen = () => setOnline(true)
+    es.onerror = () => setOnline(false)
+    const onVisible = () => document.visibilityState === 'visible' && refresh()
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { es.close(); document.removeEventListener('visibilitychange', onVisible) }
+  }, [refresh])
+
+  const mutate = useCallback(<T,>(method: string, path: string, body?: unknown) =>
+    api<T>(method, path, body).finally(refresh), [refresh])
+
+  const saveProduct = useCallback((p: ProductInput) =>
+    p.id ? mutate<Product>('PUT', `/products/${p.id}`, p) : mutate<Product>('POST', '/products', p), [mutate])
+  const deleteProduct = useCallback((id: string) => mutate('DELETE', `/products/${id}`), [mutate])
+  const addMovement = useCallback((m: MovementInput) => mutate<{ saleId: string | null }>('POST', '/movements', m), [mutate])
+  const deleteMovement = useCallback((id: string) => mutate('DELETE', `/movements/${id}`), [mutate])
+  const sell = useCallback((b: { items: CartItem[]; counterparty: string; note: string; payment: string }) =>
+    mutate<{ saleId: string }>('POST', '/sales', b), [mutate])
+  const saveSettings = useCallback((s: ShopSettings) => mutate('PUT', '/settings', s), [mutate])
+  const replaceAll = useCallback((d: WarehouseData) => mutate('POST', '/import', d), [mutate])
+  const reset = useCallback(() => mutate('POST', '/reset'), [mutate])
+  const clearAll = useCallback(() => mutate('POST', '/clear'), [mutate])
+
+  const findByCode = useCallback((code: string) => {
+    const c = code.trim().toLowerCase()
+    if (!c) return undefined
+    return data.products.find((p) => p.barcode.toLowerCase() === c) ?? data.products.find((p) => p.sku.toLowerCase() === c)
   }, [data.products])
 
-  const deleteMovement = useCallback((id: string) => {
-    // Harakatni bekor qilish: qoldiqni ham qaytaramiz
-    setData((d) => {
-      const mv = d.movements.find((x) => x.id === id)
-      if (!mv) return d
-      const delta = mv.type === 'in' ? -mv.qty : mv.type === 'out' ? mv.qty : -mv.qty
-      return {
-        ...d,
-        products: d.products.map((x) => (x.id === mv.productId ? { ...x, qty: Math.max(0, x.qty + delta) } : x)),
-        movements: d.movements.filter((x) => x.id !== id),
-      }
-    })
-  }, [])
-
-  const addCategory = useCallback((name: string) => {
-    setData((d) => (d.categories.includes(name) ? d : { ...d, categories: [...d.categories, name] }))
-  }, [])
-
-  const replaceAll = useCallback((next: WarehouseData) => setData(next), [])
-  const reset = useCallback(() => setData(seedData()), [])
-  const clearAll = useCallback(() => setData({ products: [], movements: [], categories: seedData().categories }), [])
-
-  return { data, saveProduct, deleteProduct, addMovement, deleteMovement, addCategory, replaceAll, reset, clearAll }
+  return {
+    data, loading, online, refresh, findByCode,
+    saveProduct, deleteProduct, addMovement, deleteMovement, sell, saveSettings, replaceAll, reset, clearAll,
+  }
 }
 
 export type Warehouse = ReturnType<typeof useWarehouse>

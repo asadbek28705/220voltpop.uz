@@ -14,6 +14,7 @@ import {
 } from 'recharts'
 import type { Warehouse } from '../store'
 import { download, fmtMoney, fmtNum, toCsv } from '../utils'
+import { paymentLabel } from '../types'
 import { MONTHS, dayKey, daysAgo, inRange, profitOf, today } from '../stats'
 import { GREEN, YELLOW } from '../theme'
 import PageHeader from './PageHeader'
@@ -51,6 +52,7 @@ export default function Reports({ wh }: { wh: Warehouse }) {
       }
     }
     const catMap = new Map<string, number>()
+    const payMap = new Map<string, number>()
     const prodMap = new Map<string, { name: string; qty: number; unit: string; sum: number; profit: number }>()
     for (const m of sales) {
       const k = dayKey(m.date)
@@ -61,6 +63,8 @@ export default function Reports({ wh }: { wh: Warehouse }) {
       const prod = products.find((p) => p.id === m.productId)
       const cat = prod?.category ?? 'Boshqa'
       catMap.set(cat, (catMap.get(cat) ?? 0) + sum)
+      const pay = paymentLabel(m.payment) || 'Naqd'
+      payMap.set(pay, (payMap.get(pay) ?? 0) + sum)
       const pr = prodMap.get(m.productId) ?? { name: m.productName, qty: 0, unit: prod?.unit ?? '', sum: 0, profit: 0 }
       pr.qty += m.qty; pr.sum += sum; pr.profit += pf
       prodMap.set(m.productId, pr)
@@ -70,6 +74,7 @@ export default function Reports({ wh }: { wh: Warehouse }) {
       monthly: [...monthMap.values()],
       daily: [...dayMap.values()],
       categories: [...catMap.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
+      payments: [...payMap.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
       top: [...prodMap.values()].sort((a, b) => b.sum - a.sum).slice(0, 10),
     }
   }, [movements, products, from, to])
@@ -117,14 +122,14 @@ export default function Reports({ wh }: { wh: Warehouse }) {
           </ChartCard>
         </Grid>
         <Grid size={{ xs: 12, lg: 4 }}>
-          <ChartCard title="Kategoriyalar bo'yicha savdo">
-            {r.categories.length === 0 ? (
+          <ChartCard title="To'lov usullari">
+            {r.payments.length === 0 ? (
               <Typography color="text.secondary">Ma'lumot yo'q</Typography>
             ) : (
               <ResponsiveContainer>
                 <PieChart>
-                  <Pie data={r.categories} dataKey="value" nameKey="name" innerRadius="45%" outerRadius="80%" paddingAngle={2}>
-                    {r.categories.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="none" />)}
+                  <Pie data={r.payments} dataKey="value" nameKey="name" innerRadius="45%" outerRadius="80%" paddingAngle={2}>
+                    {r.payments.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="none" />)}
                   </Pie>
                   <Tooltip {...cs.tooltip} />
                   <Legend iconSize={10} wrapperStyle={{ fontSize: 12 }} />
@@ -150,8 +155,25 @@ export default function Reports({ wh }: { wh: Warehouse }) {
             </ResponsiveContainer>
           </ChartCard>
         </Grid>
-        <Grid size={{ xs: 12 }}>
-          <Card sx={{ p: 2.5 }}>
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <ChartCard height={360} title="Kategoriyalar bo'yicha savdo">
+            {r.categories.length === 0 ? (
+              <Typography color="text.secondary">Ma'lumot yo'q</Typography>
+            ) : (
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie data={r.categories} dataKey="value" nameKey="name" innerRadius="45%" outerRadius="80%" paddingAngle={2}>
+                    {r.categories.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="none" />)}
+                  </Pie>
+                  <Tooltip {...cs.tooltip} />
+                  <Legend iconSize={10} wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
+        </Grid>
+        <Grid size={{ xs: 12, lg: 8 }}>
+          <Card sx={{ p: 2.5, height: '100%' }}>
             <Typography variant="h6" sx={{ mb: 2 }}>Eng ko'p sotilgan tovarlar</Typography>
             <Table size="small">
               <TableHead>

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import {
-  Avatar, Box, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Stack, Typography,
+  Avatar, Badge, Box, Chip, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Stack, Typography,
   useMediaQuery, useTheme,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
@@ -20,10 +20,13 @@ interface Props {
   onNavigate: (key: string) => void
   mode: 'light' | 'dark'
   onToggleMode: () => void
+  online: boolean
+  seller: string
+  cartCount: number
   children: ReactNode
 }
 
-export default function Layout({ groups, active, onNavigate, mode, onToggleMode, children }: Props) {
+export default function Layout({ groups, active, onNavigate, mode, onToggleMode, online, seller, cartCount, children }: Props) {
   const theme = useTheme()
   const desktop = useMediaQuery(theme.breakpoints.up('md'))
   const [open, setOpen] = useState(false)
@@ -48,6 +51,7 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
                 onClick={() => { onNavigate(it.key); setOpen(false) }}>
                 <ListItemIcon sx={{ minWidth: 34, color: 'text.secondary' }}>{it.icon}</ListItemIcon>
                 <ListItemText primary={it.label} slotProps={{ primary: { fontSize: 14.5, fontWeight: 'inherit' } }} />
+                {it.key === 'pos' && cartCount > 0 && <Badge badgeContent={cartCount} color="secondary" sx={{ mr: 1 }} />}
               </ListItemButton>
             ))}
           </List>
@@ -71,15 +75,20 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
         <Stack direction="row" alignItems="center" spacing={1.5} className="no-print"
           sx={{ height: 64, px: { xs: 2, md: 4 }, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider', position: 'sticky', top: 0, zIndex: 10 }}>
           {!desktop && <IconButton onClick={() => setOpen(true)}><MenuIcon /></IconButton>}
+          {!desktop && <Typography sx={{ fontWeight: 800, letterSpacing: 1.5, color: '#C9A227' }}>OMBOR</Typography>}
           <Box sx={{ flexGrow: 1 }} />
+          <Chip size="small" variant="outlined" color={online ? 'success' : 'error'} label={online ? 'Onlayn' : "Aloqa yo'q"}
+            sx={{ '& .MuiChip-label': { px: 1 } }} />
           <IconButton onClick={onToggleMode} sx={{ border: 1, borderColor: 'divider' }} title="Rejimni almashtirish">
             {mode === 'dark' ? <LightIcon fontSize="small" /> : <DarkIcon fontSize="small" />}
           </IconButton>
           <Stack direction="row" spacing={1.25} alignItems="center" sx={{ pl: 1 }}>
-            <Avatar sx={{ bgcolor: GREEN, width: 36, height: 36, fontSize: 16 }}>A</Avatar>
+            <Avatar sx={{ bgcolor: GREEN, width: 36, height: 36, fontSize: 16, cursor: 'pointer' }} onClick={() => onNavigate('settings')}>
+              {(seller || 'S').charAt(0).toUpperCase()}
+            </Avatar>
             <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-              <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>Administrator</Typography>
-              <Typography variant="caption" color="text.secondary">admin</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{seller || 'Ism kiritilmagan'}</Typography>
+              <Typography variant="caption" color="text.secondary">sotuvchi</Typography>
             </Box>
           </Stack>
         </Stack>

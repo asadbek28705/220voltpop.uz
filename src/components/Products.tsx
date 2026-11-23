@@ -31,18 +31,18 @@ export default function Products({ wh, onMovement }: Props) {
     return products
       .filter((p) => !cat || p.category === cat)
       .filter((p) => !lowOnly || p.qty <= p.minQty)
-      .filter((p) => !s || p.name.toLowerCase().includes(s) || p.sku.toLowerCase().includes(s) || p.location.toLowerCase().includes(s))
+      .filter((p) => !s || p.name.toLowerCase().includes(s) || p.sku.toLowerCase().includes(s) || p.location.toLowerCase().includes(s) || p.barcode.includes(s))
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [products, q, cat, lowOnly])
 
   const exportCsv = () => {
-    const rows: (string | number)[][] = [['Nomi', 'Artikul', 'Kategoriya', 'Birlik', 'Qoldiq', 'Minimal', 'Kelish narxi', 'Sotuv narxi', 'Joyi']]
-    list.forEach((p) => rows.push([p.name, p.sku, p.category, p.unit, p.qty, p.minQty, p.buyPrice, p.sellPrice, p.location]))
+    const rows: (string | number)[][] = [['Nomi', 'Artikul', 'Shtrix-kod', 'Kategoriya', 'Birlik', 'Qoldiq', 'Minimal', 'Kelish narxi', 'Sotuv narxi', 'Joyi']]
+    list.forEach((p) => rows.push([p.name, p.sku, p.barcode, p.category, p.unit, p.qty, p.minQty, p.buyPrice, p.sellPrice, p.location]))
     download(`mahsulotlar-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(rows), 'text/csv;charset=utf-8')
   }
 
   const remove = (p: Product) => {
-    if (confirm(`"${p.name}" o'chirilsinmi? Tarixdagi yozuvlar saqlanib qoladi.`)) wh.deleteProduct(p.id)
+    if (confirm(`"${p.name}" o'chirilsinmi? Tarixdagi yozuvlar saqlanib qoladi.`)) wh.deleteProduct(p.id).catch((e) => alert(e.message))
   }
 
   return (
@@ -53,7 +53,7 @@ export default function Products({ wh, onMovement }: Props) {
       </>} />
       <Paper variant="outlined">
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} sx={{ p: 2 }}>
-        <TextField size="small" placeholder="Qidirish: nomi, artikul yoki joyi" value={q} onChange={(e) => setQ(e.target.value)} sx={{ minWidth: 300 }}
+        <TextField size="small" placeholder="Qidirish: nomi, artikul, shtrix-kod" value={q} onChange={(e) => setQ(e.target.value)} sx={{ minWidth: 300 }}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> } }} />
         <TextField size="small" select label="Kategoriya" value={cat} onChange={(e) => setCat(e.target.value)} sx={{ minWidth: 240 }}>
           <MenuItem value="">Barchasi</MenuItem>
@@ -82,12 +82,12 @@ export default function Products({ wh, onMovement }: Props) {
               return (
                 <TableRow key={p.id} hover>
                   <TableCell sx={{ fontWeight: 500 }}>{p.name}</TableCell>
-                  <TableCell>{p.sku}</TableCell>
+                  <TableCell>{p.sku}{p.barcode && <Typography variant="caption" display="block" color="text.secondary">{p.barcode}</Typography>}</TableCell>
                   <TableCell><Typography variant="body2" color="text.secondary">{p.category}</Typography></TableCell>
                   <TableCell align="right"><Chip size="small" variant="outlined" color={status} label={`${fmtNum(p.qty)} ${p.unit}`} /></TableCell>
-                  <TableCell align="right">{fmtMoney(p.buyPrice)}</TableCell>
-                  <TableCell align="right">{fmtMoney(p.sellPrice)}</TableCell>
-                  <TableCell align="right">{fmtMoney(p.qty * p.buyPrice)}</TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{fmtMoney(p.buyPrice)}</TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{fmtMoney(p.sellPrice)}</TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{fmtMoney(p.qty * p.buyPrice)}</TableCell>
                   <TableCell>{p.location}</TableCell>
                   <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
                     <Tooltip title="Kirim"><IconButton size="small" color="success" onClick={() => onMovement('in', p.id)}><InIcon /></IconButton></Tooltip>

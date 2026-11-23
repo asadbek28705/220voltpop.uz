@@ -16,6 +16,8 @@ import type { Movement, MovementType } from '../types'
 import { download, fmtDate, fmtMoney, fmtNum, toCsv } from '../utils'
 import { daysAgo, inRange, profitOf, today } from '../stats'
 import PageHeader from './PageHeader'
+import ReceiptDialog from './ReceiptDialog'
+import { paymentLabel } from '../types'
 import StatCard from './StatCard'
 
 const label = { in: 'Kirim', out: 'Chiqim', adjust: 'Inventarizatsiya' } as const
@@ -36,6 +38,7 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
   const [from, setFrom] = useState(daysAgo(29))
   const [to, setTo] = useState(today())
   const [q, setQ] = useState('')
+  const [receipt, setReceipt] = useState<string | null>(null)
   const t = fixedType ?? type
 
   const list = useMemo(() => {
@@ -48,7 +51,7 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
   const profit = list.filter((m) => m.type === 'out').reduce((s, m) => s + profitOf(m, products), 0)
 
   const undo = (m: Movement) => {
-    if (confirm(`Bu yozuv bekor qilinsinmi? "${m.productName}" qoldig'i qayta hisoblanadi.`)) wh.deleteMovement(m.id)
+    if (confirm(`Bu yozuv bekor qilinsinmi? "${m.productName}" qoldig'i qayta hisoblanadi.`)) wh.deleteMovement(m.id).catch((e) => alert(e.message))
   }
 
   const exportCsv = () => {
@@ -96,13 +99,15 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
             <TableHead>
               <TableRow>
                 <TableCell>Sana</TableCell>
+                {t === 'out' && <TableCell>Chek</TableCell>}
                 {!fixedType && <TableCell>Turi</TableCell>}
                 <TableCell>Mahsulot</TableCell>
                 <TableCell align="right">Miqdor</TableCell>
                 {showMoney && <TableCell align="right">Narx</TableCell>}
                 {showMoney && <TableCell align="right">Summa</TableCell>}
                 {showMoney && <TableCell>{t === 'in' ? "Ta'minotchi" : t === 'out' ? 'Mijoz' : 'Kontragent'}</TableCell>}
-                <TableCell>Izoh</TableCell>
+                {t === 'out' && <TableCell>To'lov</TableCell>}
+                <TableCell>{t === 'out' ? 'Sotuvchi' : 'Izoh'}</TableCell>
                 <TableCell className="no-print" />
               </TableRow>
             </TableHead>
@@ -110,25 +115,32 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
               {list.map((m) => (
                 <TableRow key={m.id} hover>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{fmtDate(m.date)}</TableCell>
+                  {t === 'out' && (
+                    <TableCell>
+                      {m.saleId && <Chip size="small" clickable label={`№${m.saleId}`} onClick={() => setReceipt(m.saleId!)} />}
+                    </TableCell>
+                  )}
                   {!fixedType && <TableCell><Chip size="small" variant="outlined" label={label[m.type]} color={color[m.type]} /></TableCell>}
                   <TableCell sx={{ fontWeight: 500 }}>{m.productName}</TableCell>
                   <TableCell align="right">{m.type === 'adjust' && m.qty > 0 ? '+' : ''}{fmtNum(m.qty)}</TableCell>
                   {showMoney && <TableCell align="right">{m.type === 'adjust' ? '' : fmtMoney(m.price)}</TableCell>}
                   {showMoney && <TableCell align="right" sx={{ fontWeight: 600 }}>{m.type === 'adjust' ? '' : fmtMoney(m.qty * m.price)}</TableCell>}
                   {showMoney && <TableCell>{m.counterparty}</TableCell>}
-                  <TableCell>{m.note}</TableCell>
+                  {t === 'out' && <TableCell>{paymentLabel(m.payment)}</TableCell>}
+                  <TableCell>{t === 'out' ? m.seller : m.note}</TableCell>
                   <TableCell className="no-print">
-                    <Tooltip title="Bekor qilish"><IconButton size="small" onClick={() => undo(m)}><UndoIcon fontSize="small" /></IconButton></Tooltip>
+                    <Tooltip title="Bekor qilish (qoldiq qaytariladi)"><IconButton size="small" onClick={() => undo(m)}><UndoIcon fontSize="small" /></IconButton></Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
               {list.length === 0 && (
-                <TableRow><TableCell colSpan={9} align="center" sx={{ py: 5, color: 'text.secondary' }}>Tanlangan davrda yozuv yo'q</TableCell></TableRow>
+                <TableRow><TableCell colSpan={11} align="center" sx={{ py: 5, color: 'text.secondary' }}>Tanlangan davrda yozuv yo'q</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
         </TableContainer>
       </Paper>
+      {receipt && <ReceiptDialog wh={wh} saleId={receipt} onClose={() => setReceipt(null)} />}
     </>
   )
 }
