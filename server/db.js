@@ -26,11 +26,14 @@ export function openDb(file) {
     CREATE TABLE IF NOT EXISTS categories (name TEXT PRIMARY KEY);
     CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   `)
+  // Migratsiya: kirim nakladnoylarini guruhlash uchun
+  const cols = db.prepare('PRAGMA table_info(movements)').all().map((c) => c.name)
+  if (!cols.includes('batchId')) db.exec('ALTER TABLE movements ADD COLUMN batchId TEXT')
   return new Store(db)
 }
 
 const PRODUCT_COLS = ['id', 'name', 'sku', 'barcode', 'category', 'unit', 'buyPrice', 'sellPrice', 'qty', 'minQty', 'location', 'createdAt']
-const MOVE_COLS = ['id', 'productId', 'productName', 'type', 'qty', 'price', 'cost', 'counterparty', 'note', 'date', 'saleId', 'payment', 'seller', 'rev']
+const MOVE_COLS = ['id', 'productId', 'productName', 'type', 'qty', 'price', 'cost', 'counterparty', 'note', 'date', 'saleId', 'payment', 'seller', 'batchId', 'rev']
 
 export class HttpError extends Error {
   constructor(message, status = 400) { super(message); this.status = status }
@@ -248,6 +251,34 @@ class Store {
         this.db.prepare('UPDATE products SET qty = ? WHERE id = ?').run(round(p.qty - q), pid)
       }
       return { saleId }
+    })
+  }
+
+  /** Skaner bilan qabul: bir nechta tovarni bitta nakladnoy bilan omborga kiritish */
+  receive(b, seller) {
+    return this.tx(() => {
+      const items = Array.isArray(b.items) ? b.items : []
+      if (items.length === 0) throw new HttpError("Ro'yxat bo'sh")
+      for (const it of items) if (!(num(it.qty) > 0)) throw new HttpError("Miqdor 0 dan katta bo'lishi kerak")
+      const v = this.bump()
+      const n = Number(this.getMeta('batchNo') ?? 0) + 1
+      this.setMeta('batchNo', n)
+      const batchId = String(n)
+      const date = new Date().toISOString()
+      for (const it of items) {
+        const p = this.product(it.productId)
+        const qty = num(it.qty)
+        const price = num(it.price)
+        this.db.prepare('UPDATE products SET qty = ? WHERE id = ?').run(round(p.qty + qty), p.id)
+        if (price > 0) this.db.prepare('UPDATE products SET buyPrice = ? WHERE id = ?').run(price, p.id)
+        const sell = num(it.sellPrice)
+        if (sell > 0) this.db.prepare('UPDATE products SET sellPrice = ? WHERE id = ?').run(sell, p.id)
+        this.insertMovement({
+          id: randomUUID(), productId: p.id, productName: p.name, type: 'in', qty, price,
+          counterparty: str(b.counterparty), note: str(b.note), date, seller, batchId, rev: v,
+        })
+      }
+      return { batchId }
     })
   }
 

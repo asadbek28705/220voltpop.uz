@@ -8,17 +8,27 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { HttpError, openDb } from './db.js'
 import { ensureCert } from './cert.js'
-import { Telegram } from './telegram.js'
+import { DEFAULT_TG, Telegram } from './telegram.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HTTP_PORT = Number(process.env.PORT ?? 8080)
 const HTTPS_PORT = Number(process.env.HTTPS_PORT ?? 8443)
 const DEV = process.argv.includes('--dev')
+// Demo rejim: boshqalarga ko'rsatish uchun — alohida baza, Telegram o'chiq
+const DEMO = process.env.DEMO === '1'
+const DATA_DIR = process.env.DATA_DIR ?? join(ROOT, DEMO ? 'data-demo' : 'data')
 
-const store = openDb(join(ROOT, 'data', 'ombor.db'))
+const store = openDb(join(DATA_DIR, 'ombor.db'))
 const tg = new Telegram(store)
-tg.startPolling()
-tg.startScheduler()
+if (DEMO) {
+  tg.fire = () => {}
+  tg.send = () => Promise.reject(new Error("demo rejimida Telegram o'chirilgan"))
+  tg.update = () => { throw new HttpError("Demo rejimida Telegram sozlamalarini o'zgartirib bo'lmaydi") }
+  tg.publicCfg = () => ({ ...DEFAULT_TG, token: undefined, hasToken: false, tokenHint: '', demo: true })
+} else {
+  tg.startPolling()
+  tg.startScheduler()
+}
 
 const app = express()
 app.use(express.json({ limit: '50mb' }))
@@ -82,6 +92,11 @@ app.post('/api/sales', write((req) => {
   tg.onSale(r.saleId)
   return r
 }))
+app.post('/api/receive', write((req) => {
+  const r = store.receive(req.body, seller(req))
+  tg.onReceive(r.batchId)
+  return r
+}))
 app.put('/api/settings', write((req) => store.saveSettings(req.body)))
 app.post('/api/import', write((req) => store.importAll(req.body)))
 app.post('/api/reset', write(() => store.reset()))
@@ -112,12 +127,12 @@ if (!DEV && existsSync(dist)) {
 const ips = Object.values(networkInterfaces()).flat().filter((i) => i && i.family === 'IPv4' && !i.internal).map((i) => i.address)
 
 http.createServer(app).listen(HTTP_PORT, '0.0.0.0', () => {
-  console.log(`\n  Ombor serveri ishga tushdi`)
+  console.log(`\n  Ombor serveri ishga tushdi${DEMO ? ' (DEMO rejim)' : ''}`)
   console.log(`  Shu kompyuterda:   http://localhost:${HTTP_PORT}`)
 })
 
-try {
-  const { key, cert } = ensureCert(join(ROOT, 'data', 'cert'), ips)
+if (!DEMO) try {
+  const { key, cert } = ensureCert(join(DATA_DIR, 'cert'), ips)
   https.createServer({ key: readFileSync(key), cert: readFileSync(cert) }, app).listen(HTTPS_PORT, '0.0.0.0', () => {
     for (const ip of ips) console.log(`  Telefonlardan:     https://${ip}:${HTTPS_PORT}   (kamera skaneri uchun)`)
     console.log(`\n  Telefon birinchi marta "xavfsiz emas" deb ogohlantiradi — "Qo'shimcha" → "Baribir o'tish" ni bosing.\n`)

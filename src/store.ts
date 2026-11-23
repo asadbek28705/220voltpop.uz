@@ -86,6 +86,8 @@ export function useWarehouse() {
   const deleteMovement = useCallback((id: string) => mutate('DELETE', `/movements/${id}`), [mutate])
   const sell = useCallback((b: { items: CartItem[]; counterparty: string; note: string; payment: string }) =>
     mutate<{ saleId: string }>('POST', '/sales', b), [mutate])
+  const receive = useCallback((b: { items: CartItem[]; counterparty: string; note: string }) =>
+    mutate<{ batchId: string }>('POST', '/receive', b), [mutate])
   const saveSettings = useCallback((s: ShopSettings) => mutate('PUT', '/settings', s), [mutate])
   const replaceAll = useCallback((d: WarehouseData) => mutate('POST', '/import', d), [mutate])
   const reset = useCallback(() => mutate('POST', '/reset'), [mutate])
@@ -99,7 +101,7 @@ export function useWarehouse() {
 
   return {
     data, loading, online, refresh, findByCode,
-    saveProduct, deleteProduct, addMovement, deleteMovement, sell, saveSettings, replaceAll, reset, clearAll,
+    saveProduct, deleteProduct, addMovement, deleteMovement, sell, receive, saveSettings, replaceAll, reset, clearAll,
   }
 }
 

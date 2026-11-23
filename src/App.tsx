@@ -5,6 +5,7 @@ import PosIcon from '@mui/icons-material/PointOfSaleOutlined'
 import CartIcon from '@mui/icons-material/ShoppingCartOutlined'
 import BoxIcon from '@mui/icons-material/Inventory2Outlined'
 import InIcon from '@mui/icons-material/MoveToInboxOutlined'
+import ReceiveIcon from '@mui/icons-material/DocumentScannerOutlined'
 import TuneIcon from '@mui/icons-material/FactCheckOutlined'
 import ChartIcon from '@mui/icons-material/BarChartOutlined'
 import HistoryIcon from '@mui/icons-material/ReceiptLongOutlined'
@@ -19,6 +20,7 @@ import { beep, getSeller, isMobile } from './device'
 import Layout, { type NavGroup } from './components/Layout'
 import Dashboard from './components/Dashboard'
 import Pos from './components/Pos'
+import Receive from './components/Receive'
 import Products from './components/Products'
 import Movements from './components/Movements'
 import Reports from './components/Reports'
@@ -39,6 +41,7 @@ const NAV: NavGroup[] = [
   {
     title: 'OMBOR', items: [
       { key: 'products', label: 'Tovarlar', icon: <BoxIcon fontSize="small" /> },
+      { key: 'receive', label: 'Skaner bilan qabul', icon: <ReceiveIcon fontSize="small" /> },
       { key: 'incoming', label: 'Kirim', icon: <InIcon fontSize="small" /> },
       { key: 'audit', label: 'Inventarizatsiya', icon: <TuneIcon fontSize="small" /> },
     ],
@@ -51,6 +54,7 @@ const NAV: NavGroup[] = [
   },
   { title: 'SOZLAMALAR', items: [{ key: 'settings', label: 'Sozlamalar', icon: <SettingsIcon fontSize="small" /> }] },
 ]
+const buyPriceOf = (p: Product) => p.buyPrice
 const PAGE_KEYS = NAV.flatMap((g) => g.items.map((i) => i.key))
 // Telefonda dastur to'g'ridan-to'g'ri kassadan ochiladi
 const fromHash = () => { const h = location.hash.slice(1); return PAGE_KEYS.includes(h) ? h : isMobile() ? 'pos' : 'home' }
@@ -58,13 +62,14 @@ const fromHash = () => { const h = location.hash.slice(1); return PAGE_KEYS.incl
 export default function App() {
   const wh = useWarehouse()
   const cart = useCart()
+  const receiving = useCart('ombor-receive', buyPriceOf)
   const [page, setPageState] = useState(fromHash)
   const [mode, setMode] = useState<'light' | 'dark'>(() => (localStorage.getItem('ombor-mode') as 'dark') ?? 'light')
   const theme = useMemo(() => makeTheme(mode), [mode])
   const [seller, setSeller] = useState(getSeller())
   const [mv, setMv] = useState<{ type: MovementType; productId?: string } | null>(null)
   const [scan, setScan] = useState<{ code: string; product?: Product } | null>(null)
-  const [newProduct, setNewProduct] = useState<{ barcode: string } | null>(null)
+  const [newProduct, setNewProduct] = useState<{ barcode: string; forReceive?: boolean } | null>(null)
   const [camera, setCamera] = useState(false)
   const [toast, setToast] = useState('')
 
@@ -90,9 +95,20 @@ export default function App() {
       setToast(`Savatga qo'shildi: ${product.name}`)
       return
     }
+    if (page === 'receive') {
+      if (product) {
+        receiving.add(product)
+        beep(true)
+        setToast(`Qabul ro'yxatiga: ${product.name}`)
+      } else {
+        beep(false)
+        setNewProduct({ barcode: code, forReceive: true })
+      }
+      return
+    }
     beep(!!product)
     setScan({ code, product })
-  }, [wh, page, cart])
+  }, [wh, page, cart, receiving])
 
   const modalOpen = !!(mv || scan || newProduct || camera)
   useHardwareScanner(handleCode, !modalOpen)
@@ -115,6 +131,9 @@ export default function App() {
         {page === 'sales' && (
           <Movements wh={wh} fixedType="out" title="Savdolar" subtitle="Sotilgan tovarlar va cheklar" newLabel="Kassaga o'tish" onNew={() => setPage('pos')} />
         )}
+        {page === 'receive' && (
+          <Receive wh={wh} list={receiving} onUnknownCode={(code) => setNewProduct({ barcode: code, forReceive: true })} onDone={setToast} />
+        )}
         {page === 'products' && <Products wh={wh} onMovement={(t, id) => setMv({ type: t, productId: id })} />}
         {page === 'incoming' && (
           <Movements wh={wh} fixedType="in" title="Kirim" subtitle="Ta'minotchilardan qabul qilingan tovarlar" newLabel="Yangi kirim" onNew={() => setMv({ type: 'in' })} />
@@ -128,7 +147,7 @@ export default function App() {
       </Layout>
 
       {/* Telefonda istalgan sahifadan kamera bilan tovarni tekshirish */}
-      {page !== 'pos' && (
+      {page !== 'pos' && page !== 'receive' && (
         <Fab color="primary" onClick={() => setCamera(true)} className="no-print"
           sx={{ position: 'fixed', right: 20, bottom: 20, display: { md: 'none' }, '&:hover': { bgcolor: 'secondary.main', color: '#1a1a1a' } }}>
           <ScanIcon />
@@ -143,8 +162,11 @@ export default function App() {
           onCreate={(code) => { setScan(null); setNewProduct({ barcode: code }) }} />
       )}
       {newProduct && (
-        <ProductDialog wh={wh} initialBarcode={newProduct.barcode} onClose={() => setNewProduct(null)}
-          onSaved={(p) => setToast(`Qo'shildi: ${p.name}`)} />
+        <ProductDialog wh={wh} initialBarcode={newProduct.barcode} noInitialQty={newProduct.forReceive} onClose={() => setNewProduct(null)}
+          onSaved={(p) => {
+            if (newProduct.forReceive) { receiving.add(p); setToast(`Yangi tovar qabul ro'yxatiga qo'shildi: ${p.name}`) }
+            else setToast(`Qo'shildi: ${p.name}`)
+          }} />
       )}
       {mv && <MovementDialog wh={wh} initialType={mv.type} initialProductId={mv.productId} onClose={() => setMv(null)} />}
       <Snackbar open={!!toast} autoHideDuration={1800} onClose={() => setToast('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>

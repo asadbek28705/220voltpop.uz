@@ -14,6 +14,7 @@ interface TgConfig {
   dailyEnabled: boolean
   dailyTime: string
   hasToken: boolean
+  demo?: boolean
   tokenHint: string
 }
 
@@ -54,6 +55,7 @@ export default function TelegramSettings() {
         <FormControlLabel label={cfg.enabled ? 'Yoqilgan' : "O'chirilgan"}
           control={<Switch checked={cfg.enabled} disabled={busy} onChange={(e) => save({ enabled: e.target.checked })} />} />
       </Stack>
+      {cfg.demo && <Alert severity="info" sx={{ mb: 2 }}>Bu demo nusxa — Telegram xabarlari yuborilmaydi.</Alert>}
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Savdo, kirim va kunlik hisobot guruhga yuboriladi. Guruhda buyruqlar: /hisobot, /kecha, /oy, /kam, /qoldiq.
       </Typography>

@@ -131,6 +131,24 @@ export class Telegram {
     }
   }
 
+  onReceive(batchId) {
+    if (!this.ready || !this.cfg.notifyIncoming) return
+    const lines = this.store.db.prepare("SELECT m.*, p.unit, p.qty AS stock FROM movements m LEFT JOIN products p ON p.id = m.productId WHERE m.type = 'in' AND m.batchId = ?").all(batchId)
+    if (!lines.length) return
+    const f = lines[0]
+    const total = lines.reduce((s, m) => s + m.qty * m.price, 0)
+    let t = `📥 <b>Kirim — nakladnoy №${esc(batchId)}</b>\n`
+    const shown = lines.slice(0, 40)
+    t += shown.map((m, i) => `${i + 1}. ${esc(m.productName)} — ${qtyFmt(m.qty)} ${esc(m.unit ?? '')} × ${money(m.price)}`).join('\n')
+    if (lines.length > shown.length) t += `\n… yana ${lines.length - shown.length} ta`
+    t += `\n\n💰 <b>Jami: ${money(total)}</b>\n📦 Tovar turlari: ${lines.length}`
+    if (f.counterparty) t += `\n🚚 Ta'minotchi: ${esc(f.counterparty)}`
+    if (f.note) t += `\n📝 ${esc(f.note)}`
+    if (f.seller) t += `\n🧑‍💼 Qabul qildi: ${esc(f.seller)}`
+    t += `\n🕒 ${hm(f.date)}`
+    this.fire(t)
+  }
+
   onUndo(m, who) {
     if (!this.ready || !this.cfg.notifyUndo || !m) return
     const kind = m.type === 'out' ? `savdo (chek №${esc(m.saleId)})` : m.type === 'in' ? 'kirim' : 'inventarizatsiya'

@@ -41,6 +41,7 @@ export interface Movement {
   saleId?: string | null // chek raqami
   payment?: Payment | null
   seller?: string | null
+  batchId?: string | null // kirim nakladnoyi raqami
 }
 
 export interface ShopSettings {
@@ -61,4 +62,5 @@ export interface CartItem {
   productId: string
   qty: number
   price: number
+  sellPrice?: number // faqat kirimda: yangi sotuv narxi
 }

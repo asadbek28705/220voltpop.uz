@@ -10,9 +10,9 @@ import { UNITS } from '../types'
 import { attempt } from '../api'
 import CameraScanner from './CameraScanner'
 
-interface Props { wh: Warehouse; product?: Product; initialBarcode?: string; onClose: () => void; onSaved?: (p: Product) => void }
+interface Props { wh: Warehouse; product?: Product; initialBarcode?: string; noInitialQty?: boolean; onClose: () => void; onSaved?: (p: Product) => void }
 
-export default function ProductDialog({ wh, product, initialBarcode, onClose, onSaved }: Props) {
+export default function ProductDialog({ wh, product, initialBarcode, noInitialQty, onClose, onSaved }: Props) {
   const isNew = !product
   const fullScreen = useMediaQuery(useTheme().breakpoints.down('sm'))
   const [f, setF] = useState({
@@ -41,7 +41,7 @@ export default function ProductDialog({ wh, product, initialBarcode, onClose, on
       id: product?.id,
       name: f.name.trim(), sku: f.sku.trim(), barcode: f.barcode.trim(), category: f.category.trim(), unit: f.unit,
       buyPrice: num(f.buyPrice), sellPrice: num(f.sellPrice), minQty: num(f.minQty), location: f.location.trim(),
-      qty: isNew ? num(f.qty) : undefined,
+      qty: isNew && !noInitialQty ? num(f.qty) : undefined,
     }))
     setBusy(false)
     if (!r.ok) return setErr(r.error)
@@ -72,7 +72,7 @@ export default function ProductDialog({ wh, product, initialBarcode, onClose, on
             <TextField label="Sotuv narxi (so'm)" value={f.sellPrice} onChange={set('sellPrice')} fullWidth inputMode="decimal" />
           </Stack>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            {isNew && <TextField label="Boshlang'ich qoldiq" value={f.qty} onChange={set('qty')} fullWidth inputMode="decimal" />}
+            {isNew && !noInitialQty && <TextField label="Boshlang'ich qoldiq" value={f.qty} onChange={set('qty')} fullWidth inputMode="decimal" />}
             <TextField label="Minimal qoldiq" value={f.minQty} onChange={set('minQty')} fullWidth inputMode="decimal" />
             <TextField label="Joyi (javon)" value={f.location} onChange={set('location')} fullWidth />
           </Stack>
