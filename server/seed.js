@@ -13,6 +13,11 @@ export const DEFAULT_CATEGORIES = [
   'Boshqa',
 ]
 
+export const DEFAULT_EXPENSE_CATEGORIES = [
+  'Ijara', 'Ish haqi', 'Elektr, gaz, suv', 'Transport va yetkazib berish', 'Soliq va majburiy to\'lovlar',
+  'Internet va aloqa', "Xo'jalik mollari", "Ta'mirlash", 'Reklama', 'Boshqa',
+]
+
 const C = DEFAULT_CATEGORIES
 const id = () => randomUUID()
 
@@ -78,5 +83,20 @@ export function seedData() {
       }
     }
   }
-  return { products, movements, categories: [...C], receiptNo }
+  const expenses = []
+  const E = DEFAULT_EXPENSE_CATEGORIES
+  const exp = (date, category, amount, note, payment = 'naqd') =>
+    date <= now && expenses.push({ id: id(), date: date.toISOString(), category, amount, note, payment, seller: 'Administrator', createdAt: date.toISOString() })
+  for (let day = 89; day >= 0; day--) {
+    const d = new Date(now)
+    d.setDate(now.getDate() - day)
+    d.setHours(11, 0, 0, 0)
+    if (d.getDate() === 1) exp(d, E[0], 3000000, "Do'kon ijarasi", 'otkazma')
+    if (d.getDate() === 5) { exp(d, E[1], 2500000, 'Sotuvchi Ali'); exp(d, E[1], 2000000, 'Yuk tashuvchi') }
+    if (d.getDate() === 10) exp(d, E[2], 450000 + Math.round(Math.random() * 300) * 1000, 'Svet va gaz', 'karta')
+    if (d.getDate() === 15) exp(d, E[5], 150000, 'Internet', 'karta')
+    if (Math.random() < 0.25) exp(d, E[3], 50000 + Math.round(Math.random() * 15) * 10000, 'Mijozga yetkazib berish')
+    if (Math.random() < 0.08) exp(d, E[6], 30000 + Math.round(Math.random() * 10) * 5000, 'Choy, qog\'oz, tozalash')
+  }
+  return { products, movements, categories: [...C], expenses, receiptNo }
 }

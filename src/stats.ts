@@ -1,4 +1,4 @@
-import type { Movement, Product } from './types'
+import type { Expense, Movement, Product } from './types'
 
 const pad = (n: number) => n.toString().padStart(2, '0')
 
@@ -14,6 +14,11 @@ export const daysAgo = (n: number) => {
   const d = new Date()
   d.setDate(d.getDate() - n)
   return dayKey(d)
+}
+
+export const expenseInRange = (e: Expense, from: string, to: string) => {
+  const k = dayKey(e.date)
+  return (!from || k >= from) && (!to || k <= to)
 }
 
 export const inRange = (m: Movement, from: string, to: string) => {

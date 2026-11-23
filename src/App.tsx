@@ -10,6 +10,7 @@ import TuneIcon from '@mui/icons-material/FactCheckOutlined'
 import ChartIcon from '@mui/icons-material/BarChartOutlined'
 import HistoryIcon from '@mui/icons-material/ReceiptLongOutlined'
 import SettingsIcon from '@mui/icons-material/SettingsOutlined'
+import ExpenseIcon from '@mui/icons-material/MoneyOffOutlined'
 import ScanIcon from '@mui/icons-material/QrCodeScanner'
 import { useWarehouse } from './store'
 import type { MovementType, Product } from './types'
@@ -24,6 +25,8 @@ import Receive from './components/Receive'
 import Products from './components/Products'
 import Movements from './components/Movements'
 import Reports from './components/Reports'
+import Expenses from './components/Expenses'
+import ExpenseDialog from './components/ExpenseDialog'
 import Settings from './components/Settings'
 import MovementDialog from './components/MovementDialog'
 import ProductDialog from './components/ProductDialog'
@@ -49,6 +52,7 @@ const NAV: NavGroup[] = [
   {
     title: 'MOLIYA', items: [
       { key: 'reports', label: 'Hisobotlar', icon: <ChartIcon fontSize="small" /> },
+      { key: 'expenses', label: 'Xarajatlar', icon: <ExpenseIcon fontSize="small" /> },
       { key: 'history', label: 'Barcha harakatlar', icon: <HistoryIcon fontSize="small" /> },
     ],
   },
@@ -71,6 +75,7 @@ export default function App() {
   const [scan, setScan] = useState<{ code: string; product?: Product } | null>(null)
   const [newProduct, setNewProduct] = useState<{ barcode: string; forReceive?: boolean } | null>(null)
   const [camera, setCamera] = useState(false)
+  const [expenseOpen, setExpenseOpen] = useState(false)
   const [toast, setToast] = useState('')
 
   const setPage = (p: string) => { location.hash = p; setPageState(p); window.scrollTo(0, 0) }
@@ -110,7 +115,7 @@ export default function App() {
     setScan({ code, product })
   }, [wh, page, cart, receiving])
 
-  const modalOpen = !!(mv || scan || newProduct || camera)
+  const modalOpen = !!(mv || scan || newProduct || camera || expenseOpen)
   useHardwareScanner(handleCode, !modalOpen)
 
   if (wh.loading) {
@@ -126,7 +131,7 @@ export default function App() {
       <CssBaseline />
       <Layout groups={NAV} active={page} onNavigate={setPage} mode={mode} onToggleMode={toggleMode}
         online={wh.online} seller={seller} cartCount={cart.items.length}>
-        {page === 'home' && <Dashboard wh={wh} onMovement={(t, id) => setMv({ type: t, productId: id })} navigate={setPage} />}
+        {page === 'home' && <Dashboard wh={wh} onMovement={(t, id) => setMv({ type: t, productId: id })} navigate={setPage} onExpense={() => setExpenseOpen(true)} />}
         {page === 'pos' && <Pos wh={wh} cart={cart} onUnknownCode={(code) => setScan({ code })} />}
         {page === 'sales' && (
           <Movements wh={wh} fixedType="out" title="Savdolar" subtitle="Sotilgan tovarlar va cheklar" newLabel="Kassaga o'tish" onNew={() => setPage('pos')} />
@@ -142,6 +147,7 @@ export default function App() {
           <Movements wh={wh} fixedType="adjust" title="Inventarizatsiya" subtitle="Sanoq natijasida qoldiqqa kiritilgan tuzatishlar" newLabel="Qoldiqni tuzatish" onNew={() => setMv({ type: 'adjust' })} />
         )}
         {page === 'reports' && <Reports wh={wh} />}
+        {page === 'expenses' && <Expenses wh={wh} />}
         {page === 'history' && <Movements wh={wh} title="Barcha harakatlar" subtitle="Kirim, chiqim va inventarizatsiya tarixi" />}
         {page === 'settings' && <Settings wh={wh} onSellerChange={setSeller} />}
       </Layout>
@@ -168,6 +174,7 @@ export default function App() {
             else setToast(`Qo'shildi: ${p.name}`)
           }} />
       )}
+      {expenseOpen && <ExpenseDialog wh={wh} onClose={() => setExpenseOpen(false)} />}
       {mv && <MovementDialog wh={wh} initialType={mv.type} initialProductId={mv.productId} onClose={() => setMv(null)} />}
       <Snackbar open={!!toast} autoHideDuration={1800} onClose={() => setToast('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         <Alert severity="success" variant="filled" onClose={() => setToast('')}>{toast}</Alert>

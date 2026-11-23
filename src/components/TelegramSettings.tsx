@@ -8,6 +8,7 @@ interface TgConfig {
   enabled: boolean
   notifySales: boolean
   notifyIncoming: boolean
+  notifyExpenses: boolean
   notifyAdjust: boolean
   notifyUndo: boolean
   notifyLowStock: boolean
@@ -21,6 +22,7 @@ interface TgConfig {
 const TOGGLES: [keyof TgConfig, string][] = [
   ['notifySales', 'Har bir savdo (chek)'],
   ['notifyIncoming', 'Kirimlar'],
+  ['notifyExpenses', 'Xarajatlar'],
   ['notifyAdjust', 'Inventarizatsiya'],
   ['notifyUndo', 'Bekor qilingan yozuvlar'],
   ['notifyLowStock', 'Tovar kam qolganda ogohlantirish'],

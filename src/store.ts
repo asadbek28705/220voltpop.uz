@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { CartItem, Movement, MovementType, Product, ShopSettings, WarehouseData } from './types'
+import type { CartItem, Expense, Movement, MovementType, Product, ShopSettings, WarehouseData } from './types'
 import { api } from './api'
 
 interface DataResponse extends WarehouseData {
@@ -22,7 +22,7 @@ export interface MovementInput {
 export type ProductInput = Omit<Product, 'id' | 'createdAt' | 'qty'> & { id?: string; qty?: number }
 
 const EMPTY: WarehouseData = {
-  products: [], movements: [], categories: [],
+  products: [], movements: [], categories: [], expenses: [],
   settings: { shopName: '', address: '', phone: '', receiptFooter: '' },
 }
 
@@ -47,7 +47,7 @@ export function useWarehouse() {
           movements = [...d.movements, ...prev.movements.filter((m) => !drop.has(m.id))]
           if (d.movements.length) movements.sort((a, b) => b.date.localeCompare(a.date))
         }
-        return { products: d.products, categories: d.categories, settings: d.settings, movements }
+        return { products: d.products, categories: d.categories, settings: d.settings, expenses: d.expenses ?? [], movements }
       })
       s.version = d.version
       s.epoch = d.epoch
@@ -88,6 +88,9 @@ export function useWarehouse() {
     mutate<{ saleId: string }>('POST', '/sales', b), [mutate])
   const receive = useCallback((b: { items: CartItem[]; counterparty: string; note: string }) =>
     mutate<{ batchId: string }>('POST', '/receive', b), [mutate])
+  const addExpense = useCallback((e: { category: string; amount: number; note: string; payment: string; date?: string }) =>
+    mutate<Expense>('POST', '/expenses', e), [mutate])
+  const deleteExpense = useCallback((id: string) => mutate('DELETE', `/expenses/${id}`), [mutate])
   const saveSettings = useCallback((s: ShopSettings) => mutate('PUT', '/settings', s), [mutate])
   const replaceAll = useCallback((d: WarehouseData) => mutate('POST', '/import', d), [mutate])
   const reset = useCallback(() => mutate('POST', '/reset'), [mutate])
@@ -101,7 +104,7 @@ export function useWarehouse() {
 
   return {
     data, loading, online, refresh, findByCode,
-    saveProduct, deleteProduct, addMovement, deleteMovement, sell, receive, saveSettings, replaceAll, reset, clearAll,
+    saveProduct, deleteProduct, addMovement, deleteMovement, sell, receive, addExpense, deleteExpense, saveSettings, replaceAll, reset, clearAll,
   }
 }
 

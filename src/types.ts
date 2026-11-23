@@ -51,10 +51,27 @@ export interface ShopSettings {
   receiptFooter: string
 }
 
+export interface Expense {
+  id: string
+  date: string // ISO
+  category: string
+  amount: number
+  note: string
+  payment: Payment
+  seller?: string | null
+  createdAt: string
+}
+
+export const EXPENSE_CATEGORIES = [
+  'Ijara', 'Ish haqi', 'Elektr, gaz, suv', 'Transport va yetkazib berish', "Soliq va majburiy to'lovlar",
+  'Internet va aloqa', "Xo'jalik mollari", "Ta'mirlash", 'Reklama', 'Boshqa',
+]
+
 export interface WarehouseData {
   products: Product[]
   movements: Movement[]
   categories: string[]
+  expenses: Expense[]
   settings: ShopSettings
 }
 

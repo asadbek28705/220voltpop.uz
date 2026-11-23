@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { randomUUID } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { DEFAULT_CATEGORIES, seedData } from './seed.js'
+import { DEFAULT_CATEGORIES, DEFAULT_EXPENSE_CATEGORIES, seedData } from './seed.js'
 
 export function openDb(file) {
   mkdirSync(dirname(file), { recursive: true })
@@ -24,6 +24,11 @@ export function openDb(file) {
     CREATE INDEX IF NOT EXISTS movements_sale ON movements(saleId);
     CREATE TABLE IF NOT EXISTS deleted_movements (id TEXT PRIMARY KEY, rev INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS categories (name TEXT PRIMARY KEY);
+    CREATE TABLE IF NOT EXISTS expenses (
+      id TEXT PRIMARY KEY, date TEXT NOT NULL, category TEXT NOT NULL, amount REAL NOT NULL,
+      note TEXT NOT NULL DEFAULT '', payment TEXT NOT NULL DEFAULT 'naqd', seller TEXT, createdAt TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS expenses_date ON expenses(date);
     CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   `)
   // Migratsiya: kirim nakladnoylarini guruhlash uchun
@@ -84,8 +89,9 @@ class Store {
   }
   ensureCategory(name) { if (name) this.db.prepare('INSERT OR IGNORE INTO categories (name) VALUES (?)').run(name) }
 
-  loadData({ products = [], movements = [], categories = [], receiptNo = 0 }) {
-    this.db.exec('DELETE FROM products; DELETE FROM movements; DELETE FROM deleted_movements; DELETE FROM categories;')
+  loadData({ products = [], movements = [], categories = [], expenses = [], receiptNo = 0 }) {
+    this.db.exec('DELETE FROM products; DELETE FROM movements; DELETE FROM deleted_movements; DELETE FROM categories; DELETE FROM expenses;')
+    for (const e of expenses) this.insertExpense({ note: '', payment: 'naqd', seller: null, createdAt: e.date, ...e })
     const v = this.bump()
     for (const c of categories.length ? categories : DEFAULT_CATEGORIES) this.ensureCategory(c)
     for (const p of products) {
@@ -107,7 +113,8 @@ class Store {
       : this.db.prepare('SELECT * FROM movements WHERE rev > ? ORDER BY date DESC').all(since)
     ).map(({ rev: _r, ...m }) => m)
     const deleted = full ? [] : this.db.prepare('SELECT id FROM deleted_movements WHERE rev > ?').all(since).map((r) => r.id)
-    return { full, epoch: this.epoch, version: this.version, products, categories, movements, deleted, settings: this.settings() }
+    const expenses = this.db.prepare('SELECT * FROM expenses ORDER BY date DESC').all().map((r) => ({ ...r }))
+    return { full, epoch: this.epoch, version: this.version, products, categories, movements, deleted, expenses, settings: this.settings() }
   }
 
   settings() { return JSON.parse(this.getMeta('settings') ?? '{}') }
@@ -254,6 +261,44 @@ class Store {
     })
   }
 
+  // ---------- xarajatlar ----------
+  insertExpense(e) {
+    const cols = ['id', 'date', 'category', 'amount', 'note', 'payment', 'seller', 'createdAt']
+    this.db.prepare(`INSERT INTO expenses (${cols}) VALUES (${cols.map(() => '?')})`).run(...cols.map((c) => e[c] ?? null))
+  }
+
+  addExpense(b, seller) {
+    return this.tx(() => {
+      const amount = num(b.amount)
+      if (!(amount > 0)) throw new HttpError("Summa 0 dan katta bo'lishi kerak")
+      const category = str(b.category)
+      if (!category) throw new HttpError('Xarajat turini tanlang')
+      let date = new Date()
+      if (b.date) {
+        const d = new Date(b.date)
+        if (isNaN(d)) throw new HttpError("Sana noto'g'ri")
+        date = d
+      }
+      const e = {
+        id: randomUUID(), date: date.toISOString(), category, amount, note: str(b.note),
+        payment: str(b.payment) || 'naqd', seller, createdAt: new Date().toISOString(),
+      }
+      this.insertExpense(e)
+      this.bump()
+      return e
+    })
+  }
+
+  deleteExpense(id) {
+    return this.tx(() => {
+      const e = this.db.prepare('SELECT * FROM expenses WHERE id = ?').get(id)
+      if (!e) throw new HttpError('Xarajat topilmadi', 404)
+      this.db.prepare('DELETE FROM expenses WHERE id = ?').run(id)
+      this.bump()
+      return { ...e }
+    })
+  }
+
   /** Skaner bilan qabul: bir nechta tovarni bitta nakladnoy bilan omborga kiritish */
   receive(b, seller) {
     return this.tx(() => {
@@ -300,7 +345,7 @@ class Store {
     if (!Array.isArray(d?.products) || !Array.isArray(d?.movements)) throw new HttpError("Fayl noto'g'ri")
     return this.tx(() => {
       const receiptNo = Math.max(0, ...d.movements.map((m) => Number(m.saleId) || 0))
-      this.loadData({ ...d, receiptNo })
+      this.loadData({ ...d, expenses: Array.isArray(d.expenses) ? d.expenses : [], receiptNo })
       if (d.settings) this.setMeta('settings', JSON.stringify(d.settings))
     })
   }

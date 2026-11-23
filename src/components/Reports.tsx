@@ -7,6 +7,8 @@ import CartIcon from '@mui/icons-material/ShoppingCartOutlined'
 import TrendIcon from '@mui/icons-material/TrendingUp'
 import WalletIcon from '@mui/icons-material/AccountBalanceWalletOutlined'
 import InboxIcon from '@mui/icons-material/MoveToInboxOutlined'
+import MoneyOffIcon from '@mui/icons-material/MoneyOffOutlined'
+import BalanceIcon from '@mui/icons-material/AccountBalanceOutlined'
 import DownloadIcon from '@mui/icons-material/FileDownloadOutlined'
 import PrintIcon from '@mui/icons-material/PrintOutlined'
 import {
@@ -15,7 +17,7 @@ import {
 import type { Warehouse } from '../store'
 import { download, fmtMoney, fmtNum, toCsv } from '../utils'
 import { paymentLabel } from '../types'
-import { MONTHS, dayKey, daysAgo, inRange, profitOf, today } from '../stats'
+import { MONTHS, dayKey, daysAgo, expenseInRange, inRange, profitOf, today } from '../stats'
 import { GREEN, YELLOW } from '../theme'
 import PageHeader from './PageHeader'
 import StatCard from './StatCard'
@@ -23,7 +25,7 @@ import ChartCard from './ChartCard'
 import { PIE_COLORS, useChartStyle } from './charts'
 
 export default function Reports({ wh }: { wh: Warehouse }) {
-  const { movements, products } = wh.data
+  const { movements, products, expenses } = wh.data
   const [from, setFrom] = useState(daysAgo(89))
   const [to, setTo] = useState(today())
   const cs = useChartStyle()
@@ -34,9 +36,11 @@ export default function Reports({ wh }: { wh: Warehouse }) {
     const revenue = sales.reduce((s, m) => s + m.qty * m.price, 0)
     const profit = sales.reduce((s, m) => s + profitOf(m, products), 0)
     const purchased = ins.reduce((s, m) => s + m.qty * m.price, 0)
+    const exps = expenses.filter((e) => expenseInRange(e, from, to))
+    const spent = exps.reduce((s, e) => s + e.amount, 0)
 
     // Oylik
-    const monthMap = new Map<string, { name: string; Savdo: number; Foyda: number }>()
+    const monthMap = new Map<string, { name: string; Savdo: number; Foyda: number; Xarajat: number; 'Sof foyda': number }>()
     // Kunlik — oraliqdagi har bir kun
     const dayMap = new Map<string, { name: string; Savdo: number }>()
     if (from && to && from <= to) {
@@ -47,7 +51,7 @@ export default function Reports({ wh }: { wh: Warehouse }) {
         const k = dayKey(d)
         dayMap.set(k, { name: `${k.slice(8)}.${k.slice(5, 7)}`, Savdo: 0 })
         const mk = k.slice(0, 7)
-        if (!monthMap.has(mk)) monthMap.set(mk, { name: `${MONTHS[d.getMonth()]} ${d.getFullYear()}`, Savdo: 0, Foyda: 0 })
+        if (!monthMap.has(mk)) monthMap.set(mk, { name: `${MONTHS[d.getMonth()]} ${d.getFullYear()}`, Savdo: 0, Foyda: 0, Xarajat: 0, 'Sof foyda': 0 })
         d.setDate(d.getDate() + 1)
       }
     }
@@ -69,8 +73,10 @@ export default function Reports({ wh }: { wh: Warehouse }) {
       pr.qty += m.qty; pr.sum += sum; pr.profit += pf
       prodMap.set(m.productId, pr)
     }
+    for (const e of exps) { const mon = monthMap.get(dayKey(e.date).slice(0, 7)); if (mon) mon.Xarajat += e.amount }
+    for (const mon of monthMap.values()) mon['Sof foyda'] = mon.Foyda - mon.Xarajat
     return {
-      revenue, profit, purchased, count: sales.length,
+      revenue, profit, purchased, spent, net: profit - spent, count: sales.length,
       monthly: [...monthMap.values()],
       daily: [...dayMap.values()],
       categories: [...catMap.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
@@ -82,7 +88,7 @@ export default function Reports({ wh }: { wh: Warehouse }) {
   const exportCsv = () => {
     const rows: (string | number)[][] = [
       ['Hisobot', `${from} — ${to}`], [],
-      ['Jami savdo', r.revenue], ['Foyda', r.profit], ['Savdolar soni', r.count], ['Jami kirim', r.purchased], [],
+      ['Jami savdo', r.revenue], ['Savdodan foyda', r.profit], ['Xarajatlar', r.spent], ['Sof foyda', r.net], ['Savdolar soni', r.count], ['Jami kirim', r.purchased], [],
       ['Tovar', 'Sotilgan miqdor', 'Birlik', 'Summa', 'Foyda'],
       ...r.top.map((t) => [t.name, t.qty, t.unit, t.sum, t.profit]),
     ]
@@ -99,10 +105,12 @@ export default function Reports({ wh }: { wh: Warehouse }) {
       </>} />
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<CartIcon />} title="Jami savdo" value={fmtMoney(r.revenue)} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title="Foyda" value={fmtMoney(r.profit)} valueColor={r.profit >= 0 ? 'primary.main' : 'error.main'} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<WalletIcon />} title="Savdolar soni" value={String(r.count)} color="#C9A227" /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<InboxIcon />} title="Jami kirim" value={fmtMoney(r.purchased)} color="#3B82F6" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<CartIcon />} title="Jami savdo" value={fmtMoney(r.revenue)} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<TrendIcon />} title="Savdodan foyda" value={fmtMoney(r.profit)} valueColor={r.profit >= 0 ? 'primary.main' : 'error.main'} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<MoneyOffIcon />} title="Xarajatlar" value={fmtMoney(r.spent)} color="#E5533D" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<BalanceIcon />} title="Sof foyda" value={fmtMoney(r.net)} color={r.net >= 0 ? '#2E9E5B' : '#E5533D'} valueColor={r.net >= 0 ? 'primary.main' : 'error.main'} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<WalletIcon />} title="Savdolar soni" value={String(r.count)} color="#C9A227" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<InboxIcon />} title="Jami kirim (tovar)" value={fmtMoney(r.purchased)} color="#3B82F6" /></Grid>
       </Grid>
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
@@ -117,6 +125,7 @@ export default function Reports({ wh }: { wh: Warehouse }) {
                 <Legend />
                 <Bar dataKey="Savdo" fill={GREEN} radius={[6, 6, 0, 0]} maxBarSize={80} activeBar={{ fill: YELLOW }} />
                 <Bar dataKey="Foyda" fill="#9AD3B0" radius={[6, 6, 0, 0]} maxBarSize={80} activeBar={{ fill: '#FCE38A' }} />
+                <Bar dataKey="Xarajat" fill="#F2A08F" radius={[6, 6, 0, 0]} maxBarSize={80} activeBar={{ fill: '#FCE38A' }} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>

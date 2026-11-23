@@ -3,7 +3,7 @@ import { Box, Button, Card, Chip, List, ListItem, ListItemText, Stack, Typograph
 import Grid from '@mui/material/Grid'
 import AddIcon from '@mui/icons-material/AddCircleOutline'
 import CartIcon from '@mui/icons-material/ShoppingCartOutlined'
-import BoxIcon from '@mui/icons-material/Inventory2Outlined'
+import MoneyOffIcon from '@mui/icons-material/MoneyOffOutlined'
 import WalletIcon from '@mui/icons-material/AccountBalanceWalletOutlined'
 import TrendIcon from '@mui/icons-material/TrendingUp'
 import WarningIcon from '@mui/icons-material/WarningAmberRounded'
@@ -18,9 +18,9 @@ import StatCard from './StatCard'
 import ChartCard from './ChartCard'
 import { useChartStyle } from './charts'
 
-interface Props { wh: Warehouse; onMovement: (t: MovementType, id?: string) => void; navigate: (page: string) => void }
+interface Props { wh: Warehouse; onMovement: (t: MovementType, id?: string) => void; navigate: (page: string) => void; onExpense: () => void }
 
-export default function Dashboard({ wh, onMovement, navigate }: Props) {
+export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props) {
   const { products, movements } = wh.data
   const cs = useChartStyle()
   const costValue = products.reduce((s, p) => s + p.qty * p.buyPrice, 0)
@@ -30,6 +30,7 @@ export default function Dashboard({ wh, onMovement, navigate }: Props) {
   const todaySales = movements.filter((m) => m.type === 'out' && dayKey(m.date) === t)
   const todayRevenue = todaySales.reduce((s, m) => s + m.qty * m.price, 0)
   const todayProfit = todaySales.reduce((s, m) => s + profitOf(m, products), 0)
+  const todayExpenses = wh.data.expenses.filter((e) => dayKey(e.date) === t).reduce((s, e) => s + e.amount, 0)
 
   const last14 = useMemo(() => {
     const rows = Array.from({ length: 14 }, (_, i) => {
@@ -44,15 +45,16 @@ export default function Dashboard({ wh, onMovement, navigate }: Props) {
   return (
     <>
       <PageHeader title="Bosh sahifa" subtitle="Bugungi holat" actions={<>
+        <Button variant="outlined" startIcon={<MoneyOffIcon />} onClick={onExpense}>Xarajat</Button>
         <Button variant="outlined" startIcon={<AddIcon />} onClick={() => onMovement('in')}>Kirim</Button>
         <Button variant="contained" startIcon={<CartIcon />} onClick={() => onMovement('out')}>Yangi savdo</Button>
       </>} />
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<CartIcon />} title="Bugungi savdo" value={fmtMoney(todayRevenue)} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title="Bugungi foyda" value={fmtMoney(todayProfit)} valueColor="primary.main" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title="Bugungi sof foyda" value={fmtMoney(todayProfit - todayExpenses)} valueColor={todayProfit - todayExpenses >= 0 ? 'primary.main' : 'error.main'} /></Grid>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<WalletIcon />} title="Ombor qiymati (tannarx)" value={fmtMoney(costValue)} color="#3B82F6" /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<BoxIcon />} title="Tovar turlari" value={String(products.length)} color="#C9A227" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<MoneyOffIcon />} title="Bugungi xarajat" value={fmtMoney(todayExpenses)} color="#E5533D" /></Grid>
       </Grid>
 
       <Grid container spacing={2}>

@@ -14,7 +14,7 @@ const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 
 
 export const DEFAULT_TG = {
   token: '', chatId: '', enabled: false,
-  notifySales: true, notifyIncoming: true, notifyAdjust: true, notifyUndo: true, notifyLowStock: true,
+  notifySales: true, notifyIncoming: true, notifyExpenses: true, notifyAdjust: true, notifyUndo: true, notifyLowStock: true,
   dailyEnabled: true, dailyTime: '20:00', lastDaily: '',
 }
 
@@ -41,7 +41,7 @@ export class Telegram {
     const patch = {}
     if (typeof b.token === 'string' && b.token.trim()) patch.token = b.token.trim()
     if (b.chatId != null) patch.chatId = String(b.chatId).trim()
-    for (const k of ['enabled', 'notifySales', 'notifyIncoming', 'notifyAdjust', 'notifyUndo', 'notifyLowStock', 'dailyEnabled']) {
+    for (const k of ['enabled', 'notifySales', 'notifyIncoming', 'notifyExpenses', 'notifyAdjust', 'notifyUndo', 'notifyLowStock', 'dailyEnabled']) {
       if (k in b) patch[k] = !!b[k]
     }
     if (typeof b.dailyTime === 'string' && /^\d{2}:\d{2}$/.test(b.dailyTime)) patch.dailyTime = b.dailyTime
@@ -149,6 +149,21 @@ export class Telegram {
     this.fire(t)
   }
 
+  onExpense(e) {
+    if (!this.ready || !this.cfg.notifyExpenses || !e) return
+    let t = `💸 <b>Xarajat: ${esc(e.category)}</b>\n💰 <b>${money(e.amount)}</b> · ${PAYMENT[e.payment] ?? esc(e.payment)}`
+    if (e.note) t += `\n📝 ${esc(e.note)}`
+    if (e.seller) t += `\n🧑‍💼 ${esc(e.seller)}`
+    const d = new Date(e.date)
+    t += `\n🕒 ${dayKey(d) === dayKey(new Date()) ? hm(e.date) : dmy(d)}`
+    this.fire(t)
+  }
+
+  onExpenseUndo(e, who) {
+    if (!this.ready || !this.cfg.notifyUndo || !e) return
+    this.fire(`↩️ <b>Xarajat bekor qilindi</b>\n${esc(e.category)} — ${money(e.amount)}${e.note ? '\n📝 ' + esc(e.note) : ''}${who ? '\n🧑‍💼 ' + esc(who) : ''}`)
+  }
+
   onUndo(m, who) {
     if (!this.ready || !this.cfg.notifyUndo || !m) return
     const kind = m.type === 'out' ? `savdo (chek №${esc(m.saleId)})` : m.type === 'in' ? 'kirim' : 'inventarizatsiya'
@@ -179,6 +194,10 @@ export class Telegram {
     const profit = sales.reduce((s, m) => s + m.qty * (m.price - (m.cost ?? byId.get(m.productId)?.buyPrice ?? 0)), 0)
     const receipts = new Set(sales.map((m) => m.saleId)).size
     const purchased = ins.reduce((s, m) => s + m.qty * m.price, 0)
+    const expenses = db.prepare('SELECT * FROM expenses WHERE date >= ? AND date < ?').all(from.toISOString(), to.toISOString())
+    const spent = expenses.reduce((s, e) => s + e.amount, 0)
+    const byCat = new Map()
+    for (const e of expenses) byCat.set(e.category, (byCat.get(e.category) ?? 0) + e.amount)
 
     const pay = new Map()
     for (const m of sales) pay.set(m.payment, (pay.get(m.payment) ?? 0) + m.qty * m.price)
@@ -195,7 +214,9 @@ export class Telegram {
 
     let t = `📊 <b>${esc(title)}</b>\n\n`
     t += `💰 Savdo: <b>${money(revenue)}</b>\n`
-    t += `📈 Foyda: <b>${money(profit)}</b>\n`
+    t += `📈 Savdodan foyda: <b>${money(profit)}</b>\n`
+    t += `💸 Xarajatlar: <b>${money(spent)}</b>\n`
+    t += `${profit - spent >= 0 ? '✅' : '🔻'} Sof foyda: <b>${money(profit - spent)}</b>\n`
     t += `🧾 Cheklar soni: ${receipts}\n`
     t += `📥 Kirim: ${money(purchased)}\n`
     if (pay.size) {
@@ -212,6 +233,9 @@ export class Telegram {
       t += `\n📥 <b>Kirimlar</b>\n` + ins.slice(0, 10).map((m) => `• ${esc(m.productName)} — ${qtyFmt(m.qty)}, ${money(m.qty * m.price)}`).join('\n')
       if (ins.length > 10) t += `\n… yana ${ins.length - 10} ta`
       t += '\n'
+    }
+    if (byCat.size) {
+      t += `\n💸 <b>Xarajatlar</b>\n` + [...byCat].sort((a, b) => b[1] - a[1]).map(([k, v]) => `• ${esc(k)}: ${money(v)}`).join('\n') + '\n'
     }
     t += `\n🏬 Ombor qiymati (tannarx): ${money(stockValue)}`
     if (low.length) {

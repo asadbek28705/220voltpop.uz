@@ -97,6 +97,16 @@ app.post('/api/receive', write((req) => {
   tg.onReceive(r.batchId)
   return r
 }))
+app.post('/api/expenses', write((req) => {
+  const e = store.addExpense(req.body, seller(req))
+  tg.onExpense(e)
+  return e
+}))
+app.delete('/api/expenses/:id', write((req) => {
+  const e = store.deleteExpense(req.params.id)
+  tg.onExpenseUndo(e, seller(req))
+  return { ok: true }
+}))
 app.put('/api/settings', write((req) => store.saveSettings(req.body)))
 app.post('/api/import', write((req) => store.importAll(req.body)))
 app.post('/api/reset', write(() => store.reset()))
