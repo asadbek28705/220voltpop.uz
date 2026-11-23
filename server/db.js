@@ -261,6 +261,7 @@ class Store {
       const v = this.bump()
       this.db.prepare('DELETE FROM movements WHERE id = ?').run(id)
       this.db.prepare('INSERT OR REPLACE INTO deleted_movements (id, rev) VALUES (?, ?)').run(id, v)
+      return { ...m }
     })
   }
 

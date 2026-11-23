@@ -6,6 +6,7 @@ import { download } from '../utils'
 import { attempt } from '../api'
 import { getSeller, setSeller } from '../device'
 import PageHeader from './PageHeader'
+import TelegramSettings from './TelegramSettings'
 
 export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSellerChange: (name: string) => void }) {
   const fileRef = useRef<HTMLInputElement>(null)
@@ -62,6 +63,8 @@ export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSell
           <Button variant="contained" sx={{ alignSelf: 'flex-start' }} onClick={() => run(() => wh.saveSettings(shop), 'Chek ma\'lumotlari saqlandi')}>Saqlash</Button>
         </Stack>
       </Paper>
+
+      <TelegramSettings />
 
       <Paper variant="outlined" sx={{ p: 2.5 }}>
         <Typography variant="h6" gutterBottom>Zaxira nusxa</Typography>

@@ -38,6 +38,14 @@ Kassa sahifasi telefonga moslangan (telefonda dastur shu sahifadan ochiladi). Sk
 Sotuvdan keyin chek chiqadi (58/80 mm termoprinter yoki oddiy printer). Eski cheklar: Savdolar → chek raqami.
 Do'kon nomi, manzil, telefon — Sozlamalar → Chek ma'lumotlari. Har bir ishchi o'z telefonida ismini Sozlamalarda yozadi.
 
+## Telegram bot
+
+Sozlamalar → Telegram bot: token va guruh ID. Token faqat serverda saqlanadi (`data/ombor.db`), telefonlarga ko'rsatilmaydi.
+
+- Darhol xabarlar: savdo (chek), kirim, inventarizatsiya, bekor qilish, kam qolgan tovar
+- Har kuni belgilangan vaqtda umumiy hisobot (standart 20:00)
+- Guruhdagi buyruqlar: `/hisobot`, `/kecha`, `/oy`, `/kam`, `/qoldiq sement`, `/yordam`
+
 ## Ma'lumotlar
 
 SQLite bazasi: `data/ombor.db`. Sozlamalar → "Zaxira yuklab olish" bilan muntazam zaxira oling.

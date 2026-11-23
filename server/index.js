@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { HttpError, openDb } from './db.js'
 import { ensureCert } from './cert.js'
+import { Telegram } from './telegram.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HTTP_PORT = Number(process.env.PORT ?? 8080)
@@ -15,6 +16,10 @@ const HTTPS_PORT = Number(process.env.HTTPS_PORT ?? 8443)
 const DEV = process.argv.includes('--dev')
 
 const store = openDb(join(ROOT, 'data', 'ombor.db'))
+const tg = new Telegram(store)
+tg.startPolling()
+tg.startScheduler()
+
 const app = express()
 app.use(express.json({ limit: '50mb' }))
 
@@ -54,17 +59,48 @@ const write = (fn) => (req, res) => {
 app.get('/api/data', (req, res) => {
   res.json(store.data(Number(req.query.since ?? 0), String(req.query.epoch ?? '')))
 })
-app.post('/api/products', write((req) => store.createProduct(req.body, seller(req))))
+app.post('/api/products', write((req) => {
+  const p = store.createProduct(req.body, seller(req))
+  if (p.qty > 0) tg.onMovement(store.db.prepare("SELECT * FROM movements WHERE productId = ? AND type = 'in'").get(p.id))
+  return p
+}))
 app.put('/api/products/:id', write((req) => store.updateProduct(req.params.id, req.body)))
 app.delete('/api/products/:id', write((req) => store.deleteProduct(req.params.id)))
 app.post('/api/categories', write((req) => store.addCategory(req.body.name)))
-app.post('/api/movements', write((req) => store.addMovement(req.body, seller(req))))
-app.delete('/api/movements/:id', write((req) => store.deleteMovement(req.params.id)))
-app.post('/api/sales', write((req) => store.sell(req.body, seller(req))))
+app.post('/api/movements', write((req) => {
+  const r = store.addMovement(req.body, seller(req))
+  tg.onMovement(r.movement)
+  return r
+}))
+app.delete('/api/movements/:id', write((req) => {
+  const m = store.deleteMovement(req.params.id)
+  tg.onUndo(m, seller(req))
+  return { ok: true }
+}))
+app.post('/api/sales', write((req) => {
+  const r = store.sell(req.body, seller(req))
+  tg.onSale(r.saleId)
+  return r
+}))
 app.put('/api/settings', write((req) => store.saveSettings(req.body)))
 app.post('/api/import', write((req) => store.importAll(req.body)))
 app.post('/api/reset', write(() => store.reset()))
 app.post('/api/clear', write(() => store.clear()))
+
+// ---- Telegram ----
+app.get('/api/telegram', (_req, res) => res.json(tg.publicCfg()))
+app.put('/api/telegram', write((req) => tg.update(req.body)))
+const tgAction = (fn) => async (req, res) => {
+  try {
+    if (!tg.cfg.token || !tg.cfg.chatId) return res.status(400).json({ error: 'Token va guruh ID sini kiriting' })
+    await fn(req)
+    res.json({ ok: true })
+  } catch (e) {
+    res.status(400).json({ error: 'Telegram: ' + e.message })
+  }
+}
+app.post('/api/telegram/test', tgAction(() => tg.send("✅ <b>Ombor dasturi ulandi.</b>\nSavdo, kirim va kunlik hisobotlar shu guruhga yuboriladi. Buyruqlar: /yordam")))
+app.post('/api/telegram/report', tgAction(() => tg.send(tg.dayReport(new Date()))))
 
 // ---- Frontend (npm run build dan keyin) ----
 const dist = join(ROOT, 'dist')
