@@ -9,7 +9,7 @@ import LightIcon from '@mui/icons-material/LightModeOutlined'
 import WarehouseIcon from '@mui/icons-material/WarehouseOutlined'
 import { GREEN, YELLOW } from '../theme'
 
-export interface NavItem { key: string; label: string; icon: ReactNode }
+export interface NavItem { key: string; label: string; icon: ReactNode; admin?: boolean }
 export interface NavGroup { title?: string; items: NavItem[] }
 
 const WIDTH = 248
@@ -22,11 +22,12 @@ interface Props {
   onToggleMode: () => void
   online: boolean
   seller: string
+  role: 'admin' | 'seller' | 'demo'
   cartCount: number
   children: ReactNode
 }
 
-export default function Layout({ groups, active, onNavigate, mode, onToggleMode, online, seller, cartCount, children }: Props) {
+export default function Layout({ groups, active, onNavigate, mode, onToggleMode, online, seller, role, cartCount, children }: Props) {
   const theme = useTheme()
   const desktop = useMediaQuery(theme.breakpoints.up('md'))
   const [open, setOpen] = useState(false)
@@ -88,7 +89,7 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
             </Avatar>
             <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
               <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{seller || 'Ism kiritilmagan'}</Typography>
-              <Typography variant="caption" color="text.secondary">sotuvchi</Typography>
+              <Typography variant="caption" color="text.secondary">{role === 'admin' ? 'egasi' : role === 'demo' ? 'demo' : 'sotuvchi'}</Typography>
             </Box>
           </Stack>
         </Stack>

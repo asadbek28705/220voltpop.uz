@@ -8,6 +8,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import PrintIcon from '@mui/icons-material/PrintOutlined'
 import AutoIcon from '@mui/icons-material/AutoFixHighOutlined'
 import type { Warehouse } from '../store'
+import { useIsAdmin } from '../auth'
 import type { Product } from '../types'
 import { attempt } from '../api'
 import { fmtMoney, fmtNum } from '../utils'
@@ -63,6 +64,7 @@ export default function Labels({ wh }: { wh: Warehouse }) {
   const [showShop, setShowShop] = useState(false)
   const [printing, setPrinting] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const admin = useIsAdmin()
   const format = LABEL_FORMATS.find((f) => f.key === formatKey) ?? LABEL_FORMATS[0]
 
   const list = useMemo(() => {
@@ -108,7 +110,7 @@ export default function Labels({ wh }: { wh: Warehouse }) {
     <>
       <PageHeader title="Shtrix-kod etiketkalari" subtitle="Shtrix-kodi yo'q tovarlarga kod yaratib, etiketka chop eting" />
 
-      {missingTotal > 0 && (
+      {missingTotal > 0 && admin && (
         <Alert severity="warning" sx={{ mb: 2 }} action={<Button color="inherit" startIcon={<AutoIcon />} onClick={() => generate()}>Hammasiga yaratish</Button>}>
           {missingTotal} ta tovarda shtrix-kod yo'q.
         </Alert>
@@ -142,9 +144,9 @@ export default function Labels({ wh }: { wh: Warehouse }) {
                       <TableCell padding="checkbox"><Checkbox checked={n > 0} onChange={(e) => toggle(p, e.target.checked)} /></TableCell>
                       <TableCell sx={{ fontWeight: 500 }}>{p.name}</TableCell>
                       <TableCell>
-                        {p.barcode ? <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{p.barcode}</Typography> : (
+                        {p.barcode ? <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{p.barcode}</Typography> : admin ? (
                           <Button size="small" startIcon={<AutoIcon />} onClick={() => generate([p.id])}>Yaratish</Button>
-                        )}
+                        ) : <Typography variant="body2" color="text.secondary">yo'q</Typography>}
                       </TableCell>
                       <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{fmtMoney(p.sellPrice)}</TableCell>
                       <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{fmtNum(p.qty)} {p.unit}</TableCell>
@@ -179,7 +181,7 @@ export default function Labels({ wh }: { wh: Warehouse }) {
             </Box>
 
             {missing.length > 0 && (
-              <Alert severity="warning" action={<Button color="inherit" size="small" onClick={() => generate(missing.map((p) => p.id))}>Yaratish</Button>}>
+              <Alert severity="warning" action={admin ? <Button color="inherit" size="small" onClick={() => generate(missing.map((p) => p.id))}>Yaratish</Button> : undefined}>
                 {missing.length} ta tanlangan tovarda kod yo'q — ular chop etilmaydi.
               </Alert>
             )}

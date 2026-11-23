@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Alert, Button, Paper, Stack, TextField, Typography } from '@mui/material'
+import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material'
 import type { Warehouse } from '../store'
 import type { ShopSettings, WarehouseData } from '../types'
 import { download } from '../utils'
@@ -7,12 +7,26 @@ import { attempt } from '../api'
 import { getSeller, setSeller } from '../device'
 import PageHeader from './PageHeader'
 import TelegramSettings from './TelegramSettings'
+import Users from './Users'
+import { useMe } from '../auth'
+import { api } from '../api'
+import LogoutIcon from '@mui/icons-material/Logout'
 
 export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSellerChange: (name: string) => void }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [shop, setShop] = useState<ShopSettings>(wh.data.settings)
   const [seller, setSellerName] = useState(getSeller())
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const me = useMe()
+  const admin = me.user?.role === 'admin'
+  const [pw, setPw] = useState({ old: '', next: '', next2: '' })
+  const changePassword = async () => {
+    if (pw.next !== pw.next2) return setMsg({ ok: false, text: 'Yangi parollar bir xil emas' })
+    const r = await attempt(() => api('POST', '/password', { oldPassword: pw.old, newPassword: pw.next }))
+    setMsg(r.ok ? { ok: true, text: "Parol o'zgartirildi" } : { ok: false, text: r.error })
+    if (r.ok) setPw({ old: '', next: '', next2: '' })
+  }
+  const logout = async () => { await attempt(() => api('POST', '/logout')); location.reload() }
   useEffect(() => setShop(wh.data.settings), [wh.data.settings])
 
   const run = async (fn: () => Promise<unknown>, okText: string) => {
@@ -39,19 +53,41 @@ export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSell
 
   return (
     <Stack spacing={2} sx={{ maxWidth: 760 }}>
-      <PageHeader title="Sozlamalar" subtitle="Chek, sotuvchi va ma'lumotlar" />
+      <PageHeader title="Sozlamalar" subtitle={admin ? "Hisob, xodimlar, chek, Telegram va ma'lumotlar" : 'Hisobingiz'} />
       {msg && <Alert severity={msg.ok ? 'success' : 'error'} onClose={() => setMsg(null)}>{msg.text}</Alert>}
 
-      <Paper variant="outlined" sx={{ p: 2.5 }}>
-        <Typography variant="h6" gutterBottom>Shu qurilmadagi sotuvchi</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Har bir ishchi o'z telefonida ismini yozadi — chekda va savdolar tarixida ko'rinadi.
-        </Typography>
-        <Stack direction="row" spacing={2}>
-          <TextField size="small" label="Ism" value={seller} onChange={(e) => setSellerName(e.target.value)} fullWidth />
-          <Button variant="contained" onClick={() => { setSeller(seller); onSellerChange(seller.trim()); setMsg({ ok: true, text: 'Saqlandi' }) }}>Saqlash</Button>
-        </Stack>
-      </Paper>
+      {me.demo ? (
+        <Paper variant="outlined" sx={{ p: 2.5 }}>
+          <Typography variant="h6" gutterBottom>Shu qurilmadagi sotuvchi</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Demo nusxa: ism chekda va savdolar tarixida ko'rinadi.</Typography>
+          <Stack direction="row" spacing={2}>
+            <TextField size="small" label="Ism" value={seller} onChange={(e) => setSellerName(e.target.value)} fullWidth />
+            <Button variant="contained" onClick={() => { setSeller(seller); onSellerChange(seller.trim()); setMsg({ ok: true, text: 'Saqlandi' }) }}>Saqlash</Button>
+          </Stack>
+        </Paper>
+      ) : (
+        <Paper variant="outlined" sx={{ p: 2.5 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+            <Box>
+              <Typography variant="h6">{me.user?.name}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Login: {me.user?.login} · {admin ? 'Egasi (admin)' : 'Sotuvchi'}
+              </Typography>
+            </Box>
+            <Button variant="outlined" startIcon={<LogoutIcon />} onClick={logout}>Chiqish</Button>
+          </Stack>
+          <Typography sx={{ fontWeight: 600, mb: 1 }}>Parolni almashtirish</Typography>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+            <TextField size="small" type="password" label="Eski parol" value={pw.old} onChange={(e) => setPw({ ...pw, old: e.target.value })} autoComplete="current-password" />
+            <TextField size="small" type="password" label="Yangi parol" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} autoComplete="new-password" />
+            <TextField size="small" type="password" label="Takrorlang" value={pw.next2} onChange={(e) => setPw({ ...pw, next2: e.target.value })} autoComplete="new-password" />
+            <Button variant="contained" onClick={changePassword} disabled={!pw.old || pw.next.length < 6}>Saqlash</Button>
+          </Stack>
+        </Paper>
+      )}
+
+      {!admin ? null : <>
+      <Users />
 
       <Paper variant="outlined" sx={{ p: 2.5 }}>
         <Typography variant="h6" gutterBottom>Chek ma'lumotlari</Typography>
@@ -69,7 +105,7 @@ export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSell
       <Paper variant="outlined" sx={{ p: 2.5 }}>
         <Typography variant="h6" gutterBottom>Zaxira nusxa</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Ma'lumotlar do'kon kompyuteridagi bazada saqlanadi (ombor/data/ombor.db). Haftada bir marta zaxira oling.
+          Ma'lumotlar server bazasida saqlanadi (data/ombor.db). Haftada bir marta zaxira oling.
         </Typography>
         <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
           <Button variant="contained" onClick={backup}>Zaxira yuklab olish</Button>
@@ -92,6 +128,7 @@ export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSell
           </Button>
         </Stack>
       </Paper>
+      </>}
     </Stack>
   )
 }

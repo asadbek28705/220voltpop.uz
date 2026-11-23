@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "start": "npm run build && node --disable-warning=ExperimentalWarning server/index.js",
     "server": "node --disable-warning=ExperimentalWarning server/index.js",
-    "demo": "DEMO=1 PORT=8090 node --disable-warning=ExperimentalWarning server/index.js"
+    "demo": "DEMO=1 PORT=8090 node --disable-warning=ExperimentalWarning server/index.js",
+    "user": "node --disable-warning=ExperimentalWarning server/users.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

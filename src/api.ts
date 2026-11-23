@@ -14,6 +14,8 @@ export async function api<T = unknown>(method: string, path: string, body?: unkn
     throw new ApiError("Server bilan aloqa yo'q. Wi-Fi ni tekshiring.")
   }
   const data = await res.json().catch(() => ({}))
+  // Sessiya tugagan — login sahifasiga qaytarish
+  if (res.status === 401 && path !== '/login') window.dispatchEvent(new Event('ombor-unauthorized'))
   if (!res.ok) throw new ApiError(data.error ?? `Xato: ${res.status}`)
   return data as T
 }

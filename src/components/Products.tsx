@@ -12,6 +12,7 @@ import OutIcon from '@mui/icons-material/RemoveCircleOutline'
 import TuneIcon from '@mui/icons-material/Tune'
 import DownloadIcon from '@mui/icons-material/FileDownloadOutlined'
 import type { Warehouse } from '../store'
+import { useIsAdmin } from '../auth'
 import type { MovementType, Product } from '../types'
 import { download, fmtMoney, fmtNum, toCsv } from '../utils'
 import ProductDialog from './ProductDialog'
@@ -25,6 +26,7 @@ export default function Products({ wh, onMovement }: Props) {
   const [cat, setCat] = useState('')
   const [lowOnly, setLowOnly] = useState(false)
   const [editing, setEditing] = useState<Product | 'new' | null>(null)
+  const admin = useIsAdmin()
 
   const list = useMemo(() => {
     const s = q.trim().toLowerCase()
@@ -48,8 +50,8 @@ export default function Products({ wh, onMovement }: Props) {
   return (
     <Stack spacing={2}>
       <PageHeader title="Tovarlar" subtitle="Ombordagi barcha tovarlar va qoldiqlar" actions={<>
-        <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>Excel</Button>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setEditing('new')}>Yangi tovar</Button>
+        {admin && <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>Excel</Button>}
+        {admin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => setEditing('new')}>Yangi tovar</Button>}
       </>} />
       <Paper variant="outlined">
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} sx={{ p: 2 }}>
@@ -69,9 +71,9 @@ export default function Products({ wh, onMovement }: Props) {
               <TableCell>Artikul</TableCell>
               <TableCell>Kategoriya</TableCell>
               <TableCell align="right">Qoldiq</TableCell>
-              <TableCell align="right">Kelish narxi</TableCell>
+              {admin && <TableCell align="right">Kelish narxi</TableCell>}
               <TableCell align="right">Sotuv narxi</TableCell>
-              <TableCell align="right">Jami (tannarx)</TableCell>
+              {admin && <TableCell align="right">Jami (tannarx)</TableCell>}
               <TableCell>Joyi</TableCell>
               <TableCell align="center">Amallar</TableCell>
             </TableRow>
@@ -85,16 +87,18 @@ export default function Products({ wh, onMovement }: Props) {
                   <TableCell>{p.sku}{p.barcode && <Typography variant="caption" display="block" color="text.secondary">{p.barcode}</Typography>}</TableCell>
                   <TableCell><Typography variant="body2" color="text.secondary">{p.category}</Typography></TableCell>
                   <TableCell align="right"><Chip size="small" variant="outlined" color={status} label={`${fmtNum(p.qty)} ${p.unit}`} /></TableCell>
-                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{fmtMoney(p.buyPrice)}</TableCell>
+                  {admin && <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{fmtMoney(p.buyPrice)}</TableCell>}
                   <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{fmtMoney(p.sellPrice)}</TableCell>
-                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{fmtMoney(p.qty * p.buyPrice)}</TableCell>
+                  {admin && <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{fmtMoney(p.qty * p.buyPrice)}</TableCell>}
                   <TableCell>{p.location}</TableCell>
                   <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
                     <Tooltip title="Kirim"><IconButton size="small" color="success" onClick={() => onMovement('in', p.id)}><InIcon /></IconButton></Tooltip>
                     <Tooltip title="Chiqim / Sotuv"><IconButton size="small" color="primary" onClick={() => onMovement('out', p.id)}><OutIcon /></IconButton></Tooltip>
-                    <Tooltip title="Inventarizatsiya (qoldiqni tuzatish)"><IconButton size="small" onClick={() => onMovement('adjust', p.id)}><TuneIcon /></IconButton></Tooltip>
-                    <Tooltip title="Tahrirlash"><IconButton size="small" onClick={() => setEditing(p)}><EditIcon /></IconButton></Tooltip>
-                    <Tooltip title="O'chirish"><IconButton size="small" color="error" onClick={() => remove(p)}><DeleteIcon /></IconButton></Tooltip>
+                    {admin && <>
+                      <Tooltip title="Inventarizatsiya (qoldiqni tuzatish)"><IconButton size="small" onClick={() => onMovement('adjust', p.id)}><TuneIcon /></IconButton></Tooltip>
+                      <Tooltip title="Tahrirlash"><IconButton size="small" onClick={() => setEditing(p)}><EditIcon /></IconButton></Tooltip>
+                      <Tooltip title="O'chirish"><IconButton size="small" color="error" onClick={() => remove(p)}><DeleteIcon /></IconButton></Tooltip>
+                    </>}
                   </TableCell>
                 </TableRow>
               )
@@ -107,7 +111,7 @@ export default function Products({ wh, onMovement }: Props) {
       </TableContainer>
       </Paper>
       <Typography variant="body2" color="text.secondary">
-        Ko'rsatilgan: {list.length} ta · Jami tannarx: {fmtMoney(list.reduce((s, p) => s + p.qty * p.buyPrice, 0))}
+        Ko'rsatilgan: {list.length} ta{admin && <> · Jami tannarx: {fmtMoney(list.reduce((s, p) => s + p.qty * p.buyPrice, 0))}</>}
       </Typography>
 
       {editing && <ProductDialog wh={wh} product={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} />}

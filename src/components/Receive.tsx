@@ -10,6 +10,7 @@ import AddIcon from '@mui/icons-material/Add'
 import RemoveIcon from '@mui/icons-material/Remove'
 import InboxIcon from '@mui/icons-material/MoveToInboxOutlined'
 import type { Warehouse } from '../store'
+import { useIsAdmin } from '../auth'
 import type { Cart } from '../hooks/useCart'
 import type { Product } from '../types'
 import { attempt } from '../api'
@@ -25,6 +26,7 @@ const num = (s: string) => Number(s.replace(/\s/g, '').replace(',', '.'))
 /** Kelgan tovarlarni ketma-ket skaner qilib, bitta nakladnoy bilan omborga kiritish */
 export default function Receive({ wh, list, onUnknownCode, onDone }: Props) {
   const mobile = useMediaQuery(useTheme().breakpoints.down('md'))
+  const admin = useIsAdmin()
   const { products } = wh.data
   const [input, setInput] = useState('')
   const [camera, setCamera] = useState(false)
@@ -92,7 +94,7 @@ export default function Receive({ wh, list, onUnknownCode, onDone }: Props) {
                       <Typography>{p.name}</Typography>
                       <Typography variant="caption" color="text.secondary">{p.sku} · omborda {fmtNum(p.qty)} {p.unit}</Typography>
                     </Box>
-                    <Typography color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>{fmtMoney(p.buyPrice)}</Typography>
+                    {admin && <Typography color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>{fmtMoney(p.buyPrice)}</Typography>}
                   </Stack>
                 </li>
               )}
@@ -133,11 +135,11 @@ export default function Receive({ wh, list, onUnknownCode, onDone }: Props) {
                   <IconButton size="small" onClick={() => list.update(l.productId, { qty: l.qty + 1 })}><AddIcon fontSize="small" /></IconButton>
                 </Stack>
                 <Typography color="text.secondary">{l.product.unit}</Typography>
-                <TextField size="small" label="Kelish narxi" value={l.price} inputMode="decimal" sx={{ width: 150 }}
-                  onChange={(e) => { const v = num(e.target.value); if (!isNaN(v)) list.update(l.productId, { price: v }) }} />
-                <TextField size="small" label="Sotuv narxi" value={l.sellPrice ?? l.product.sellPrice} inputMode="decimal" sx={{ width: 150 }}
-                  onChange={(e) => { const v = num(e.target.value); if (!isNaN(v)) list.update(l.productId, { sellPrice: v }) }} />
-                <Typography sx={{ ml: 'auto !important', fontWeight: 700 }}>{fmtMoney(l.qty * l.price)}</Typography>
+                {admin && <TextField size="small" label="Kelish narxi" value={l.price} inputMode="decimal" sx={{ width: 150 }}
+                  onChange={(e) => { const v = num(e.target.value); if (!isNaN(v)) list.update(l.productId, { price: v }) }} />}
+                {admin && <TextField size="small" label="Sotuv narxi" value={l.sellPrice ?? l.product.sellPrice} inputMode="decimal" sx={{ width: 150 }}
+                  onChange={(e) => { const v = num(e.target.value); if (!isNaN(v)) list.update(l.productId, { sellPrice: v }) }} />}
+                {admin && <Typography sx={{ ml: 'auto !important', fontWeight: 700 }}>{fmtMoney(l.qty * l.price)}</Typography>}
               </Stack>
             </Card>
           ))}
@@ -151,10 +153,10 @@ export default function Receive({ wh, list, onUnknownCode, onDone }: Props) {
               <TextField size="small" label="Izoh (nakladnoy raqami va h.k.)" value={note} onChange={(e) => setNote(e.target.value)} />
               <Divider />
               <Stack direction="row" justifyContent="space-between"><Typography color="text.secondary">Tovar turlari</Typography><Typography>{lines.length}</Typography></Stack>
-              <Stack direction="row" justifyContent="space-between" alignItems="baseline">
+              {admin && <Stack direction="row" justifyContent="space-between" alignItems="baseline">
                 <Typography variant="h6">Jami</Typography>
                 <Typography variant="h5" sx={{ color: 'primary.main' }}>{fmtMoney(total)}</Typography>
-              </Stack>
+              </Stack>}
               {error && <Alert severity="error">{error}</Alert>}
               {!mobile && (
                 <Button variant="contained" size="large" disabled={!lines.length || busy} onClick={submit} sx={{ py: 1.5, fontSize: 17 }}>
@@ -172,8 +174,8 @@ export default function Receive({ wh, list, onUnknownCode, onDone }: Props) {
           sx={{ position: 'fixed', left: 0, right: 0, bottom: 0, p: 1.5, zIndex: 20, borderRadius: 0, borderTop: 1, borderColor: 'divider' }}>
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="caption" color="text.secondary">Jami ({lines.length} xil)</Typography>
-              <Typography variant="h6" sx={{ lineHeight: 1.1 }}>{fmtMoney(total)}</Typography>
+              <Typography variant="caption" color="text.secondary">{admin ? `Jami (${lines.length} xil)` : 'Tovar turlari'}</Typography>
+              <Typography variant="h6" sx={{ lineHeight: 1.1 }}>{admin ? fmtMoney(total) : lines.length}</Typography>
             </Box>
             <IconButton onClick={() => setCamera(true)} sx={{ border: 1, borderColor: 'divider' }}><CameraIcon /></IconButton>
             <Button variant="contained" size="large" disabled={!lines.length || busy} onClick={submit} sx={{ px: 3, py: 1.25 }}>

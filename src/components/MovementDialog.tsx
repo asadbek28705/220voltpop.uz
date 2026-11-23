@@ -4,6 +4,7 @@ import {
   ToggleButton, ToggleButtonGroup, Typography,
 } from '@mui/material'
 import type { Warehouse } from '../store'
+import { useIsAdmin } from '../auth'
 import type { MovementType } from '../types'
 import { fmtMoney, fmtNum } from '../utils'
 import { attempt } from '../api'
@@ -13,6 +14,7 @@ interface Props { wh: Warehouse; initialType: MovementType; initialProductId?: s
 export default function MovementDialog({ wh, initialType, initialProductId, onClose }: Props) {
   const { products } = wh.data
   const fullScreen = useMediaQuery(useTheme().breakpoints.down('sm'))
+  const admin = useIsAdmin()
   const [type, setType] = useState<MovementType>(initialType)
   const [productId, setProductId] = useState(initialProductId ?? '')
   const prod = products.find((p) => p.id === productId) ?? null
@@ -68,7 +70,7 @@ export default function MovementDialog({ wh, initialType, initialProductId, onCl
           <ToggleButtonGroup exclusive fullWidth value={type} onChange={(_, v) => changeType(v)} size="small">
             <ToggleButton value="in" color="success">Kirim</ToggleButton>
             <ToggleButton value="out" color="primary">Chiqim</ToggleButton>
-            <ToggleButton value="adjust">Inventarizatsiya</ToggleButton>
+            {admin && <ToggleButton value="adjust">Inventarizatsiya</ToggleButton>}
           </ToggleButtonGroup>
           <Autocomplete
             options={products}
@@ -94,7 +96,7 @@ export default function MovementDialog({ wh, initialType, initialProductId, onCl
           <Stack direction="row" spacing={2}>
             <TextField label={type === 'adjust' ? `Haqiqiy qoldiq${prod ? ' (' + prod.unit + ')' : ''}` : `Miqdor${prod ? ' (' + prod.unit + ')' : ''}`}
               value={qty} onChange={(e) => setQty(e.target.value)} fullWidth inputMode="decimal" autoFocus={!!prod} />
-            {type !== 'adjust' && (
+            {type !== 'adjust' && (admin || type === 'out') && (
               <TextField label={type === 'in' ? "Kelish narxi (so'm)" : "Sotuv narxi (so'm)"} value={price} onChange={(e) => setPrice(e.target.value)} fullWidth inputMode="decimal" />
             )}
           </Stack>
@@ -103,7 +105,7 @@ export default function MovementDialog({ wh, initialType, initialProductId, onCl
           )}
           <TextField label="Izoh" value={note} onChange={(e) => setNote(e.target.value)} multiline minRows={2}
             placeholder={type === 'adjust' ? "Masalan: sanoqda kam chiqdi, singan" : ''} />
-          {prod && type !== 'adjust' && q > 0 && (
+          {prod && type !== 'adjust' && q > 0 && (admin || type === 'out') && (
             <Alert severity="info" icon={false}>
               Jami summa: <b>{fmtMoney(q * pr)}</b>
               {type === 'out' && prod.buyPrice > 0 && <> · Foyda: <b>{fmtMoney(q * (pr - prod.buyPrice))}</b></>}

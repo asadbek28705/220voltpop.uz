@@ -14,6 +14,9 @@ import ExpenseIcon from '@mui/icons-material/MoneyOffOutlined'
 import LabelIcon from '@mui/icons-material/QrCode2Outlined'
 import ScanIcon from '@mui/icons-material/QrCodeScanner'
 import { useWarehouse } from './store'
+import { api } from './api'
+import { MeContext, useMe, type Me } from './auth'
+import Login from './components/Login'
 import type { MovementType, Product } from './types'
 import { makeTheme } from './theme'
 import { useCart } from './hooks/useCart'
@@ -36,7 +39,7 @@ import ScanResultDialog from './components/ScanResultDialog'
 import CameraScanner from './components/CameraScanner'
 
 const NAV: NavGroup[] = [
-  { items: [{ key: 'home', label: 'Bosh sahifa', icon: <DashboardIcon fontSize="small" /> }] },
+  { items: [{ key: 'home', admin: true, label: 'Bosh sahifa', icon: <DashboardIcon fontSize="small" /> }] },
   {
     title: 'SOTUV', items: [
       { key: 'pos', label: 'Kassa', icon: <PosIcon fontSize="small" /> },
@@ -48,32 +51,84 @@ const NAV: NavGroup[] = [
       { key: 'products', label: 'Tovarlar', icon: <BoxIcon fontSize="small" /> },
       { key: 'receive', label: 'Skaner bilan qabul', icon: <ReceiveIcon fontSize="small" /> },
       { key: 'incoming', label: 'Kirim', icon: <InIcon fontSize="small" /> },
-      { key: 'audit', label: 'Inventarizatsiya', icon: <TuneIcon fontSize="small" /> },
+      { key: 'audit', admin: true, label: 'Inventarizatsiya', icon: <TuneIcon fontSize="small" /> },
       { key: 'labels', label: 'Shtrix-kod chop etish', icon: <LabelIcon fontSize="small" /> },
     ],
   },
   {
     title: 'MOLIYA', items: [
-      { key: 'reports', label: 'Hisobotlar', icon: <ChartIcon fontSize="small" /> },
-      { key: 'expenses', label: 'Xarajatlar', icon: <ExpenseIcon fontSize="small" /> },
-      { key: 'history', label: 'Barcha harakatlar', icon: <HistoryIcon fontSize="small" /> },
+      { key: 'reports', admin: true, label: 'Hisobotlar', icon: <ChartIcon fontSize="small" /> },
+      { key: 'expenses', admin: true, label: 'Xarajatlar', icon: <ExpenseIcon fontSize="small" /> },
+      { key: 'history', admin: true, label: 'Barcha harakatlar', icon: <HistoryIcon fontSize="small" /> },
     ],
   },
   { title: 'SOZLAMALAR', items: [{ key: 'settings', label: 'Sozlamalar', icon: <SettingsIcon fontSize="small" /> }] },
 ]
 const buyPriceOf = (p: Product) => p.buyPrice
-const PAGE_KEYS = NAV.flatMap((g) => g.items.map((i) => i.key))
-// Telefonda dastur to'g'ridan-to'g'ri kassadan ochiladi
-const fromHash = () => { const h = location.hash.slice(1); return PAGE_KEYS.includes(h) ? h : isMobile() ? 'pos' : 'home' }
+const navFor = (admin: boolean) =>
+  NAV.map((g) => ({ ...g, items: g.items.filter((i) => admin || !i.admin) })).filter((g) => g.items.length)
 
+function useThemeMode() {
+  const [mode, setMode] = useState<'light' | 'dark'>(() => (localStorage.getItem('ombor-mode') as 'dark') ?? 'light')
+  const theme = useMemo(() => makeTheme(mode), [mode])
+  const toggle = () => {
+    const next = mode === 'light' ? 'dark' : 'light'
+    setMode(next)
+    localStorage.setItem('ombor-mode', next)
+  }
+  return { mode, theme, toggle }
+}
+
+/** Avval kim kirganini aniqlaymiz: login bo'lmasa — login sahifasi */
 export default function App() {
+  const { mode, theme, toggle } = useThemeMode()
+  const [me, setMe] = useState<Me | null>(null)
+  const [failed, setFailed] = useState(false)
+  const load = useCallback(() => {
+    api<Me>('GET', '/me').then((m) => { setMe(m); setFailed(false) }).catch(() => setFailed(true))
+  }, [])
+  useEffect(() => {
+    load()
+    const on = () => setMe((m) => (m ? { ...m, user: null } : m))
+    window.addEventListener('ombor-unauthorized', on)
+    return () => window.removeEventListener('ombor-unauthorized', on)
+  }, [load])
+
+  let body
+  if (!me) {
+    body = (
+      <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '100vh', p: 2 }}>
+        {failed ? <Alert severity="error" action={<button onClick={load}>Qayta</button>}>Server bilan aloqa yo'q</Alert> : <CircularProgress />}
+      </Box>
+    )
+  } else if (!me.user) {
+    body = <Login me={me} onDone={() => location.reload()} />
+  } else {
+    body = <Main mode={mode} onToggleMode={toggle} />
+  }
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <MeContext.Provider value={me ?? { user: null, demo: false, needsSetup: false, canSetup: false }}>{body}</MeContext.Provider>
+    </ThemeProvider>
+  )
+}
+
+function Main({ mode, onToggleMode }: { mode: 'light' | 'dark'; onToggleMode: () => void }) {
+  const me = useMe()
+  const admin = me.user?.role === 'admin'
+  const nav = useMemo(() => navFor(admin), [admin])
+  const pageKeys = useMemo(() => nav.flatMap((g) => g.items.map((i) => i.key)), [nav])
+  // Telefonda va sotuvchida dastur to'g'ridan-to'g'ri kassadan ochiladi
+  const fromHash = useCallback(() => {
+    const h = location.hash.slice(1)
+    return pageKeys.includes(h) ? h : isMobile() || !admin ? 'pos' : 'home'
+  }, [pageKeys, admin])
   const wh = useWarehouse()
   const cart = useCart()
   const receiving = useCart('ombor-receive', buyPriceOf)
   const [page, setPageState] = useState(fromHash)
-  const [mode, setMode] = useState<'light' | 'dark'>(() => (localStorage.getItem('ombor-mode') as 'dark') ?? 'light')
-  const theme = useMemo(() => makeTheme(mode), [mode])
-  const [seller, setSeller] = useState(getSeller())
+  const [seller, setSeller] = useState(me.demo ? getSeller() : me.user?.name ?? '')
   const [mv, setMv] = useState<{ type: MovementType; productId?: string } | null>(null)
   const [scan, setScan] = useState<{ code: string; product?: Product } | null>(null)
   const [newProduct, setNewProduct] = useState<{ barcode: string; forReceive?: boolean } | null>(null)
@@ -86,13 +141,7 @@ export default function App() {
     const on = () => setPageState(fromHash())
     window.addEventListener('hashchange', on)
     return () => window.removeEventListener('hashchange', on)
-  }, [])
-
-  const toggleMode = () => {
-    const next = mode === 'light' ? 'dark' : 'light'
-    setMode(next)
-    localStorage.setItem('ombor-mode', next)
-  }
+  }, [fromHash])
 
   // Skaner qilingan kod: kassada — savatga, boshqa joyda — tovar ma'lumoti
   const handleCode = useCallback((code: string) => {
@@ -110,37 +159,33 @@ export default function App() {
         setToast(`Qabul ro'yxatiga: ${product.name}`)
       } else {
         beep(false)
-        setNewProduct({ barcode: code, forReceive: true })
+        if (admin) setNewProduct({ barcode: code, forReceive: true })
+        else setScan({ code })
       }
       return
     }
     beep(!!product)
     setScan({ code, product })
-  }, [wh, page, cart, receiving])
+  }, [wh, page, cart, receiving, admin])
 
   const modalOpen = !!(mv || scan || newProduct || camera || expenseOpen)
   useHardwareScanner(handleCode, !modalOpen)
 
   if (wh.loading) {
-    return (
-      <ThemeProvider theme={theme}><CssBaseline />
-        <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}><CircularProgress /></Box>
-      </ThemeProvider>
-    )
+    return <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}><CircularProgress /></Box>
   }
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Layout groups={NAV} active={page} onNavigate={setPage} mode={mode} onToggleMode={toggleMode}
-        online={wh.online} seller={seller} cartCount={cart.items.length}>
+    <>
+      <Layout groups={nav} active={page} onNavigate={setPage} mode={mode} onToggleMode={onToggleMode}
+        online={wh.online} seller={seller} role={me.demo ? 'demo' : admin ? 'admin' : 'seller'} cartCount={cart.items.length}>
         {page === 'home' && <Dashboard wh={wh} onMovement={(t, id) => setMv({ type: t, productId: id })} navigate={setPage} onExpense={() => setExpenseOpen(true)} />}
         {page === 'pos' && <Pos wh={wh} cart={cart} onUnknownCode={(code) => setScan({ code })} />}
         {page === 'sales' && (
           <Movements wh={wh} fixedType="out" title="Savdolar" subtitle="Sotilgan tovarlar va cheklar" newLabel="Kassaga o'tish" onNew={() => setPage('pos')} />
         )}
         {page === 'receive' && (
-          <Receive wh={wh} list={receiving} onUnknownCode={(code) => setNewProduct({ barcode: code, forReceive: true })} onDone={setToast} />
+          <Receive wh={wh} list={receiving} onUnknownCode={(code) => (admin ? setNewProduct({ barcode: code, forReceive: true }) : setScan({ code }))} onDone={setToast} />
         )}
         {page === 'products' && <Products wh={wh} onMovement={(t, id) => setMv({ type: t, productId: id })} />}
         {page === 'incoming' && (
@@ -169,7 +214,7 @@ export default function App() {
         <ScanResultDialog code={scan.code} product={scan.product} onClose={() => setScan(null)}
           onAddToCart={(p) => { cart.add(p); setScan(null); setPage('pos') }}
           onIncoming={(p) => { setScan(null); setMv({ type: 'in', productId: p.id }) }}
-          onCreate={(code) => { setScan(null); setNewProduct({ barcode: code }) }} />
+          onCreate={admin ? (code) => { setScan(null); setNewProduct({ barcode: code }) } : undefined} />
       )}
       {newProduct && (
         <ProductDialog wh={wh} initialBarcode={newProduct.barcode} noInitialQty={newProduct.forReceive} onClose={() => setNewProduct(null)}
@@ -183,6 +228,6 @@ export default function App() {
       <Snackbar open={!!toast} autoHideDuration={1800} onClose={() => setToast('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         <Alert severity="success" variant="filled" onClose={() => setToast('')}>{toast}</Alert>
       </Snackbar>
-    </ThemeProvider>
+    </>
   )
 }

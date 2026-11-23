@@ -12,6 +12,7 @@ import TrendIcon from '@mui/icons-material/TrendingUp'
 import InboxIcon from '@mui/icons-material/MoveToInboxOutlined'
 import ReceiptIcon from '@mui/icons-material/ReceiptLongOutlined'
 import type { Warehouse } from '../store'
+import { useIsAdmin } from '../auth'
 import type { Movement, MovementType } from '../types'
 import { download, fmtDate, fmtMoney, fmtNum, toCsv } from '../utils'
 import { daysAgo, inRange, profitOf, today } from '../stats'
@@ -40,6 +41,7 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
   const [q, setQ] = useState('')
   const [receipt, setReceipt] = useState<string | null>(null)
   const t = fixedType ?? type
+  const admin = useIsAdmin()
 
   const list = useMemo(() => {
     const s = q.trim().toLowerCase()
@@ -60,7 +62,7 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
     download(`${title.toLowerCase().replace(/\s+/g, '-')}-${from}_${to}.csv`, toCsv(rows), 'text/csv;charset=utf-8')
   }
 
-  const showMoney = t !== 'adjust'
+  const showMoney = t !== 'adjust' && (admin || t === 'out')
 
   return (
     <>
@@ -74,9 +76,9 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {(!t || t === 'out') && <>
           <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<CartIcon />} title="Jami savdo" value={fmtMoney(total('out'))} /></Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title="Foyda" value={fmtMoney(profit)} valueColor={profit >= 0 ? 'primary.main' : 'error.main'} /></Grid>
+          {admin && <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title="Foyda" value={fmtMoney(profit)} valueColor={profit >= 0 ? 'primary.main' : 'error.main'} /></Grid>}
         </>}
-        {(!t || t === 'in') && (
+        {(!t || t === 'in') && admin && (
           <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<InboxIcon />} title="Jami kirim" value={fmtMoney(total('in'))} color="#3B82F6" /></Grid>
         )}
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<ReceiptIcon />} title="Yozuvlar soni" value={String(list.length)} color="#C9A227" /></Grid>
@@ -108,7 +110,7 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
                 {showMoney && <TableCell>{t === 'in' ? "Ta'minotchi" : t === 'out' ? 'Mijoz' : 'Kontragent'}</TableCell>}
                 {t === 'out' && <TableCell>To'lov</TableCell>}
                 <TableCell>{t === 'out' ? 'Sotuvchi' : 'Izoh'}</TableCell>
-                <TableCell className="no-print" />
+                {admin && <TableCell className="no-print" />}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -128,9 +130,9 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
                   {showMoney && <TableCell>{m.counterparty}</TableCell>}
                   {t === 'out' && <TableCell>{paymentLabel(m.payment)}</TableCell>}
                   <TableCell>{t === 'out' ? m.seller : m.note}</TableCell>
-                  <TableCell className="no-print">
+                  {admin && <TableCell className="no-print">
                     <Tooltip title="Bekor qilish (qoldiq qaytariladi)"><IconButton size="small" onClick={() => undo(m)}><UndoIcon fontSize="small" /></IconButton></Tooltip>
-                  </TableCell>
+                  </TableCell>}
                 </TableRow>
               ))}
               {list.length === 0 && (

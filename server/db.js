@@ -59,7 +59,8 @@ class Store {
         this.setMeta('epoch', randomUUID())
         this.setMeta('version', '0')
         this.setMeta('settings', JSON.stringify({ shopName: "Qurilish va santexnika do'koni", address: '', phone: '', receiptFooter: 'Xaridingiz uchun rahmat!' }))
-        this.loadData(seedData())
+        // NO_SEED=1 — haqiqiy ish uchun bo'sh baza (namuna ma'lumotlarsiz)
+        this.loadData(process.env.NO_SEED === '1' ? { products: [], movements: [], categories: DEFAULT_CATEGORIES } : seedData())
       })
     }
   }
@@ -202,7 +203,7 @@ class Store {
       if (type === 'adjust' && qty === 0) throw new HttpError("Qoldiq o'zgarmadi")
       const delta = type === 'out' ? -qty : qty
       if (prod.qty + delta < -1e-9) throw new HttpError(`Omborda faqat ${prod.qty} ${prod.unit} bor`)
-      const price = num(b.price)
+      const price = type === 'in' && !(num(b.price) > 0) ? prod.buyPrice : num(b.price)
       const v = this.bump()
       let saleId = null
       if (type === 'out') saleId = this.nextReceipt()
@@ -339,7 +340,8 @@ class Store {
       for (const it of items) {
         const p = this.product(it.productId)
         const qty = num(it.qty)
-        const price = num(it.price)
+        // Narx berilmasa (sotuvchi kiritganda) — joriy kelish narxi
+        const price = num(it.price) > 0 ? num(it.price) : p.buyPrice
         this.db.prepare('UPDATE products SET qty = ? WHERE id = ?').run(round(p.qty + qty), p.id)
         if (price > 0) this.db.prepare('UPDATE products SET buyPrice = ? WHERE id = ?').run(price, p.id)
         const sell = num(it.sellPrice)

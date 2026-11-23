@@ -11,7 +11,7 @@ interface Props {
   onClose: () => void
   onAddToCart: (p: Product) => void
   onIncoming: (p: Product) => void
-  onCreate: (code: string) => void
+  onCreate?: (code: string) => void
 }
 
 export default function ScanResultDialog({ code, product: p, onClose, onAddToCart, onIncoming, onCreate }: Props) {
@@ -21,11 +21,13 @@ export default function ScanResultDialog({ code, product: p, onClose, onAddToCar
         <DialogTitle>Tovar topilmadi</DialogTitle>
         <DialogContent>
           <Typography>Shtrix-kod: <b>{code}</b></Typography>
-          <Typography color="text.secondary" sx={{ mt: 1 }}>Bu kod bilan tovar yo'q. Yangi tovar sifatida qo'shasizmi?</Typography>
+          <Typography color="text.secondary" sx={{ mt: 1 }}>
+            {onCreate ? "Bu kod bilan tovar yo'q. Yangi tovar sifatida qo'shasizmi?" : "Bu kod bilan tovar yo'q. Yangi tovarni do'kon egasi qo'shadi."}
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Yopish</Button>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => onCreate(code)}>Yangi tovar</Button>
+          {onCreate && <Button variant="contained" startIcon={<AddIcon />} onClick={() => onCreate(code)}>Yangi tovar</Button>}
         </DialogActions>
       </Dialog>
     )
