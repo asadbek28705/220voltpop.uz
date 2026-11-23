@@ -32,6 +32,12 @@ Agar telefonlar ulana olmasa: **System Settings → Network → Firewall → Opt
 - **Telefon kamerasi**: Kassadagi kamera tugmasi yoki boshqa sahifalardagi pastki o'ng tugma.
 - Tovarga shtrix-kod biriktirish: Tovarlar → tahrirlash → "Shtrix-kod" maydoniga skaner qiling.
 
+### Shtrix-kodi yo'q tovarlar
+
+Ombor → **Shtrix-kod chop etish**: dastur ichki EAN-13 kod yaratadi (`200…` — do'kon ichki kodlari uchun ajratilgan oraliq)
+va etiketka chop etadi: termo-etiketka 58×40 yoki 40×30 mm, yoki oddiy printerda A4 yopishqoq varaq (24 yoki 40 ta).
+Chop etishda masshtab 100%, chekkalar — "Yo'q".
+
 ## Kassa va cheklar
 
 Kassa sahifasi telefonga moslangan (telefonda dastur shu sahifadan ochiladi). Skaner → savat → to'lov usuli → "Sotish".
