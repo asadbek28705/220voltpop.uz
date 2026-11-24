@@ -283,36 +283,39 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
         <Button color="warning" variant="outlined" startIcon={<ReturnIcon />} onClick={() => setReturning(true)}>{tr("Tovar qaytarish")}</Button>
       } />
       {/* Xaridor oynalari: bir xaridor bilan ishlayotganda ikkinchisi kelsa — yangi oyna */}
-      <Stack direction="row" spacing={1} sx={{ mb: 2, overflowX: 'auto', pb: 0.5 }} className="no-print">
+      <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1.5, overflowX: 'auto', pb: 0.5 }} className="no-print">
         {sale.tabs.map((x) => {
           const on = x.id === tab.id
           const c = x.customerId ? wh.data.customers.find((k) => k.id === x.customerId)?.name : x.customerText
           const sum = x.items.reduce((s, it) => s + it.qty * it.price, 0)
+          const info = c || (sum > 0 ? fmtMoney(sum) : '')
+          const closable = sale.tabs.length > 1 || x.items.length > 0
           return (
-            <Paper key={x.id} variant="outlined" onClick={() => sale.select(x.id)}
+            <Box key={x.id} onClick={() => sale.select(x.id)} title={info || tr("bo'sh")}
               sx={{
-                pl: 1.5, pr: 0.5, py: 0.75, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 0.5, borderRadius: 2.5,
-                borderWidth: 2, borderColor: on ? 'primary.main' : 'divider', bgcolor: on ? 'action.selected' : 'background.paper',
+                height: 30, pl: 1.25, pr: closable ? 0.25 : 1.25, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 0.5,
+                borderRadius: 999, border: 1.5, borderColor: on ? 'primary.main' : 'divider',
+                bgcolor: on ? 'primary.main' : 'background.paper', color: on ? 'primary.contrastText' : 'text.primary',
+                fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
               }}>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="body2" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
-                  {tr("Xaridor {0}", x.n)}{x.items.length > 0 && <Chip component="span" size="small" color={on ? 'primary' : 'default'} label={x.items.length} sx={{ ml: 0.75, height: 18 }} />}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', maxWidth: 150 }}>
-                  {c || (sum > 0 ? fmtMoney(sum) : tr("bo'sh"))}
-                </Typography>
-              </Box>
-              {(sale.tabs.length > 1 || x.items.length > 0) && (
-                <IconButton size="small" aria-label={tr("Oynani yopish")} onClick={(e) => {
+              {tr("Xaridor {0}", x.n)}
+              {x.items.length > 0 && (
+                <Box component="span" sx={{ minWidth: 18, height: 18, px: 0.5, borderRadius: 999, display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700,
+                  bgcolor: on ? 'rgba(255,255,255,.25)' : 'action.selected' }}>{x.items.length}</Box>
+              )}
+              {info && <Box component="span" sx={{ fontSize: 12, fontWeight: 400, opacity: 0.8, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' }}>· {info}</Box>}
+              {closable && (
+                <IconButton size="small" aria-label={tr("Oynani yopish")} sx={{ p: 0.25, color: 'inherit', opacity: 0.7 }} onClick={(e) => {
                   e.stopPropagation()
                   if (!x.items.length || confirm(tr("«Xaridor {0}» oynasi yopilsinmi? Savatdagi tovarlar o'chadi.", x.n))) sale.close(x.id)
-                }}><CloseIcon fontSize="small" /></IconButton>
+                }}><CloseIcon sx={{ fontSize: 15 }} /></IconButton>
               )}
-            </Paper>
+            </Box>
           )
         })}
-        <Button variant="contained" color="secondary" startIcon={<AddIcon />} onClick={() => sale.newTab()} disabled={sale.tabs.length >= MAX_TABS}
-          sx={{ flexShrink: 0, whiteSpace: 'nowrap', borderRadius: 2.5 }}>
+        <Button size="small" variant="contained" color="secondary" disableElevation startIcon={<AddIcon sx={{ fontSize: '16px !important' }} />}
+          onClick={() => sale.newTab()} disabled={sale.tabs.length >= MAX_TABS}
+          sx={{ flexShrink: 0, whiteSpace: 'nowrap', borderRadius: 999, height: 30, px: 1.5, fontSize: 13, minWidth: 0 }}>
           {tr("Yangi xaridor")}
         </Button>
       </Stack>
