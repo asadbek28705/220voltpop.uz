@@ -81,14 +81,19 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<MoneyOffIcon />} title={tr("Bugungi xarajat")} value={fmtMoney(todayExpenses)} color="#E5533D" /></Grid>
       </Grid>
 
-      <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: 1 }}>
-        <Typography variant="h6">{tr("Joriy davr")}</Typography>
-        <Typography variant="body2" color="text.secondary">{tr('{0} dan', fmtDay(q.from))}</Typography>
-        <Box sx={{ flexGrow: 1 }} />
+      {/* Telefonda qator sig'masa — keyingi qatorga o'tadi, tugma ekrandan chiqib ketmaydi */}
+      <Stack direction="row" alignItems="center" flexWrap="wrap" useFlexGap columnGap={1} rowGap={1} sx={{ mb: 1.5 }}>
+        <Stack direction="row" alignItems="baseline" spacing={1} sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Typography variant="h6" sx={{ whiteSpace: 'nowrap' }}>{tr("Joriy davr")}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>{tr('{0} dan', fmtDay(q.from))}</Typography>
+        </Stack>
         {totalDebt > 0 && <Chip icon={<DebtIcon />} color="error" variant="outlined" clickable onClick={() => navigate('debtors')}
-          label={tr("Mijozlar qarzi: {0} ({1})", fmtMoney(totalDebt), debtors.length)} sx={{ fontWeight: 600 }} />}
-        <Button size="small" onClick={() => navigate('reports')}>{tr("Batafsil")}</Button>
-        {admin && <Button size="small" color="warning" variant="outlined" startIcon={<RestartIcon />} onClick={() => setClosing(true)}>{tr("Davrni yopish")}</Button>}
+          label={tr("Mijozlar qarzi: {0} ({1})", fmtMoney(totalDebt), debtors.length)} sx={{ fontWeight: 600, maxWidth: '100%' }} />}
+        <Stack direction="row" spacing={1}>
+          <Button size="small" onClick={() => navigate('reports')} sx={{ whiteSpace: 'nowrap' }}>{tr("Batafsil")}</Button>
+          {admin && <Button size="small" color="warning" variant="contained" disableElevation startIcon={<RestartIcon />} onClick={() => setClosing(true)}
+            sx={{ whiteSpace: 'nowrap' }}>{tr("Davrni yopish")}</Button>}
+        </Stack>
       </Stack>
       {closing && <ClosePeriodDialog wh={wh} from={q.from} totals={qs} onClose={() => setClosing(false)} onDone={setToast} />}
       <Snackbar open={!!toast} autoHideDuration={5000} onClose={() => setToast('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
