@@ -20,7 +20,9 @@ import { useIsAdmin } from '../auth'
 import ClosePeriodDialog from './ClosePeriodDialog'
 import DebtIcon from '@mui/icons-material/MenuBookOutlined'
 import BalanceIcon from '@mui/icons-material/AccountBalanceOutlined'
-import { GOLD_GRADIENT, GREEN, INK, YELLOW } from '../theme'
+import { GRADIENT, GREEN, YELLOW } from '../theme'
+import Rings from './Rings'
+import { useTheme } from '@mui/material'
 import { useMe } from '../auth'
 import { alpha } from '@mui/material'
 import StatCard from './StatCard'
@@ -35,7 +37,6 @@ const longDate = (d: Date) => lang === 'uz'
   ? `${d.getDate()}-${UZ_MONTHS[d.getMonth()]}, ${d.getFullYear()} · ${UZ_DAYS[d.getDay()]}`
   : d.toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-const glassBtn = { color: '#fff', bgcolor: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.16)', backdropFilter: 'blur(6px)', '&:hover': { bgcolor: 'rgba(255,255,255,.18)' } }
 
 interface Props { wh: Warehouse; onMovement: (t: MovementType, id?: string) => void; navigate: (page: string) => void; onExpense: () => void }
 
@@ -52,6 +53,7 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
   const todayExpenses = wh.data.expenses.filter((e) => dayKey(e.date) === t).reduce((s, e) => s + e.amount, 0)
   const todayReceipts = new Set(movements.filter((m) => m.type === 'out' && dayKey(m.date) === t).map((m) => m.saleId)).size
   const userName = (useMe().user?.name ?? '').split(' ')[0]
+  const darkMode = useTheme().palette.mode === 'dark'
   const hour = new Date().getHours()
   const greeting = hour < 11 ? tr("Xayrli tong") : hour < 18 ? tr("Xayrli kun") : tr("Xayrli kech")
   const todayLabel = longDate(new Date())
@@ -84,39 +86,42 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
 
   return (
     <>
-      {/* Premium banner: salomlashish, bugungi savdo va tezkor amallar */}
+      {/* Premium banner: salomlashish, bugungi savdo va tezkor amallar. Och fon, yumaloq halqali naqsh */}
       <Box sx={{
-        position: 'relative', overflow: 'hidden', borderRadius: '24px', p: { xs: 2.5, md: 3.5 }, mb: 3, color: '#fff',
-        background: `radial-gradient(80% 120% at 100% 0%, ${alpha(YELLOW, 0.28)} 0%, transparent 55%), radial-gradient(70% 120% at 0% 100%, ${alpha(GREEN, 0.55)} 0%, transparent 60%), linear-gradient(135deg, #0E1626 0%, ${INK} 100%)`,
-        boxShadow: '0 20px 40px rgba(11,18,32,.25)',
+        position: 'relative', overflow: 'hidden', borderRadius: '24px', p: { xs: 2.5, md: 3.5 }, mb: 3,
+        border: 1, borderColor: darkMode ? 'rgba(255,255,255,.07)' : alpha(GREEN, 0.18),
+        background: darkMode
+          ? `radial-gradient(70% 120% at 0% 100%, ${alpha(GREEN, 0.35)} 0%, transparent 60%), linear-gradient(135deg, #141F2E 0%, #101722 100%)`
+          : `linear-gradient(120deg, #E6F7EE 0%, #F6FBF8 45%, #FFFFFF 60%, #FFF5D9 100%)`,
+        boxShadow: darkMode ? '0 20px 40px rgba(0,0,0,.3)' : `0 18px 40px ${alpha(GREEN, 0.12)}`,
       }}>
-        <Box sx={{ position: 'absolute', right: -60, bottom: -80, width: 260, height: 260, borderRadius: '50%', border: '1px solid rgba(255,255,255,.08)' }} />
-        <Box sx={{ position: 'absolute', right: 40, bottom: -120, width: 260, height: 260, borderRadius: '50%', border: '1px solid rgba(255,255,255,.06)' }} />
+        <Rings color={GREEN} size={420} x="calc(100% - 60px)" y="-20px" count={4} />
+        <Rings color={YELLOW} size={240} x="0%" y="110%" count={3} strength={1.4} />
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} justifyContent="space-between" alignItems={{ md: 'flex-end' }} sx={{ position: 'relative' }}>
           <Box>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,.6)' }}>{todayLabel}</Typography>
+            <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>{todayLabel}</Typography>
             <Typography sx={{ fontSize: { xs: 24, md: 30 }, fontWeight: 800, letterSpacing: -0.5, mt: 0.5 }}>{greeting}{userName ? `, ${userName}` : ''} 👋</Typography>
             <Stack direction="row" spacing={{ xs: 2.5, md: 4 }} sx={{ mt: 2.5 }} flexWrap="wrap" useFlexGap rowGap={2}>
               <Box>
-                <Typography sx={{ fontSize: 12.5, color: 'rgba(255,255,255,.6)', fontWeight: 600 }}>{tr("Bugungi savdo")}</Typography>
-                <Typography sx={{ fontSize: { xs: 26, md: 34 }, fontWeight: 800, letterSpacing: -0.8, lineHeight: 1.15, background: GOLD_GRADIENT, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                <Typography sx={{ fontSize: 12.5, color: 'text.secondary', fontWeight: 600 }}>{tr("Bugungi savdo")}</Typography>
+                <Typography sx={{ fontSize: { xs: 26, md: 34 }, fontWeight: 800, letterSpacing: -0.8, lineHeight: 1.15, background: GRADIENT, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                   {fmtMoney(todayRevenue)}
                 </Typography>
               </Box>
               <Box>
-                <Typography sx={{ fontSize: 12.5, color: 'rgba(255,255,255,.6)', fontWeight: 600 }}>{tr("Cheklar")}</Typography>
+                <Typography sx={{ fontSize: 12.5, color: 'text.secondary', fontWeight: 600 }}>{tr("Cheklar")}</Typography>
                 <Typography sx={{ fontSize: { xs: 22, md: 26 }, fontWeight: 800, lineHeight: 1.3 }}>{todayReceipts}</Typography>
               </Box>
               <Box>
-                <Typography sx={{ fontSize: 12.5, color: 'rgba(255,255,255,.6)', fontWeight: 600 }}>{tr("Bugungi sof foyda")}</Typography>
-                <Typography sx={{ fontSize: { xs: 22, md: 26 }, fontWeight: 800, lineHeight: 1.3, color: todayProfit - todayExpenses >= 0 ? '#4ADE80' : '#FF8A8A' }}>{fmtMoney(todayProfit - todayExpenses)}</Typography>
+                <Typography sx={{ fontSize: 12.5, color: 'text.secondary', fontWeight: 600 }}>{tr("Bugungi sof foyda")}</Typography>
+                <Typography sx={{ fontSize: { xs: 22, md: 26 }, fontWeight: 800, lineHeight: 1.3, color: todayProfit - todayExpenses >= 0 ? 'primary.main' : 'error.main' }}>{fmtMoney(todayProfit - todayExpenses)}</Typography>
               </Box>
             </Stack>
           </Box>
           <Stack direction="row" spacing={1.25} flexWrap="wrap" useFlexGap className="no-print">
-            <Button startIcon={<MoneyOffIcon />} onClick={onExpense} sx={glassBtn}>{tr("Xarajat")}</Button>
-            <Button startIcon={<AddIcon />} onClick={() => onMovement('in')} sx={glassBtn}>{tr("Kirim")}</Button>
-            <Button variant="contained" color="secondary" size="large" startIcon={<CartIcon />} onClick={() => navigate('pos')}>{tr("Yangi savdo")}</Button>
+            <Button variant="outlined" startIcon={<MoneyOffIcon />} onClick={onExpense}>{tr("Xarajat")}</Button>
+            <Button variant="outlined" startIcon={<AddIcon />} onClick={() => onMovement('in')}>{tr("Kirim")}</Button>
+            <Button variant="contained" size="large" startIcon={<CartIcon />} onClick={() => navigate('pos')}>{tr("Yangi savdo")}</Button>
           </Stack>
         </Stack>
       </Box>

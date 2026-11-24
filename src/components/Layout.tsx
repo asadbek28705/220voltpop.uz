@@ -7,7 +7,7 @@ import MenuIcon from '@mui/icons-material/Menu'
 import DarkIcon from '@mui/icons-material/DarkModeOutlined'
 import LightIcon from '@mui/icons-material/LightModeOutlined'
 import WarehouseIcon from '@mui/icons-material/WarehouseRounded'
-import { GOLD_GRADIENT, GRADIENT, GREEN, INK, YELLOW } from '../theme'
+import { GOLD_GRADIENT, GRADIENT, GREEN, GREEN_DARK, INK, YELLOW } from '../theme'
 import { t as tr } from '../i18n'
 import LangSwitcher from './LangSwitcher'
 
@@ -31,6 +31,7 @@ interface Props {
 
 /** Logotip: oltin belgili to'q kvadrat + nom */
 function Brand({ compact }: { compact?: boolean }) {
+  // Nom matn rangida (och va to'q rejimga mos)
   return (
     <Stack direction="row" alignItems="center" spacing={1.5}>
       <Box sx={{
@@ -41,10 +42,10 @@ function Brand({ compact }: { compact?: boolean }) {
       </Box>
       <Box sx={{ lineHeight: 1 }}>
         <Stack direction="row" alignItems="center" spacing={0.75}>
-          <Typography sx={{ fontWeight: 800, letterSpacing: 1.5, fontSize: compact ? 16 : 18, color: compact ? 'text.primary' : '#fff' }}>OMBOR</Typography>
+          <Typography sx={{ fontWeight: 800, letterSpacing: 1.5, fontSize: compact ? 16 : 18, color: 'text.primary' }}>OMBOR</Typography>
           <Box component="span" sx={{ px: 0.6, py: 0.1, borderRadius: 1, fontSize: 9.5, fontWeight: 800, letterSpacing: 1, color: '#1a1300', background: GOLD_GRADIENT }}>PRO</Box>
         </Stack>
-        {!compact && <Typography sx={{ fontSize: 11.5, color: 'rgba(255,255,255,.5)', mt: 0.3 }}>{tr("Qurilish & Santexnika")}</Typography>}
+        {!compact && <Typography sx={{ fontSize: 11.5, color: 'text.secondary', mt: 0.3 }}>{tr("Qurilish & Santexnika")}</Typography>}
       </Box>
     </Stack>
   )
@@ -57,19 +58,24 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
   const dark = mode === 'dark'
   const roleLabel = role === 'admin' ? tr('egasi') : role === 'demo' ? 'demo' : tr('sotuvchi')
 
-  // Yon menyu har doim to'q rangda — premium ko'rinish
+  // Yon menyu: och rejimda oq, yashil-oltin nafis tus bilan; to'q rejimda — to'q
+  const sb = dark
+    ? { text: 'rgba(255,255,255,.72)', strong: '#fff', muted: 'rgba(255,255,255,.4)', icon: 'rgba(255,255,255,.45)', hover: 'rgba(255,255,255,.06)', line: 'rgba(255,255,255,.12)', card: 'rgba(255,255,255,.05)', cardBorder: 'rgba(255,255,255,.07)' }
+    : { text: '#475569', strong: '#0F172A', muted: '#94A3B8', icon: '#94A3B8', hover: alpha(GREEN, 0.06), line: '#E7EAF0', card: '#F8FAFC', cardBorder: '#E7EAF0' }
   const sidebar = (
     <Box sx={{
-      width: WIDTH, height: '100%', display: 'flex', flexDirection: 'column', color: 'rgba(255,255,255,.72)',
-      background: `radial-gradient(120% 60% at 0% 0%, ${alpha(GREEN, 0.22)} 0%, transparent 60%), linear-gradient(180deg, #0E1626 0%, ${INK} 100%)`,
+      width: WIDTH, height: '100%', display: 'flex', flexDirection: 'column', color: sb.text,
+      background: dark
+        ? `radial-gradient(120% 60% at 0% 0%, ${alpha(GREEN, 0.22)} 0%, transparent 60%), linear-gradient(180deg, #0E1626 0%, ${INK} 100%)`
+        : `radial-gradient(120% 40% at 0% 0%, ${alpha(GREEN, 0.10)} 0%, transparent 60%), radial-gradient(100% 30% at 100% 100%, ${alpha(YELLOW, 0.10)} 0%, transparent 60%), #FFFFFF`,
     }}>
       <Box sx={{ px: 2.5, pt: 3, pb: 2.5 }}><Brand /></Box>
-      <Box sx={{ mx: 2.5, mb: 1, height: '1px', background: 'linear-gradient(90deg, rgba(255,255,255,.12), transparent)' }} />
-      <Box sx={{ px: 1.5, pb: 2, overflowY: 'auto', flexGrow: 1, '&::-webkit-scrollbar': { width: 6 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,.1)', borderRadius: 3 } }}>
+      <Box sx={{ mx: 2.5, mb: 1, height: '1px', background: `linear-gradient(90deg, ${sb.line}, transparent)` }} />
+      <Box sx={{ px: 1.5, pb: 2, overflowY: 'auto', flexGrow: 1, '&::-webkit-scrollbar': { width: 6 }, '&::-webkit-scrollbar-thumb': { bgcolor: sb.line, borderRadius: 3 } }}>
         {groups.map((g, i) => (
           <List key={i} dense disablePadding
             subheader={g.title ? (
-              <ListSubheader disableSticky sx={{ bgcolor: 'transparent', color: 'rgba(255,255,255,.35)', fontSize: 10.5, fontWeight: 800, letterSpacing: 1.4, lineHeight: '30px', mt: 1.5, px: 1.5 }}>
+              <ListSubheader disableSticky sx={{ bgcolor: 'transparent', color: sb.muted, fontSize: 10.5, fontWeight: 800, letterSpacing: 1.4, lineHeight: '30px', mt: 1.5, px: 1.5 }}>
                 {g.title}
               </ListSubheader>
             ) : undefined}>
@@ -78,18 +84,21 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
               return (
                 <ListItemButton key={it.key} selected={on} onClick={() => { onNavigate(it.key); setOpen(false) }}
                   sx={{
-                    mb: 0.4, py: 0.95, px: 1.5, position: 'relative', color: on ? '#fff' : 'inherit',
-                    '&:hover': { bgcolor: 'rgba(255,255,255,.06)', color: '#fff' },
-                    '&:hover .MuiListItemIcon-root': { color: '#fff' },
+                    mb: 0.4, py: 0.95, px: 1.5, position: 'relative', color: on ? (dark ? '#fff' : GREEN_DARK) : 'inherit',
+                    '&:hover': { bgcolor: sb.hover, color: sb.strong },
+                    '&:hover .MuiListItemIcon-root': { color: dark ? '#fff' : GREEN },
                     '&.Mui-selected, &.Mui-selected:hover': {
-                      background: `linear-gradient(90deg, ${alpha(GREEN, 0.35)} 0%, ${alpha(GREEN, 0.08)} 100%)`, color: '#fff',
-                      boxShadow: `inset 0 0 0 1px ${alpha(GREEN, 0.35)}`,
+                      background: dark
+                        ? `linear-gradient(90deg, ${alpha(GREEN, 0.35)} 0%, ${alpha(GREEN, 0.08)} 100%)`
+                        : `linear-gradient(90deg, ${alpha(GREEN, 0.14)} 0%, ${alpha(GREEN, 0.04)} 100%)`,
+                      color: dark ? '#fff' : GREEN_DARK,
+                      boxShadow: `inset 0 0 0 1px ${alpha(GREEN, dark ? 0.35 : 0.22)}`,
                     },
                     '&.Mui-selected::before': {
                       content: '""', position: 'absolute', left: -12, top: 8, bottom: 8, width: 4, borderRadius: 4, background: GOLD_GRADIENT,
                     },
                   }}>
-                  <ListItemIcon sx={{ minWidth: 34, color: on ? YELLOW : 'rgba(255,255,255,.45)', '&.MuiListItemIcon-root': on ? { color: `${YELLOW} !important` } : {} }}>{it.icon}</ListItemIcon>
+                  <ListItemIcon sx={{ minWidth: 34, color: on ? (dark ? YELLOW : GREEN) : sb.icon }}>{it.icon}</ListItemIcon>
                   <ListItemText primary={it.label} slotProps={{ primary: { fontSize: 14, fontWeight: on ? 700 : 500 } }} />
                   {it.key === 'pos' && cartCount > 0 && (
                     <Box sx={{ minWidth: 22, height: 22, px: 0.75, borderRadius: 11, display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 800, color: '#1a1300', background: GOLD_GRADIENT }}>
@@ -105,14 +114,14 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
       {/* Foydalanuvchi kartasi */}
       <Box sx={{ p: 1.5 }}>
         <Stack direction="row" spacing={1.25} alignItems="center" onClick={() => { onNavigate('settings'); setOpen(false) }}
-          sx={{ p: 1.25, borderRadius: 3, cursor: 'pointer', bgcolor: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.07)', '&:hover': { bgcolor: 'rgba(255,255,255,.09)' } }}>
+          sx={{ p: 1.25, borderRadius: 3, cursor: 'pointer', bgcolor: sb.card, border: `1px solid ${sb.cardBorder}`, '&:hover': { bgcolor: sb.hover } }}>
           <Box sx={{ position: 'relative' }}>
             <Avatar sx={{ width: 38, height: 38, fontSize: 16, fontWeight: 800, background: GRADIENT }}>{(seller || 'S').charAt(0).toUpperCase()}</Avatar>
-            <Box sx={{ position: 'absolute', right: -1, bottom: -1, width: 11, height: 11, borderRadius: '50%', bgcolor: online ? '#22C55E' : '#E5484D', border: `2px solid ${INK}` }} />
+            <Box sx={{ position: 'absolute', right: -1, bottom: -1, width: 11, height: 11, borderRadius: '50%', bgcolor: online ? '#22C55E' : '#E5484D', border: `2px solid ${dark ? INK : '#fff'}` }} />
           </Box>
           <Box sx={{ minWidth: 0 }}>
-            <Typography noWrap sx={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>{seller || tr("Ism kiritilmagan")}</Typography>
-            <Typography sx={{ fontSize: 12, color: 'rgba(255,255,255,.5)' }}>{roleLabel} · {online ? tr("Onlayn") : tr("Aloqa yo'q")}</Typography>
+            <Typography noWrap sx={{ fontWeight: 700, fontSize: 14, color: sb.strong }}>{seller || tr("Ism kiritilmagan")}</Typography>
+            <Typography sx={{ fontSize: 12, color: sb.muted }}>{roleLabel} · {online ? tr("Onlayn") : tr("Aloqa yo'q")}</Typography>
           </Box>
         </Stack>
       </Box>
@@ -132,7 +141,7 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
         open={desktop || open}
         onClose={() => setOpen(false)}
         className="no-print"
-        sx={{ width: desktop ? WIDTH : 0, flexShrink: 0, '& .MuiDrawer-paper': { width: WIDTH, border: 0, bgcolor: INK } }}
+        sx={{ width: desktop ? WIDTH : 0, flexShrink: 0, '& .MuiDrawer-paper': { width: WIDTH, border: 0, borderRight: dark ? 0 : '1px solid #E7EAF0', bgcolor: dark ? INK : '#fff', boxShadow: dark ? 'none' : '4px 0 24px rgba(16,24,40,.04)' } }}
       >
         {sidebar}
       </Drawer>
