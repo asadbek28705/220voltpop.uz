@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
-  Alert, Autocomplete, Box, Button, Card, Divider, IconButton, InputAdornment, Paper, Stack, TextField,
+  Alert, Autocomplete, Box, Button, Card, Chip, Divider, IconButton, InputAdornment, Paper, Stack, TextField,
   ToggleButton, ToggleButtonGroup, Typography, useMediaQuery, useTheme,
 } from '@mui/material'
 import CameraIcon from '@mui/icons-material/QrCodeScanner'
@@ -11,8 +11,11 @@ import RemoveIcon from '@mui/icons-material/Remove'
 import CartIcon from '@mui/icons-material/ShoppingCartOutlined'
 import type { Warehouse } from '../store'
 import type { Cart } from '../hooks/useCart'
-import type { Payment, Product } from '../types'
-import { PAYMENTS } from '../types'
+import type { Customer, Payment, Product } from '../types'
+import { SALE_PAYMENTS } from '../types'
+import PersonIcon from '@mui/icons-material/PersonOutline'
+import CustomerDialog from './CustomerDialog'
+import { matchCustomer } from './Customers'
 import { attempt } from '../api'
 import { beep } from '../device'
 import { fmtMoney, fmtNum } from '../utils'
@@ -20,18 +23,33 @@ import PageHeader from './PageHeader'
 import CameraScanner from './CameraScanner'
 import ReceiptDialog from './ReceiptDialog'
 
-interface Props { wh: Warehouse; cart: Cart; onUnknownCode: (code: string) => void }
+interface Props {
+  wh: Warehouse; cart: Cart; onUnknownCode: (code: string) => void
+  customerId: string; onCustomerChange: (id: string) => void
+}
+type NewOption = { newName: string }
 
 const num = (s: string) => Number(s.replace(/\s/g, '').replace(',', '.'))
 
-export default function Pos({ wh, cart, onUnknownCode }: Props) {
+export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerChange }: Props) {
   const theme = useTheme()
   const mobile = useMediaQuery(theme.breakpoints.down('md'))
   const { products } = wh.data
   const [input, setInput] = useState('')
   const [camera, setCamera] = useState(false)
-  const [customer, setCustomer] = useState('')
+  const [customer, setCustomer] = useState('') // bazada yo'q, bir martalik mijoz nomi
+  const [newCustomer, setNewCustomer] = useState<string | null>(null)
   const [payment, setPayment] = useState<Payment>('naqd')
+  const [paidNow, setPaidNow] = useState('')
+  const selected = wh.data.customers.find((c) => c.id === customerId) ?? null
+
+  // Shu mijoz oldin ko'p olgan tovarlar — bir bosishda savatga
+  const usual = useMemo(() => {
+    if (!selected) return []
+    const map = new Map<string, number>()
+    for (const m of wh.data.movements) if (m.type === 'out' && m.customerId === selected.id) map.set(m.productId, (map.get(m.productId) ?? 0) + 1)
+    return [...map].sort((a, b) => b[1] - a[1]).map(([id]) => products.find((p) => p.id === id)).filter((p): p is Product => !!p).slice(0, 12)
+  }, [selected, wh.data.movements, products])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [receipt, setReceipt] = useState<string | null>(null)
@@ -58,16 +76,22 @@ export default function Pos({ wh, cart, onUnknownCode }: Props) {
     setError('')
     if (!lines.length) return
     if (short.length) return setError('Omborda yetarli bo\'lmagan tovarlar bor')
+    if (payment === 'nasiya' && !selected) return setError("Nasiya uchun mijozni tanlang yoki yangi mijoz qo'shing")
+    const paid = payment === 'nasiya' ? Math.round(num(paidNow) || 0) : 0
+    if (paid >= total && paid > 0) return setError("To'liq to'layapti — naqd yoki kartani tanlang")
     setBusy(true)
     const r = await attempt(() => wh.sell({
       items: lines.map((l) => ({ productId: l.productId, qty: l.qty, price: l.price })),
-      counterparty: customer.trim(), note: '', payment,
+      counterparty: selected ? selected.name : customer.trim(), note: '', payment,
+      customerId: selected?.id, paidNow: paid || undefined, paidNowPayment: 'naqd',
     }))
     setBusy(false)
     if (!r.ok) return setError(r.error)
     cart.clear()
     setCustomer('')
+    onCustomerChange('')
     setPayment('naqd')
+    setPaidNow('')
     setReceipt(r.value.saleId)
   }
 
@@ -156,13 +180,77 @@ export default function Pos({ wh, cart, onUnknownCode }: Props) {
   const summary = (
     <Card sx={{ p: 2.5, position: { md: 'sticky' }, top: { md: 88 } }}>
       <Stack spacing={2}>
-        <TextField size="small" label="Mijoz (ixtiyoriy)" value={customer} onChange={(e) => setCustomer(e.target.value)} />
+        <Autocomplete<Customer | NewOption, false, false, true>
+          freeSolo size="small"
+          options={wh.data.customers as (Customer | NewOption)[]}
+          value={selected}
+          inputValue={selected ? selected.name : customer}
+          onInputChange={(_, v, reason) => { if (reason === 'input') { setCustomer(v); if (selected) onCustomerChange('') } }}
+          onChange={(_, v) => {
+            if (v && typeof v === 'object' && 'newName' in v) { setNewCustomer(v.newName); return }
+            if (v && typeof v === 'object') { onCustomerChange(v.id); setCustomer('') }
+            else if (!v) { onCustomerChange(''); setCustomer('') }
+          }}
+          filterOptions={(opts, { inputValue }) => {
+            const found = (opts as Customer[]).filter((c) => 'id' in c && matchCustomer(c, inputValue)).slice(0, 20) as (Customer | NewOption)[]
+            const t = inputValue.trim()
+            if (t && !found.some((c) => 'name' in c && c.name.toLowerCase() === t.toLowerCase())) found.push({ newName: t })
+            return found
+          }}
+          getOptionLabel={(o) => (typeof o === 'string' ? o : 'newName' in o ? o.newName : o.name)}
+          isOptionEqualToValue={(a, b) => 'id' in a && 'id' in b && a.id === b.id}
+          renderOption={(props, o) => 'newName' in o ? (
+            <li {...props} key="__new"><Typography color="primary" sx={{ fontWeight: 600 }}>➕ Yangi mijoz: «{o.newName}»</Typography></li>
+          ) : (
+            <li {...props} key={o.id}>
+              <Stack direction="row" justifyContent="space-between" sx={{ width: '100%' }} spacing={1}>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography noWrap>{o.name}</Typography>
+                  {o.phone && <Typography variant="caption" color="text.secondary">{o.phone}</Typography>}
+                </Box>
+                {o.debt > 0 && <Typography variant="body2" color="error" sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>qarz {fmtMoney(o.debt)}</Typography>}
+              </Stack>
+            </li>
+          )}
+          renderInput={(params) => (
+            <TextField {...params} label="Mijoz" placeholder="Ism yoki telefon bilan qidiring"
+              slotProps={{ input: { ...params.InputProps, startAdornment: <><InputAdornment position="start"><PersonIcon fontSize="small" /></InputAdornment>{params.InputProps.startAdornment}</> } }} />
+          )}
+        />
+        {selected && (
+          <Box sx={{ mt: '8px !important' }}>
+            {selected.debt > 0 && <Typography variant="body2" color="error" sx={{ fontWeight: 600 }}>Oldingi qarzi: {fmtMoney(selected.debt)}</Typography>}
+            {usual.length > 0 && <>
+              <Typography variant="caption" color="text.secondary">Odatda oladi — bosing, savatga tushadi:</Typography>
+              <Stack direction="row" flexWrap="wrap" useFlexGap spacing={0.75} sx={{ mt: 0.5 }}>
+                {usual.map((p) => <Chip key={p.id} size="small" label={p.name} onClick={() => addProduct(p)} variant="outlined" disabled={p.qty <= 0} />)}
+              </Stack>
+            </>}
+          </Box>
+        )}
         <Box>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>To'lov usuli</Typography>
           <ToggleButtonGroup exclusive fullWidth size="small" value={payment} onChange={(_, v) => v && setPayment(v)}>
-            {PAYMENTS.map((p) => <ToggleButton key={p.value} value={p.value}>{p.value === 'otkazma' ? "O'tkazma" : p.label}</ToggleButton>)}
+            {SALE_PAYMENTS.map((p) => (
+              <ToggleButton key={p.value} value={p.value} color={p.value === 'nasiya' ? 'error' : 'primary'} sx={{ px: 0.5 }}>
+                {p.value === 'otkazma' ? "O'tkazma" : p.value === 'nasiya' ? 'Nasiya' : p.label}
+              </ToggleButton>
+            ))}
           </ToggleButtonGroup>
         </Box>
+        {payment === 'nasiya' && (
+          <Stack spacing={1}>
+            {!selected && <Alert severity="warning" sx={{ py: 0 }}>Nasiya uchun mijozni tanlang</Alert>}
+            <TextField size="small" label="Hozir to'lagani (ixtiyoriy)" value={paidNow} onChange={(e) => setPaidNow(e.target.value)} inputMode="decimal"
+              slotProps={{ input: { endAdornment: <InputAdornment position="end">so'm</InputAdornment> } }} />
+            {selected && total > 0 && (
+              <Typography variant="body2">
+                Qarzga yoziladi: <b>{fmtMoney(total - (num(paidNow) || 0))}</b>
+                {selected.debt > 0 && <> · Umumiy qarzi bo'ladi: <b style={{ color: '#E5533D' }}>{fmtMoney(selected.debt + total - (num(paidNow) || 0))}</b></>}
+              </Typography>
+            )}
+          </Stack>
+        )}
         <Divider />
         <Stack direction="row" justifyContent="space-between"><Typography color="text.secondary">Tovarlar</Typography><Typography>{lines.length} xil</Typography></Stack>
         <Stack direction="row" justifyContent="space-between" alignItems="baseline">
@@ -208,6 +296,8 @@ export default function Pos({ wh, cart, onUnknownCode }: Props) {
       )}
 
       <CameraScanner open={camera} continuous title="Kassa: skaner qiling" onClose={() => setCamera(false)} onScan={addByCode} />
+      {newCustomer != null && <CustomerDialog wh={wh} initialName={newCustomer} onClose={() => setNewCustomer(null)}
+        onSaved={(c) => { onCustomerChange(c.id); setCustomer('') }} />}
       {receipt && <ReceiptDialog wh={wh} saleId={receipt} justSold onClose={() => setReceipt(null)} />}
     </Box>
   )

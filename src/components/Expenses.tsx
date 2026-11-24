@@ -16,7 +16,8 @@ import type { Warehouse } from '../store'
 import type { Expense } from '../types'
 import { paymentLabel } from '../types'
 import { download, fmtDate, fmtMoney, toCsv } from '../utils'
-import { daysAgo, expenseInRange, inRange, profitOf, today } from '../stats'
+import { expenseInRange, inRange, profitOf, quarter } from '../stats'
+import PeriodPicker from './PeriodPicker'
 import PageHeader from './PageHeader'
 import StatCard from './StatCard'
 import ChartCard from './ChartCard'
@@ -26,8 +27,8 @@ import { PIE_COLORS, useChartStyle } from './charts'
 export default function Expenses({ wh }: { wh: Warehouse }) {
   const { expenses, movements, products } = wh.data
   const cs = useChartStyle()
-  const [from, setFrom] = useState(daysAgo(29))
-  const [to, setTo] = useState(today())
+  const [from, setFrom] = useState(() => quarter(0).from)
+  const [to, setTo] = useState(() => quarter(0).to)
   const [cat, setCat] = useState('')
   const [open, setOpen] = useState(false)
 
@@ -60,8 +61,7 @@ export default function Expenses({ wh }: { wh: Warehouse }) {
   return (
     <>
       <PageHeader title="Xarajatlar" subtitle="Ijara, ish haqi, kommunal va boshqa chiqimlar" actions={<>
-        <TextField size="small" type="date" label="Dan" value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-        <TextField size="small" type="date" label="Gacha" value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+        <PeriodPicker from={from} to={to} onChange={(f, t) => { setFrom(f); setTo(t) }} />
         <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>Excel</Button>
         <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>Yangi xarajat</Button>
       </>} />

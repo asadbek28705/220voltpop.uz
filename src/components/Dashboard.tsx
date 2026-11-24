@@ -11,7 +11,9 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import type { Warehouse } from '../store'
 import type { MovementType } from '../types'
 import { fmtDate, fmtMoney, fmtNum } from '../utils'
-import { dayKey, daysAgo, profitOf, today } from '../stats'
+import { dayKey, daysAgo, expenseInRange, inRange, profitOf, quarter, today } from '../stats'
+import DebtIcon from '@mui/icons-material/MenuBookOutlined'
+import BalanceIcon from '@mui/icons-material/AccountBalanceOutlined'
 import { GREEN, YELLOW } from '../theme'
 import PageHeader from './PageHeader'
 import StatCard from './StatCard'
@@ -31,6 +33,18 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
   const todayRevenue = todaySales.reduce((s, m) => s + m.qty * m.price, 0)
   const todayProfit = todaySales.reduce((s, m) => s + profitOf(m, products), 0)
   const todayExpenses = wh.data.expenses.filter((e) => dayKey(e.date) === t).reduce((s, e) => s + e.amount, 0)
+
+  // Joriy chorak: 1-yanvar / 1-aprel / 1-iyul / 1-oktabrdan 0 dan boshlanadi
+  const q = quarter(0)
+  const qs = useMemo(() => {
+    const sales = movements.filter((m) => m.type === 'out' && inRange(m, q.from, q.to))
+    const revenue = sales.reduce((s, m) => s + m.qty * m.price, 0)
+    const profit = sales.reduce((s, m) => s + profitOf(m, products), 0)
+    const spent = wh.data.expenses.filter((e) => expenseInRange(e, q.from, q.to)).reduce((s, e) => s + e.amount, 0)
+    return { revenue, profit, spent, net: profit - spent }
+  }, [movements, products, wh.data.expenses, q.from, q.to])
+  const debtors = wh.data.customers.filter((c) => c.debt > 0)
+  const totalDebt = debtors.reduce((s, c) => s + c.debt, 0)
 
   const last14 = useMemo(() => {
     const rows = Array.from({ length: 14 }, (_, i) => {
@@ -55,6 +69,21 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title="Bugungi sof foyda" value={fmtMoney(todayProfit - todayExpenses)} valueColor={todayProfit - todayExpenses >= 0 ? 'primary.main' : 'error.main'} /></Grid>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<WalletIcon />} title="Ombor qiymati (tannarx)" value={fmtMoney(costValue)} color="#3B82F6" /></Grid>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<MoneyOffIcon />} title="Bugungi xarajat" value={fmtMoney(todayExpenses)} color="#E5533D" /></Grid>
+      </Grid>
+
+      <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: 1 }}>
+        <Typography variant="h6">{q.label}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>— har chorak boshida 0 dan boshlanadi</Typography>
+        <Box sx={{ flexGrow: 1 }} />
+        {totalDebt > 0 && <Chip icon={<DebtIcon />} color="error" variant="outlined" clickable onClick={() => navigate('debtors')}
+          label={`Mijozlar qarzi: ${fmtMoney(totalDebt)} (${debtors.length})`} sx={{ fontWeight: 600 }} />}
+        <Button size="small" onClick={() => navigate('reports')}>Batafsil</Button>
+      </Stack>
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<CartIcon />} title="Chorak savdosi" value={fmtMoney(qs.revenue)} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title="Chorak foydasi" value={fmtMoney(qs.profit)} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<MoneyOffIcon />} title="Chorak xarajati" value={fmtMoney(qs.spent)} color="#E5533D" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<BalanceIcon />} title="Chorak sof foydasi" value={fmtMoney(qs.net)} color={qs.net >= 0 ? '#2E9E5B' : '#E5533D'} valueColor={qs.net >= 0 ? 'primary.main' : 'error.main'} /></Grid>
       </Grid>
 
       <Grid container spacing={2}>

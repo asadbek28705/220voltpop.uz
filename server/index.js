@@ -141,6 +141,7 @@ function forSeller(d) {
       .filter((m) => m.type === 'out' || m.type === 'in')
       .map((m) => ({ ...m, cost: null, price: m.type === 'in' ? 0 : m.price, priceUsd: null })),
     expenses: [],
+    customers: d.customers.map(({ paid: _p, ...c }) => c),
   }
 }
 
@@ -165,6 +166,14 @@ app.post('/api/movements', need('seller'), write((req) => {
   tg.onMovement(r.movement)
   return r
 }))
+// Mijozlar: sotuvchi qo'sha oladi va qarz to'lovini qabul qiladi
+app.post('/api/customers', need('seller'), write((req) => store.createCustomer(req.body ?? {})))
+app.post('/api/customers/:id/tx', need('seller'), write((req) => {
+  if (req.body?.type === 'debt' && !isAdmin(req)) throw new HttpError("Qarz qo'shish faqat admin uchun", 403)
+  const r = store.addCustomerTx(req.params.id, req.body ?? {}, seller(req))
+  tg.onCustomerTx(r.tx, r.customer)
+  return r
+}))
 app.post('/api/receive', need('seller'), write((req) => {
   const b = { ...req.body }
   if (!isAdmin(req)) b.items = (b.items ?? []).map((it) => ({ productId: it.productId, qty: it.qty, price: 0 }))
@@ -186,6 +195,13 @@ app.post('/api/categories', admin, write((req) => store.addCategory(req.body.nam
 app.delete('/api/movements/:id', admin, write((req) => {
   const m = store.deleteMovement(req.params.id)
   tg.onUndo(m, seller(req))
+  return { ok: true }
+}))
+app.put('/api/customers/:id', admin, write((req) => store.updateCustomer(req.params.id, req.body ?? {})))
+app.delete('/api/customers/:id', admin, write((req) => store.deleteCustomer(req.params.id)))
+app.delete('/api/customer-tx/:id', admin, write((req) => {
+  const t = store.deleteCustomerTx(req.params.id)
+  tg.onCustomerTxUndo(t, seller(req))
   return { ok: true }
 }))
 app.post('/api/barcodes/next', admin, write(() => store.reserveBarcode()))

@@ -24,13 +24,16 @@ export type Currency = 'UZS' | 'USD'
 
 export type MovementType = 'in' | 'out' | 'adjust'
 
-export type Payment = 'naqd' | 'karta' | 'otkazma'
+export type Payment = 'naqd' | 'karta' | 'otkazma' | 'nasiya'
+/** Pul bilan to'lov usullari (xarajat, qarz to'lovi) */
 export const PAYMENTS: { value: Payment; label: string }[] = [
   { value: 'naqd', label: 'Naqd' },
   { value: 'karta', label: 'Karta' },
   { value: 'otkazma', label: "O'tkazma (Click/Payme)" },
 ]
-export const paymentLabel = (p?: string | null) => PAYMENTS.find((x) => x.value === p)?.label ?? p ?? ''
+/** Savdoda qo'shimcha: nasiya (qarzga) */
+export const SALE_PAYMENTS: { value: Payment; label: string }[] = [...PAYMENTS, { value: 'nasiya', label: 'Nasiya (qarzga)' }]
+export const paymentLabel = (p?: string | null) => SALE_PAYMENTS.find((x) => x.value === p)?.label ?? p ?? ''
 
 export interface Movement {
   id: string
@@ -47,6 +50,7 @@ export interface Movement {
   payment?: Payment | null
   seller?: string | null
   batchId?: string | null // kirim nakladnoyi raqami
+  customerId?: string | null // doimiy mijoz
   priceUsd?: number | null // dollar kirimda: $ narx
   rate?: number | null // kirim paytidagi kurs
 }
@@ -76,7 +80,33 @@ export const EXPENSE_CATEGORIES = [
   'Internet va aloqa', "Xo'jalik mollari", "Ta'mirlash", 'Reklama', 'Boshqa',
 ]
 
+export interface Customer {
+  id: string
+  name: string
+  phone: string
+  note: string
+  createdAt: string
+  debt: number // hozirgi qarzi (manfiy — oldindan to'lagan)
+  bought: number // jami xaridlari
+  receipts: number
+  lastDate: string | null
+}
+
+export interface CustomerTx {
+  id: string
+  customerId: string
+  type: 'pay' | 'debt' // to'lov yoki qo'lda yozilgan qarz
+  amount: number
+  payment: Payment | null
+  note: string
+  saleId: string | null
+  date: string
+  seller: string | null
+}
+
 export interface WarehouseData {
+  customers: Customer[]
+  customerTx: CustomerTx[]
   products: Product[]
   movements: Movement[]
   categories: string[]

@@ -13,6 +13,9 @@ import SettingsIcon from '@mui/icons-material/SettingsOutlined'
 import ExpenseIcon from '@mui/icons-material/MoneyOffOutlined'
 import LabelIcon from '@mui/icons-material/QrCode2Outlined'
 import ScanIcon from '@mui/icons-material/QrCodeScanner'
+import PeopleIcon from '@mui/icons-material/PeopleAltOutlined'
+import DebtIcon from '@mui/icons-material/MenuBookOutlined'
+import Customers from './components/Customers'
 import UsdIcon from '@mui/icons-material/AttachMoneyOutlined'
 import UzsIcon from '@mui/icons-material/PaymentsOutlined'
 import { useWarehouse } from './store'
@@ -46,6 +49,8 @@ const NAV: NavGroup[] = [
     title: 'SOTUV', items: [
       { key: 'pos', label: 'Kassa', icon: <PosIcon fontSize="small" /> },
       { key: 'sales', label: 'Savdolar', icon: <CartIcon fontSize="small" /> },
+      { key: 'customers', label: 'Mijozlar', icon: <PeopleIcon fontSize="small" /> },
+      { key: 'debtors', label: 'Qarzdorlar', icon: <DebtIcon fontSize="small" /> },
     ],
   },
   {
@@ -131,6 +136,9 @@ function Main({ mode, onToggleMode }: { mode: 'light' | 'dark'; onToggleMode: ()
   const wh = useWarehouse()
   const cart = useCart()
   const receiving = useCart('ombor-receive', buyPriceOf)
+  // Kassadagi tanlangan mijoz (Mijozlar sahifasidan «Sotuv» bosilganda ham)
+  const [saleCustomer, setSaleCustomerState] = useState(() => localStorage.getItem('ombor-sale-customer') ?? '')
+  const setSaleCustomer = (id: string) => { setSaleCustomerState(id); localStorage.setItem('ombor-sale-customer', id) }
   const [page, setPageState] = useState(fromHash)
   const [seller, setSeller] = useState(me.demo ? getSeller() : me.user?.name ?? '')
   const [mv, setMv] = useState<{ type: MovementType; productId?: string } | null>(null)
@@ -184,7 +192,10 @@ function Main({ mode, onToggleMode }: { mode: 'light' | 'dark'; onToggleMode: ()
       <Layout groups={nav} active={page} onNavigate={setPage} mode={mode} onToggleMode={onToggleMode}
         online={wh.online} seller={seller} role={me.demo ? 'demo' : admin ? 'admin' : 'seller'} cartCount={cart.items.length}>
         {page === 'home' && <Dashboard wh={wh} onMovement={(t, id) => setMv({ type: t, productId: id })} navigate={setPage} onExpense={() => setExpenseOpen(true)} />}
-        {page === 'pos' && <Pos wh={wh} cart={cart} onUnknownCode={(code) => setScan({ code })} />}
+        {page === 'pos' && <Pos wh={wh} cart={cart} onUnknownCode={(code) => setScan({ code })} customerId={saleCustomer} onCustomerChange={setSaleCustomer} />}
+        {(page === 'customers' || page === 'debtors') && (
+          <Customers key={page} wh={wh} debtorsOnly={page === 'debtors'} onSell={(c) => { setSaleCustomer(c.id); setPage('pos') }} />
+        )}
         {page === 'sales' && (
           <Movements wh={wh} fixedType="out" title="Savdolar" subtitle="Sotilgan tovarlar va cheklar" newLabel="Kassaga o'tish" onNew={() => setPage('pos')} />
         )}

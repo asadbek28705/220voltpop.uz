@@ -38,3 +38,27 @@ export const shortMoney = (n: number) =>
   n >= 1e9 ? (n / 1e9).toFixed(1).replace('.0', '') + ' mlrd'
     : n >= 1e6 ? (n / 1e6).toFixed(1).replace('.0', '') + ' mln'
       : n >= 1e3 ? Math.round(n / 1e3) + ' ming' : String(Math.round(n))
+
+// ---------- Chorak (3 oy): hisoblagichlar har chorak 0 dan boshlanadi ----------
+const QN = ['I', 'II', 'III', 'IV']
+const QMONTHS = ['Yanvar–Mart', 'Aprel–Iyun', 'Iyul–Sentabr', 'Oktabr–Dekabr']
+
+export interface Period { from: string; to: string; label: string; short: string }
+
+/** offset: 0 — joriy chorak, -1 — o'tgan chorak va h.k. */
+export function quarter(offset = 0, base = new Date()): Period {
+  const q0 = Math.floor(base.getMonth() / 3) + offset
+  const start = new Date(base.getFullYear(), q0 * 3, 1)
+  const end = new Date(start.getFullYear(), start.getMonth() + 3, 0)
+  const qi = Math.floor(start.getMonth() / 3)
+  return {
+    from: dayKey(start), to: dayKey(end),
+    label: `${start.getFullYear()} — ${QN[qi]} chorak (${QMONTHS[qi]})`,
+    short: `${QN[qi]} chorak ${start.getFullYear()}`,
+  }
+}
+
+export function yearPeriod(offset = 0): Period {
+  const y = new Date().getFullYear() + offset
+  return { from: `${y}-01-01`, to: `${y}-12-31`, label: `${y} yil`, short: `${y} yil` }
+}

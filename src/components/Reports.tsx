@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
-  Button, Card, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography,
+  Button, Card, Table, TableBody, TableCell, TableHead, TableRow, Typography,
 } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import CartIcon from '@mui/icons-material/ShoppingCartOutlined'
@@ -17,7 +17,8 @@ import {
 import type { Warehouse } from '../store'
 import { download, fmtMoney, fmtNum, toCsv } from '../utils'
 import { paymentLabel } from '../types'
-import { MONTHS, dayKey, daysAgo, expenseInRange, inRange, profitOf, today } from '../stats'
+import { MONTHS, dayKey, expenseInRange, inRange, profitOf, quarter } from '../stats'
+import PeriodPicker from './PeriodPicker'
 import { GREEN, YELLOW } from '../theme'
 import PageHeader from './PageHeader'
 import StatCard from './StatCard'
@@ -26,8 +27,9 @@ import { PIE_COLORS, useChartStyle } from './charts'
 
 export default function Reports({ wh }: { wh: Warehouse }) {
   const { movements, products, expenses } = wh.data
-  const [from, setFrom] = useState(daysAgo(89))
-  const [to, setTo] = useState(today())
+  // Standart: joriy chorak — har 3 oyda hisob 0 dan boshlanadi
+  const [from, setFrom] = useState(() => quarter(0).from)
+  const [to, setTo] = useState(() => quarter(0).to)
   const cs = useChartStyle()
 
   const r = useMemo(() => {
@@ -83,7 +85,7 @@ export default function Reports({ wh }: { wh: Warehouse }) {
       payments: [...payMap.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
       top: [...prodMap.values()].sort((a, b) => b.sum - a.sum).slice(0, 10),
     }
-  }, [movements, products, from, to])
+  }, [movements, products, expenses, from, to])
 
   const exportCsv = () => {
     const rows: (string | number)[][] = [
@@ -97,9 +99,8 @@ export default function Reports({ wh }: { wh: Warehouse }) {
 
   return (
     <>
-      <PageHeader title="Hisobotlar" subtitle="Qurilish va santexnika do'koni" actions={<>
-        <TextField size="small" type="date" label="Dan" value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-        <TextField size="small" type="date" label="Gacha" value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+      <PageHeader title="Hisobotlar" subtitle={quarter(0).from === from && quarter(0).to === to ? `Joriy chorak: ${quarter(0).label}` : `${from} — ${to}`} actions={<>
+        <PeriodPicker from={from} to={to} onChange={(f, t) => { setFrom(f); setTo(t) }} />
         <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>Excel</Button>
         <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => window.print()}>Chop etish</Button>
       </>} />

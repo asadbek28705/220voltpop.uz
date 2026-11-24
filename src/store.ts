@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { CartItem, Expense, Movement, MovementType, Product, ShopSettings, WarehouseData } from './types'
+import type { CartItem, Customer, CustomerTx, Expense, Movement, MovementType, Product, ShopSettings, WarehouseData } from './types'
 import { api } from './api'
 
 interface DataResponse extends WarehouseData {
@@ -24,7 +24,7 @@ export type ProductInput = Omit<Product, 'id' | 'createdAt' | 'qty'> & { id?: st
 export interface RateResult { rate: number; products: number; repriced: number }
 
 const EMPTY: WarehouseData = {
-  products: [], movements: [], categories: [], expenses: [],
+  products: [], movements: [], categories: [], expenses: [], customers: [], customerTx: [],
   settings: { shopName: '', address: '', phone: '', receiptFooter: '' },
 }
 
@@ -49,7 +49,8 @@ export function useWarehouse() {
           movements = [...d.movements, ...prev.movements.filter((m) => !drop.has(m.id))]
           if (d.movements.length) movements.sort((a, b) => b.date.localeCompare(a.date))
         }
-        return { products: d.products, categories: d.categories, settings: d.settings, expenses: d.expenses ?? [], movements }
+        return { products: d.products, categories: d.categories, settings: d.settings, expenses: d.expenses ?? [], movements,
+          customers: d.customers ?? [], customerTx: d.customerTx ?? [] }
       })
       s.version = d.version
       s.epoch = d.epoch
@@ -86,7 +87,7 @@ export function useWarehouse() {
   const deleteProduct = useCallback((id: string) => mutate('DELETE', `/products/${id}`), [mutate])
   const addMovement = useCallback((m: MovementInput) => mutate<{ saleId: string | null }>('POST', '/movements', m), [mutate])
   const deleteMovement = useCallback((id: string) => mutate('DELETE', `/movements/${id}`), [mutate])
-  const sell = useCallback((b: { items: CartItem[]; counterparty: string; note: string; payment: string }) =>
+  const sell = useCallback((b: { items: CartItem[]; counterparty: string; note: string; payment: string; customerId?: string; paidNow?: number; paidNowPayment?: string }) =>
     mutate<{ saleId: string }>('POST', '/sales', b), [mutate])
   const receive = useCallback((b: { items: CartItem[]; counterparty: string; note: string }) =>
     mutate<{ batchId: string }>('POST', '/receive', b), [mutate])
@@ -95,6 +96,12 @@ export function useWarehouse() {
   const deleteExpense = useCallback((id: string) => mutate('DELETE', `/expenses/${id}`), [mutate])
   const nextBarcode = useCallback(() => mutate<{ barcode: string }>('POST', '/barcodes/next'), [mutate])
   const generateBarcodes = useCallback((ids?: string[]) => mutate<{ count: number }>('POST', '/barcodes/generate', { ids }), [mutate])
+  const saveCustomer = useCallback((c: { id?: string; name: string; phone: string; note: string }) =>
+    c.id ? mutate<Customer>('PUT', `/customers/${c.id}`, c) : mutate<Customer>('POST', '/customers', c), [mutate])
+  const deleteCustomer = useCallback((id: string) => mutate('DELETE', `/customers/${id}`), [mutate])
+  const addCustomerTx = useCallback((customerId: string, t: { type: 'pay' | 'debt'; amount: number; payment?: string; note: string }) =>
+    mutate<{ tx: CustomerTx; customer: Customer }>('POST', `/customers/${customerId}/tx`, t), [mutate])
+  const deleteCustomerTx = useCallback((id: string) => mutate('DELETE', `/customer-tx/${id}`), [mutate])
   const setRate = useCallback((rate: number, updateSellPrices: boolean) =>
     mutate<RateResult>('PUT', '/rate', { rate, updateSellPrices }), [mutate])
   const saveSettings = useCallback((s: ShopSettings) => mutate('PUT', '/settings', s), [mutate])
@@ -110,7 +117,7 @@ export function useWarehouse() {
 
   return {
     data, loading, online, refresh, findByCode,
-    saveProduct, deleteProduct, addMovement, deleteMovement, sell, receive, addExpense, deleteExpense, nextBarcode, generateBarcodes, setRate, saveSettings, replaceAll, reset, clearAll,
+    saveProduct, deleteProduct, addMovement, deleteMovement, sell, receive, addExpense, deleteExpense, nextBarcode, generateBarcodes, setRate, saveCustomer, deleteCustomer, addCustomerTx, deleteCustomerTx, saveSettings, replaceAll, reset, clearAll,
   }
 }
 

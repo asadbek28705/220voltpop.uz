@@ -6,7 +6,7 @@ import { fmtDate, fmtNum } from '../utils'
 const money = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 
 /** Chek: 58/80 mm termoprinter uchun. Faqat chop etishda ko'rinadi. */
-export function Receipt({ lines, settings }: { lines: Movement[]; settings: ShopSettings }) {
+export function Receipt({ lines, settings, paid }: { lines: Movement[]; settings: ShopSettings; paid?: number }) {
   if (!lines.length) return null
   const first = lines[0]
   const total = lines.reduce((s, m) => s + m.qty * m.price, 0)
@@ -30,6 +30,10 @@ export function Receipt({ lines, settings }: { lines: Movement[]; settings: Shop
       <div className="r-sep" />
       <div className="r-row r-bold r-big"><span>JAMI:</span><span>{money(total)} so'm</span></div>
       <div className="r-row"><span>To'lov</span><span>{paymentLabel(first.payment)}</span></div>
+      {first.payment === 'nasiya' && <>
+        {!!paid && <div className="r-row"><span>To'landi</span><span>{money(paid)}</span></div>}
+        <div className="r-row r-bold"><span>Qarzga</span><span>{money(total - (paid ?? 0))} so'm</span></div>
+      </>}
       <div className="r-sep" />
       {settings.receiptFooter && <div className="r-center">{settings.receiptFooter}</div>}
     </div>
@@ -37,9 +41,9 @@ export function Receipt({ lines, settings }: { lines: Movement[]; settings: Shop
 }
 
 /** Chekni sahifa ustida maxsus joyga chiqarib, brauzer chop etish oynasini ochadi */
-export function PrintArea({ lines, settings }: { lines: Movement[] | null; settings: ShopSettings }) {
+export function PrintArea({ lines, settings, paid }: { lines: Movement[] | null; settings: ShopSettings; paid?: number }) {
   if (!lines) return null
-  return createPortal(<Receipt lines={lines} settings={settings} />, document.getElementById('print-root')!)
+  return createPortal(<Receipt lines={lines} settings={settings} paid={paid} />, document.getElementById('print-root')!)
 }
 
 export function printReceipt() {

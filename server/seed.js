@@ -47,6 +47,11 @@ export function seedData() {
   ]
 
   const movements = []
+  // Doimiy mijozlar (namuna)
+  const REGULAR = [['Usta Akmal', '+998 90 123 45 67'], ['Obyekt: Yunusobod 12-uy', '+998 93 555 11 22'], ['Qurilish brigadasi', '+998 97 700 80 90'], ['Usta Jasur', '+998 99 321 00 11']]
+  const customers = REGULAR.map(([name, phone]) => ({ id: id(), name, phone, note: '', createdAt: new Date(Date.now() - 90 * 864e5).toISOString() }))
+  const byName = new Map(customers.map((c) => [c.name, c]))
+  const customerTx = []
   const pick = (a) => a[Math.floor(Math.random() * a.length)]
   const qtyFor = (pr) =>
     pr.buyPrice < 2000 ? 50 * (1 + Math.floor(Math.random() * 10)) : pr.buyPrice < 30000 ? 2 + Math.floor(Math.random() * 15) : 1 + Math.floor(Math.random() * 3)
@@ -62,7 +67,8 @@ export function seedData() {
       if (d > now) continue
       const saleId = String(++receiptNo)
       const customer = pick(CUSTOMERS)
-      const payment = pick(PAYMENTS)
+      const cust = byName.get(customer)
+      const payment = cust && Math.random() < 0.45 ? 'nasiya' : pick(PAYMENTS)
       const lines = 1 + Math.floor(Math.random() * 3)
       const used = new Set()
       for (let j = 0; j < lines; j++) {
@@ -70,7 +76,14 @@ export function seedData() {
         if (used.has(pr.id)) continue
         used.add(pr.id)
         movements.push({ id: id(), productId: pr.id, productName: pr.name, type: 'out', qty: qtyFor(pr), price: pr.sellPrice, cost: pr.buyPrice,
-          counterparty: customer, note: '', date: d.toISOString(), saleId, payment, seller: 'Administrator' })
+          counterparty: customer, note: '', date: d.toISOString(), saleId, payment, seller: 'Administrator', customerId: cust?.id ?? null })
+      }
+      // Nasiyalarning ko'pchiligi keyinroq to'langan
+      if (payment === 'nasiya' && day > 7 && Math.random() < 0.75) {
+        const sum = movements.filter((m) => m.saleId === saleId).reduce((s, m) => s + m.qty * m.price, 0)
+        const pd = new Date(d.getTime() + 5 * 864e5)
+        if (pd < now) customerTx.push({ id: id(), customerId: cust.id, type: 'pay', amount: sum, payment: pick(PAYMENTS), note: `Chek №${saleId} bo'yicha`,
+          saleId, date: pd.toISOString(), seller: 'Administrator', createdAt: pd.toISOString() })
       }
     }
     if (day % 9 === 0) {
@@ -98,5 +111,5 @@ export function seedData() {
     if (Math.random() < 0.25) exp(d, E[3], 50000 + Math.round(Math.random() * 15) * 10000, 'Mijozga yetkazib berish')
     if (Math.random() < 0.08) exp(d, E[6], 30000 + Math.round(Math.random() * 10) * 5000, 'Choy, qog\'oz, tozalash')
   }
-  return { products, movements, categories: [...C], expenses, receiptNo }
+  return { products, movements, categories: [...C], expenses, customers, customerTx, receiptNo }
 }

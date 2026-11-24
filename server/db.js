@@ -30,10 +30,22 @@ export function openDb(file) {
     );
     CREATE INDEX IF NOT EXISTS expenses_date ON expenses(date);
     CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS customers (
+      id TEXT PRIMARY KEY, name TEXT NOT NULL, phone TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', createdAt TEXT NOT NULL
+    );
+    -- Mijoz hisobidagi qo'lda yozuvlar: 'pay' — qarz to'lovi, 'debt' — eski/qo'shimcha qarz.
+    -- Nasiya savdolar movements jadvalidan hisoblanadi (savdo bekor qilinsa qarz ham kamayadi).
+    CREATE TABLE IF NOT EXISTS customer_tx (
+      id TEXT PRIMARY KEY, customerId TEXT NOT NULL, type TEXT NOT NULL, amount REAL NOT NULL, payment TEXT,
+      note TEXT NOT NULL DEFAULT '', saleId TEXT, date TEXT NOT NULL, seller TEXT, createdAt TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS customer_tx_c ON customer_tx(customerId);
   `)
   // Migratsiya: kirim nakladnoylarini guruhlash uchun
   const cols = db.prepare('PRAGMA table_info(movements)').all().map((c) => c.name)
   if (!cols.includes('batchId')) db.exec('ALTER TABLE movements ADD COLUMN batchId TEXT')
+  if (!cols.includes('customerId')) db.exec('ALTER TABLE movements ADD COLUMN customerId TEXT')
+  db.exec('CREATE INDEX IF NOT EXISTS movements_customer ON movements(customerId)')
   if (!cols.includes('priceUsd')) db.exec('ALTER TABLE movements ADD COLUMN priceUsd REAL; ALTER TABLE movements ADD COLUMN rate REAL;')
   // Migratsiya: dollarda sotib olinadigan tovarlar
   const pcols = db.prepare('PRAGMA table_info(products)').all().map((c) => c.name)
@@ -46,7 +58,7 @@ export function openDb(file) {
 }
 
 const PRODUCT_COLS = ['id', 'name', 'sku', 'barcode', 'category', 'unit', 'buyPrice', 'sellPrice', 'qty', 'minQty', 'location', 'createdAt', 'currency', 'buyPriceUsd', 'markup']
-const MOVE_COLS = ['id', 'productId', 'productName', 'type', 'qty', 'price', 'cost', 'counterparty', 'note', 'date', 'saleId', 'payment', 'seller', 'batchId', 'priceUsd', 'rate', 'rev']
+const MOVE_COLS = ['id', 'productId', 'productName', 'type', 'qty', 'price', 'cost', 'counterparty', 'note', 'date', 'saleId', 'payment', 'seller', 'batchId', 'priceUsd', 'rate', 'customerId', 'rev']
 
 export class HttpError extends Error {
   constructor(message, status = 400) { super(message); this.status = status }
@@ -101,8 +113,11 @@ class Store {
   }
   ensureCategory(name) { if (name) this.db.prepare('INSERT OR IGNORE INTO categories (name) VALUES (?)').run(name) }
 
-  loadData({ products = [], movements = [], categories = [], expenses = [], receiptNo = 0 }) {
-    this.db.exec('DELETE FROM products; DELETE FROM movements; DELETE FROM deleted_movements; DELETE FROM categories; DELETE FROM expenses;')
+  loadData({ products = [], movements = [], categories = [], expenses = [], customers = [], customerTx = [], receiptNo = 0 }) {
+    this.db.exec('DELETE FROM products; DELETE FROM movements; DELETE FROM deleted_movements; DELETE FROM categories; DELETE FROM expenses; DELETE FROM customers; DELETE FROM customer_tx;')
+    for (const c of customers) this.db.prepare('INSERT INTO customers (id, name, phone, note, createdAt) VALUES (?, ?, ?, ?, ?)')
+      .run(c.id, str(c.name), str(c.phone), str(c.note), c.createdAt ?? new Date().toISOString())
+    for (const t of customerTx) this.insertTx(t)
     for (const e of expenses) this.insertExpense({ note: '', payment: 'naqd', seller: null, createdAt: e.date, ...e })
     const v = this.bump()
     for (const c of categories.length ? categories : DEFAULT_CATEGORIES) this.ensureCategory(c)
@@ -110,7 +125,7 @@ class Store {
       this.insertProduct({ currency: 'UZS', buyPriceUsd: 0, markup: 0, ...p, sku: str(p.sku), barcode: str(p.barcode), location: str(p.location), createdAt: p.createdAt ?? new Date().toISOString() })
       this.ensureCategory(p.category)
     }
-    for (const m of movements) this.insertMovement({ cost: null, saleId: null, payment: null, seller: null, ...m, rev: v })
+    for (const m of movements) this.insertMovement({ cost: null, saleId: null, payment: null, seller: null, customerId: null, ...m, rev: v })
     this.setMeta('receiptNo', receiptNo)
     this.setMeta('epoch', randomUUID())
   }
@@ -126,7 +141,92 @@ class Store {
     ).map(({ rev: _r, ...m }) => m)
     const deleted = full ? [] : this.db.prepare('SELECT id FROM deleted_movements WHERE rev > ?').all(since).map((r) => r.id)
     const expenses = this.db.prepare('SELECT * FROM expenses ORDER BY date DESC').all().map((r) => ({ ...r }))
-    return { full, epoch: this.epoch, version: this.version, products, categories, movements, deleted, expenses, settings: this.settings() }
+    return {
+      full, epoch: this.epoch, version: this.version, products, categories, movements, deleted, expenses, settings: this.settings(),
+      customers: this.customers(), customerTx: this.db.prepare('SELECT * FROM customer_tx ORDER BY date DESC').all().map((r) => ({ ...r })),
+    }
+  }
+
+  /** Mijozlar: qarz = nasiya savdolar + qo'lda qarzlar − to'lovlar */
+  customers() {
+    return this.db.prepare(`
+      SELECT c.*,
+        COALESCE((SELECT SUM(qty * price) FROM movements WHERE customerId = c.id AND type = 'out'), 0) AS bought,
+        COALESCE((SELECT SUM(qty * price) FROM movements WHERE customerId = c.id AND type = 'out' AND payment = 'nasiya'), 0) AS nasiya,
+        COALESCE((SELECT SUM(amount) FROM customer_tx WHERE customerId = c.id AND type = 'debt'), 0) AS extraDebt,
+        COALESCE((SELECT SUM(amount) FROM customer_tx WHERE customerId = c.id AND type = 'pay'), 0) AS paid,
+        (SELECT COUNT(DISTINCT saleId) FROM movements WHERE customerId = c.id AND type = 'out') AS receipts,
+        (SELECT MAX(date) FROM movements WHERE customerId = c.id AND type = 'out') AS lastDate
+      FROM customers c ORDER BY c.name COLLATE NOCASE
+    `).all().map(({ nasiya, extraDebt, paid, ...c }) => ({ ...c, debt: Math.round(nasiya + extraDebt - paid), paid }))
+  }
+  customer(id) {
+    const c = this.customers().find((x) => x.id === id)
+    if (!c) throw new HttpError('Mijoz topilmadi', 404)
+    return c
+  }
+
+  // ---------- mijozlar ----------
+  cleanCustomer(b) {
+    const c = { name: str(b.name), phone: str(b.phone), note: str(b.note) }
+    if (!c.name) throw new HttpError('Mijoz ismini kiriting')
+    return c
+  }
+  createCustomer(b) {
+    return this.tx(() => {
+      const c = { ...this.cleanCustomer(b), id: randomUUID(), createdAt: new Date().toISOString() }
+      if (c.phone && this.db.prepare('SELECT 1 FROM customers WHERE phone = ?').get(c.phone)) throw new HttpError('Bu telefon raqamli mijoz bor')
+      this.db.prepare('INSERT INTO customers (id, name, phone, note, createdAt) VALUES (?, ?, ?, ?, ?)').run(c.id, c.name, c.phone, c.note, c.createdAt)
+      this.bump()
+      return this.customer(c.id)
+    })
+  }
+  updateCustomer(id, b) {
+    return this.tx(() => {
+      this.customer(id)
+      const c = this.cleanCustomer(b)
+      this.db.prepare('UPDATE customers SET name = ?, phone = ?, note = ? WHERE id = ?').run(c.name, c.phone, c.note, id)
+      this.bump()
+      return this.customer(id)
+    })
+  }
+  deleteCustomer(id) {
+    return this.tx(() => {
+      const c = this.customer(id)
+      if (Math.abs(c.debt) > 0) throw new HttpError(`Mijozda ${c.debt} so'm qarz bor — avval qarzni yoping`)
+      this.db.prepare('DELETE FROM customers WHERE id = ?').run(id)
+      this.db.prepare('DELETE FROM customer_tx WHERE customerId = ?').run(id)
+      this.bump()
+    })
+  }
+  insertTx(t) {
+    const cols = ['id', 'customerId', 'type', 'amount', 'payment', 'note', 'saleId', 'date', 'seller', 'createdAt']
+    this.db.prepare(`INSERT INTO customer_tx (${cols}) VALUES (${cols.map(() => '?')})`).run(...cols.map((c) => t[c] ?? null))
+  }
+  /** Qarz to'lovi ('pay') yoki qo'lda qarz ('debt') */
+  addCustomerTx(customerId, b, seller) {
+    return this.tx(() => {
+      const c = this.customer(customerId)
+      const type = b.type === 'debt' ? 'debt' : 'pay'
+      const amount = Math.round(num(b.amount))
+      if (!(amount > 0)) throw new HttpError("Summa 0 dan katta bo'lishi kerak")
+      const t = {
+        id: randomUUID(), customerId, type, amount, payment: type === 'pay' ? str(b.payment) || 'naqd' : null, note: str(b.note),
+        saleId: b.saleId ?? null, date: new Date().toISOString(), seller, createdAt: new Date().toISOString(),
+      }
+      this.insertTx(t)
+      this.bump()
+      return { tx: t, customer: { ...c, debt: c.debt + (type === 'debt' ? amount : -amount) } }
+    })
+  }
+  deleteCustomerTx(id) {
+    return this.tx(() => {
+      const t = this.db.prepare('SELECT * FROM customer_tx WHERE id = ?').get(id)
+      if (!t) throw new HttpError('Yozuv topilmadi', 404)
+      this.db.prepare('DELETE FROM customer_tx WHERE id = ?').run(id)
+      this.bump()
+      return { ...t }
+    })
   }
 
   settings() { return { usdRate: 0, rateDate: '', ...JSON.parse(this.getMeta('settings') ?? '{}') } }
@@ -312,16 +412,28 @@ class Store {
         if (q > p.qty + 1e-9) throw new HttpError(`"${p.name}" omborda yetarli emas: ${p.qty} ${p.unit} bor`)
         prods.set(pid, p)
       }
+      const payment = str(b.payment) || 'naqd'
+      const cust = b.customerId ? this.customer(b.customerId) : null
+      if (payment === 'nasiya' && !cust) throw new HttpError('Nasiya uchun mijozni tanlang')
       const v = this.bump()
       const saleId = this.nextReceipt()
       const date = new Date().toISOString()
-      const payment = str(b.payment) || 'naqd'
+      let total = 0
       for (const it of items) {
         const p = prods.get(it.productId)
+        total += num(it.qty) * num(it.price)
         this.insertMovement({
           id: randomUUID(), productId: p.id, productName: p.name, type: 'out', qty: num(it.qty), price: num(it.price),
-          cost: p.buyPrice, counterparty: str(b.counterparty), note: str(b.note), date, saleId, payment, seller, rev: v,
+          cost: p.buyPrice, counterparty: cust ? cust.name : str(b.counterparty), note: str(b.note), date, saleId, payment, seller,
+          customerId: cust?.id ?? null, rev: v,
         })
+      }
+      // Nasiyada bir qismini darhol to'lasa — to'lov yozuvi
+      const paidNow = Math.round(num(b.paidNow))
+      if (payment === 'nasiya' && paidNow > 0) {
+        if (paidNow >= total) throw new HttpError("To'liq to'lansa — naqd/karta ni tanlang")
+        this.insertTx({ id: randomUUID(), customerId: cust.id, type: 'pay', amount: paidNow, payment: str(b.paidNowPayment) || 'naqd',
+          note: `Chek №${saleId} bo'yicha`, saleId, date, seller, createdAt: date })
       }
       for (const [pid, q] of need) {
         const p = prods.get(pid)
@@ -442,10 +554,14 @@ class Store {
     if (!Array.isArray(d?.products) || !Array.isArray(d?.movements)) throw new HttpError("Fayl noto'g'ri")
     return this.tx(() => {
       const receiptNo = Math.max(0, ...d.movements.map((m) => Number(m.saleId) || 0))
-      this.loadData({ ...d, expenses: Array.isArray(d.expenses) ? d.expenses : [], receiptNo })
+      this.loadData({ ...d, expenses: Array.isArray(d.expenses) ? d.expenses : [],
+        customers: Array.isArray(d.customers) ? d.customers : [], customerTx: Array.isArray(d.customerTx) ? d.customerTx : [], receiptNo })
       if (d.settings) this.setMeta('settings', JSON.stringify(d.settings))
     })
   }
   reset() { return this.tx(() => this.loadData(seedData())) }
   clear() { return this.tx(() => this.loadData({ products: [], movements: [], categories: DEFAULT_CATEGORIES })) }
+
+  /** Mijoz bo'yicha qisqa ma'lumot (Telegram uchun) */
+  debtors() { return this.customers().filter((c) => c.debt > 0).sort((a, b) => b.debt - a.debt) }
 }
