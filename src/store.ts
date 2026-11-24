@@ -7,6 +7,8 @@ interface DataResponse extends WarehouseData {
   epoch: string
   version: number
   deleted: string[]
+  productsFull?: boolean // false — faqat o'zgargan tovarlar keldi
+  deletedProducts?: string[]
 }
 
 export interface MovementInput {
@@ -40,7 +42,7 @@ export function useWarehouse() {
     if (s.busy) { s.again = true; return }
     s.busy = true
     try {
-      const d = await api<DataResponse>('GET', `/data?since=${s.version}&epoch=${encodeURIComponent(s.epoch)}`)
+      const d = await api<DataResponse>('GET', `/data?since=${s.version}&epoch=${encodeURIComponent(s.epoch)}&p=1`)
       setData((prev) => {
         let movements: Movement[]
         if (d.full) movements = d.movements
@@ -49,7 +51,13 @@ export function useWarehouse() {
           movements = [...d.movements, ...prev.movements.filter((m) => !drop.has(m.id))]
           if (d.movements.length) movements.sort((a, b) => b.date.localeCompare(a.date))
         }
-        return { products: d.products, categories: d.categories, settings: d.settings, expenses: d.expenses ?? [], movements,
+        let products = d.products
+        if (d.productsFull === false) {
+          const drop = new Set([...(d.deletedProducts ?? []), ...d.products.map((p) => p.id)])
+          products = [...prev.products.filter((p) => !drop.has(p.id)), ...d.products]
+          if (d.products.length) products.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+        }
+        return { products, categories: d.categories, settings: d.settings, expenses: d.expenses ?? [], movements,
           customers: d.customers ?? [], customerTx: d.customerTx ?? [] }
       })
       s.version = d.version

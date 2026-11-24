@@ -628,5 +628,9 @@ const dict: Record<string, string> = {
   "Qolgan qarz": "Remaining debt",
   "TO'LANDI:": "PAID:",
   "{0} ta chek": "{0} receipts",
+  "Sahifada:": "Per page:",
+  "{0}–{1} / {2}": "{0}–{1} of {2}",
+  "{0} tadan {1} tasi ko'rsatilgan": "Showing {1} of {0}",
+  "Yana ko'rsatish": "Show more",
 }
 export default dict

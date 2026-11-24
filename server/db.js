@@ -54,6 +54,22 @@ export function openDb(file) {
     ALTER TABLE products ADD COLUMN buyPriceUsd REAL NOT NULL DEFAULT 0;
     ALTER TABLE products ADD COLUMN markup REAL NOT NULL DEFAULT 0;
   `)
+  // Migratsiya: tovarlar ham faqat o'zgarganlari yuboriladi (har savdoda 3000+ tovarni qayta yubormaslik uchun)
+  const pcols2 = db.prepare('PRAGMA table_info(products)').all().map((c) => c.name)
+  if (!pcols2.includes('rev')) db.exec('ALTER TABLE products ADD COLUMN rev INTEGER NOT NULL DEFAULT 0')
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS products_rev ON products(rev);
+    CREATE TABLE IF NOT EXISTS deleted_products (id TEXT PRIMARY KEY, rev INTEGER NOT NULL);
+    CREATE TRIGGER IF NOT EXISTS products_rev_ins AFTER INSERT ON products BEGIN
+      UPDATE products SET rev = COALESCE((SELECT CAST(value AS INTEGER) FROM meta WHERE key = 'version'), 0) + 1 WHERE id = NEW.id;
+    END;
+    CREATE TRIGGER IF NOT EXISTS products_rev_upd AFTER UPDATE ON products WHEN NEW.rev = OLD.rev BEGIN
+      UPDATE products SET rev = COALESCE((SELECT CAST(value AS INTEGER) FROM meta WHERE key = 'version'), 0) + 1 WHERE id = NEW.id;
+    END;
+    CREATE TRIGGER IF NOT EXISTS products_rev_del AFTER DELETE ON products BEGIN
+      INSERT OR REPLACE INTO deleted_products (id, rev) VALUES (OLD.id, COALESCE((SELECT CAST(value AS INTEGER) FROM meta WHERE key = 'version'), 0) + 1);
+    END;
+  `)
   return new Store(db)
 }
 
@@ -114,7 +130,7 @@ class Store {
   ensureCategory(name) { if (name) this.db.prepare('INSERT OR IGNORE INTO categories (name) VALUES (?)').run(name) }
 
   loadData({ products = [], movements = [], categories = [], expenses = [], customers = [], customerTx = [], receiptNo = 0 }) {
-    this.db.exec('DELETE FROM products; DELETE FROM movements; DELETE FROM deleted_movements; DELETE FROM categories; DELETE FROM expenses; DELETE FROM customers; DELETE FROM customer_tx;')
+    this.db.exec('DELETE FROM products; DELETE FROM deleted_products; DELETE FROM movements; DELETE FROM deleted_movements; DELETE FROM categories; DELETE FROM expenses; DELETE FROM customers; DELETE FROM customer_tx;')
     for (const c of customers) this.db.prepare('INSERT INTO customers (id, name, phone, note, createdAt) VALUES (?, ?, ?, ?, ?)')
       .run(c.id, str(c.name), str(c.phone), str(c.note), c.createdAt ?? new Date().toISOString())
     for (const t of customerTx) this.insertTx(t)
@@ -131,9 +147,15 @@ class Store {
   }
 
   // ---------- o'qish ----------
-  data(since, epoch) {
+  /** partial — mijoz tovarlarni ham qisman qabul qila oladi (yangi versiya) */
+  data(since, epoch, partial = false) {
     const full = !since || epoch !== this.epoch
-    const products = this.db.prepare('SELECT * FROM products ORDER BY name').all().map((r) => ({ ...r }))
+    const allProducts = full || !partial
+    const products = (allProducts
+      ? this.db.prepare('SELECT * FROM products ORDER BY name').all()
+      : this.db.prepare('SELECT * FROM products WHERE rev > ? ORDER BY name').all(since)
+    ).map(({ rev: _r, ...r }) => r)
+    const deletedProducts = allProducts ? [] : this.db.prepare('SELECT id FROM deleted_products WHERE rev > ?').all(since).map((r) => r.id)
     const categories = this.db.prepare('SELECT name FROM categories ORDER BY rowid').all().map((r) => r.name)
     const movements = (full
       ? this.db.prepare('SELECT * FROM movements ORDER BY date DESC').all()
@@ -142,7 +164,7 @@ class Store {
     const deleted = full ? [] : this.db.prepare('SELECT id FROM deleted_movements WHERE rev > ?').all(since).map((r) => r.id)
     const expenses = this.db.prepare('SELECT * FROM expenses ORDER BY date DESC').all().map((r) => ({ ...r }))
     return {
-      full, epoch: this.epoch, version: this.version, products, categories, movements, deleted, expenses, settings: this.settings(),
+      full, epoch: this.epoch, version: this.version, products, productsFull: allProducts, deletedProducts, categories, movements, deleted, expenses, settings: this.settings(),
       customers: this.customers(), customerTx: this.db.prepare('SELECT * FROM customer_tx ORDER BY date DESC').all().map((r) => ({ ...r })),
     }
   }

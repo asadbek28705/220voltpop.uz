@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import {
   Button, Chip, IconButton, InputAdornment, MenuItem, Paper, Stack, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, TextField, Tooltip, Typography, FormControlLabel, Switch,
+  TableContainer, TableHead, TablePagination, TableRow, TextField, Tooltip, Typography, FormControlLabel, Switch,
 } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import AddIcon from '@mui/icons-material/Add'
@@ -43,14 +43,19 @@ export default function Products({ wh, onMovement, currency }: Props) {
   const [editing, setEditing] = useState<Product | 'new' | null>(null)
   const admin = useIsAdmin()
 
+  // Ko'p tovar bo'lsa ham tez: qidiruv kechiktirilib hisoblanadi, jadval sahifalarga bo'linadi
+  const dq = useDeferredValue(q)
+  const [page, setPage] = useState(0)
+  const [perPage, setPerPage] = useState(() => Number(localStorage.getItem('ombor-per-page')) || 50)
+  useEffect(() => setPage(0), [dq, cat, lowOnly, currency])
   const list = useMemo(() => {
-    const s = q.trim().toLowerCase()
+    const s = dq.trim().toLowerCase()
     return products
       .filter((p) => !cat || p.category === cat)
       .filter((p) => !lowOnly || p.qty <= p.minQty)
       .filter((p) => !s || p.name.toLowerCase().includes(s) || p.sku.toLowerCase().includes(s) || p.location.toLowerCase().includes(s) || p.barcode.includes(s))
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [products, q, cat, lowOnly])
+  }, [products, dq, cat, lowOnly])
 
   const exportCsv = () => {
     const rows: (string | number)[][] = [[tr("Nomi"), tr("Artikul"), tr("Shtrix-kod"), tr("Kategoriya"), tr("Birlik"), tr("Qoldiq"), tr("Minimal"), tr("Valyuta"), tr("Kelish narxi ($)"), tr("Kelish narxi (so'm)"), tr("Ustama %"), tr("Sotuv narxi"), tr("Joyi")]]
@@ -112,7 +117,7 @@ export default function Products({ wh, onMovement, currency }: Props) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {list.map((p) => {
+            {list.slice(page * perPage, page * perPage + perPage).map((p) => {
               const status = p.qty === 0 ? 'error' : p.qty <= p.minQty ? 'warning' : 'success'
               return (
                 <TableRow key={p.id} hover>
@@ -153,6 +158,13 @@ export default function Products({ wh, onMovement, currency }: Props) {
           </TableBody>
         </Table>
       </TableContainer>
+      {list.length > 25 && (
+        <TablePagination component="div" count={list.length} page={Math.min(page, Math.max(0, Math.ceil(list.length / perPage) - 1))}
+          onPageChange={(_, p) => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+          rowsPerPage={perPage} rowsPerPageOptions={[25, 50, 100, 200]}
+          onRowsPerPageChange={(e) => { const v = Number(e.target.value); setPerPage(v); localStorage.setItem('ombor-per-page', String(v)); setPage(0) }}
+          labelRowsPerPage={tr("Sahifada:")} labelDisplayedRows={({ from, to, count }) => tr("{0}–{1} / {2}", from, to, count)} />
+      )}
       </Paper>
       <Typography variant="body2" color="text.secondary">
         {tr("Ko'rsatilgan:")} {tr('{0} ta', list.length)}{admin && <> {tr("· Jami tannarx:")} {fmtMoney(list.reduce((s, p) => s + p.qty * p.buyPrice, 0))}</>}

@@ -149,7 +149,7 @@ function forSeller(d) {
 }
 
 app.get('/api/data', need('seller'), (req, res) => {
-  const d = store.data(Number(req.query.since ?? 0), String(req.query.epoch ?? ''))
+  const d = store.data(Number(req.query.since ?? 0), String(req.query.epoch ?? ''), req.query.p === '1')
   res.json(isAdmin(req) ? d : forSeller(d))
 })
 

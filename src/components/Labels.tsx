@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Alert, Box, Button, Card, Checkbox, FormControlLabel, InputAdornment, MenuItem, Paper, Stack, Switch, Table, TableBody,
@@ -68,13 +68,17 @@ export default function Labels({ wh }: { wh: Warehouse }) {
   const admin = useIsAdmin()
   const format = LABEL_FORMATS.find((f) => f.key === formatKey) ?? LABEL_FORMATS[0]
 
+  // Ko'p tovarda tez ishlashi uchun: qidiruv kechiktiriladi, ro'yxat 100 tadan ko'rsatiladi
+  const dq = useDeferredValue(q)
+  const [limit, setLimit] = useState(100)
+  useEffect(() => setLimit(100), [dq, onlyMissing])
   const list = useMemo(() => {
-    const s = q.trim().toLowerCase()
+    const s = dq.trim().toLowerCase()
     return products
       .filter((p) => !onlyMissing || !p.barcode)
       .filter((p) => !s || p.name.toLowerCase().includes(s) || p.sku.toLowerCase().includes(s) || p.barcode.includes(s))
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [products, q, onlyMissing])
+  }, [products, dq, onlyMissing])
 
   const selected = products.filter((p) => (copies[p.id] ?? 0) > 0)
   const missing = selected.filter((p) => !p.barcode)
@@ -138,7 +142,7 @@ export default function Labels({ wh }: { wh: Warehouse }) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {list.map((p) => {
+                {list.slice(0, limit).map((p) => {
                   const n = copies[p.id] ?? 0
                   return (
                     <TableRow key={p.id} hover selected={n > 0}>
@@ -162,6 +166,12 @@ export default function Labels({ wh }: { wh: Warehouse }) {
               </TableBody>
             </Table>
           </TableContainer>
+          {list.length > limit && (
+            <Stack direction="row" alignItems="center" justifyContent="center" spacing={2} sx={{ p: 1.5, borderTop: 1, borderColor: 'divider' }}>
+              <Typography variant="body2" color="text.secondary">{tr("{0} tadan {1} tasi ko'rsatilgan", list.length, limit)}</Typography>
+              <Button size="small" onClick={() => setLimit(limit + 200)}>{tr("Yana ko'rsatish")}</Button>
+            </Stack>
+          )}
         </Paper>
 
         <Card sx={{ p: 2.5, width: { xs: '100%', lg: 380 }, flexShrink: 0, position: { lg: 'sticky' }, top: { lg: 88 } }}>
