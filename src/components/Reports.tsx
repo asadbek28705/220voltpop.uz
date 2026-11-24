@@ -17,7 +17,7 @@ import {
 import type { Warehouse } from '../store'
 import { download, fmtMoney, fmtNum, toCsv } from '../utils'
 import { paymentLabel } from '../types'
-import { MONTHS, currentPeriod, dayBounds, dayKey, expenseInRange, fmtDay, inRange, profitOf } from '../stats'
+import { MONTHS, currentPeriod, dayBounds, dayKey, expenseInRange, fmtDay, inRange, profitOf, saleLines } from '../stats'
 import PeriodPicker from './PeriodPicker'
 import { GREEN, YELLOW } from '../theme'
 import PageHeader from './PageHeader'
@@ -36,7 +36,7 @@ export default function Reports({ wh }: { wh: Warehouse }) {
   const cs = useChartStyle()
 
   const r = useMemo(() => {
-    const sales = movements.filter((m) => m.type === 'out' && inRange(m, from, to))
+    const sales = saleLines(movements).filter((m) => inRange(m, from, to))
     const ins = movements.filter((m) => m.type === 'in' && inRange(m, from, to))
     const revenue = sales.reduce((s, m) => s + m.qty * m.price, 0)
     const profit = sales.reduce((s, m) => s + profitOf(m, products), 0)

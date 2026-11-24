@@ -3,6 +3,7 @@ import { Alert, Box, CircularProgress, CssBaseline, Fab, Snackbar, ThemeProvider
 import DashboardIcon from '@mui/icons-material/SpaceDashboardOutlined'
 import PosIcon from '@mui/icons-material/PointOfSaleOutlined'
 import CartIcon from '@mui/icons-material/ShoppingCartOutlined'
+import ReturnIcon from '@mui/icons-material/AssignmentReturnOutlined'
 import BoxIcon from '@mui/icons-material/Inventory2Outlined'
 import InIcon from '@mui/icons-material/MoveToInboxOutlined'
 import ReceiveIcon from '@mui/icons-material/DocumentScannerOutlined'
@@ -25,6 +26,7 @@ import Login from './components/Login'
 import type { MovementType, Product } from './types'
 import { makeTheme } from './theme'
 import { useCart } from './hooks/useCart'
+import { useSaleTabs } from './hooks/useSaleTabs'
 import { useHardwareScanner } from './hooks/useHardwareScanner'
 import { beep, getSeller, isMobile } from './device'
 import Layout, { type NavGroup } from './components/Layout'
@@ -50,6 +52,7 @@ const NAV: NavGroup[] = [
     title: tr('SOTUV'), items: [
       { key: 'pos', label: tr('Kassa'), icon: <PosIcon fontSize="small" /> },
       { key: 'sales', label: tr('Savdolar'), icon: <CartIcon fontSize="small" /> },
+      { key: 'returns', label: tr('Qaytarilgan tovarlar'), icon: <ReturnIcon fontSize="small" /> },
       { key: 'customers', label: tr('Mijozlar'), icon: <PeopleIcon fontSize="small" /> },
       { key: 'debtors', label: tr('Qarzdorlar'), icon: <DebtIcon fontSize="small" /> },
     ],
@@ -135,11 +138,9 @@ function Main({ mode, onToggleMode }: { mode: 'light' | 'dark'; onToggleMode: ()
     return pageKeys.includes(h) ? h : isMobile() || !admin ? 'pos' : 'home'
   }, [pageKeys, admin])
   const wh = useWarehouse()
-  const cart = useCart()
+  const sale = useSaleTabs() // kassadagi xaridor oynalari
+  const cart = sale.cart
   const receiving = useCart('ombor-receive', buyPriceOf)
-  // Kassadagi tanlangan mijoz (Mijozlar sahifasidan «Sotuv» bosilganda ham)
-  const [saleCustomer, setSaleCustomerState] = useState(() => localStorage.getItem('ombor-sale-customer') ?? '')
-  const setSaleCustomer = (id: string) => { setSaleCustomerState(id); localStorage.setItem('ombor-sale-customer', id) }
   const [page, setPageState] = useState(fromHash)
   const [seller, setSeller] = useState(me.demo ? getSeller() : me.user?.name ?? '')
   const [mv, setMv] = useState<{ type: MovementType; productId?: string } | null>(null)
@@ -191,14 +192,17 @@ function Main({ mode, onToggleMode }: { mode: 'light' | 'dark'; onToggleMode: ()
   return (
     <>
       <Layout groups={nav} active={page} onNavigate={setPage} mode={mode} onToggleMode={onToggleMode}
-        online={wh.online} seller={seller} role={me.demo ? 'demo' : admin ? 'admin' : 'seller'} cartCount={cart.items.length}>
+        online={wh.online} seller={seller} role={me.demo ? 'demo' : admin ? 'admin' : 'seller'} cartCount={sale.itemCount}>
         {page === 'home' && <Dashboard wh={wh} onMovement={(t, id) => setMv({ type: t, productId: id })} navigate={setPage} onExpense={() => setExpenseOpen(true)} />}
-        {page === 'pos' && <Pos wh={wh} cart={cart} onUnknownCode={(code) => setScan({ code })} customerId={saleCustomer} onCustomerChange={setSaleCustomer} />}
+        {page === 'pos' && <Pos wh={wh} sale={sale} onUnknownCode={(code) => setScan({ code })} />}
         {(page === 'customers' || page === 'debtors') && (
-          <Customers key={page} wh={wh} debtorsOnly={page === 'debtors'} onSell={(c) => { setSaleCustomer(c.id); setPage('pos') }} />
+          <Customers key={page} wh={wh} debtorsOnly={page === 'debtors'} onSell={(c) => { sale.openForCustomer(c.id); setPage('pos') }} />
         )}
         {page === 'sales' && (
-          <Movements wh={wh} fixedType="out" title={tr("Savdolar")} subtitle={tr("Sotilgan tovarlar va cheklar")} newLabel={tr("Kassaga o'tish")} onNew={() => setPage('pos')} />
+          <Movements key="sales" wh={wh} fixedType="out" title={tr("Savdolar")} subtitle={tr("Sotilgan tovarlar va cheklar")} newLabel={tr("Kassaga o'tish")} onNew={() => setPage('pos')} />
+        )}
+        {page === 'returns' && (
+          <Movements key="returns" wh={wh} fixedType="return" title={tr("Qaytarilgan tovarlar")} subtitle={tr("Mijoz qaytargan tovarlar omborga tushadi, pul qaytarilgani yoziladi")} />
         )}
         {page === 'receive' && (
           <Receive wh={wh} list={receiving} onUnknownCode={(code) => (admin ? setNewProduct({ barcode: code, forReceive: true }) : setScan({ code }))} onDone={setToast} />
@@ -207,15 +211,15 @@ function Main({ mode, onToggleMode }: { mode: 'light' | 'dark'; onToggleMode: ()
         {page === 'products-usd' && <Products key="usd" wh={wh} currency="USD" onMovement={(t, id) => setMv({ type: t, productId: id })} />}
         {page === 'products-uzs' && <Products key="uzs" wh={wh} currency="UZS" onMovement={(t, id) => setMv({ type: t, productId: id })} />}
         {page === 'incoming' && (
-          <Movements wh={wh} fixedType="in" title={tr("Kirim")} subtitle={tr("Ta'minotchilardan qabul qilingan tovarlar")} newLabel={tr("Yangi kirim")} onNew={() => setMv({ type: 'in' })} />
+          <Movements key="incoming" wh={wh} fixedType="in" title={tr("Kirim")} subtitle={tr("Ta'minotchilardan qabul qilingan tovarlar")} newLabel={tr("Yangi kirim")} onNew={() => setMv({ type: 'in' })} />
         )}
         {page === 'audit' && (
-          <Movements wh={wh} fixedType="adjust" title={tr("Inventarizatsiya")} subtitle={tr("Sanoq natijasida qoldiqqa kiritilgan tuzatishlar")} newLabel={tr("Qoldiqni tuzatish")} onNew={() => setMv({ type: 'adjust' })} />
+          <Movements key="audit" wh={wh} fixedType="adjust" title={tr("Inventarizatsiya")} subtitle={tr("Sanoq natijasida qoldiqqa kiritilgan tuzatishlar")} newLabel={tr("Qoldiqni tuzatish")} onNew={() => setMv({ type: 'adjust' })} />
         )}
         {page === 'reports' && <Reports wh={wh} />}
         {page === 'expenses' && <Expenses wh={wh} />}
         {page === 'labels' && <Labels wh={wh} />}
-        {page === 'history' && <Movements wh={wh} title={tr("Barcha harakatlar")} subtitle={tr("Kirim, chiqim va inventarizatsiya tarixi")} />}
+        {page === 'history' && <Movements key="history" wh={wh} title={tr("Barcha harakatlar")} subtitle={tr("Kirim, chiqim va inventarizatsiya tarixi")} />}
         {page === 'settings' && <Settings wh={wh} onSellerChange={setSeller} />}
       </Layout>
 

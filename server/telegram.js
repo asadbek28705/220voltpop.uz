@@ -129,6 +129,26 @@ export class Telegram {
     this.lowStock(lines.map((m) => m.productId))
   }
 
+  onReturn(returnId) {
+    if (!this.ready || !this.cfg.notifySales) return
+    const lines = this.store.db.prepare("SELECT * FROM movements WHERE type = 'return' AND batchId = ?").all(returnId)
+    if (!lines.length) return
+    const f = lines[0]
+    const total = lines.reduce((s, m) => s + m.qty * m.price, 0)
+    const unit = (id) => this.store.db.prepare('SELECT unit FROM products WHERE id = ?').get(id)?.unit ?? ''
+    let t = `↩️ <b>Tovar qaytarildi — №${esc(returnId)}</b> (chek №${esc(f.saleId)})\n`
+    t += lines.map((m, i) => `${i + 1}. ${esc(m.productName)} — ${qtyFmt(m.qty)} ${esc(unit(m.productId))} × ${money(m.price)}`).join('\n')
+    t += `\n\n📦 Tovar omborga qaytdi`
+    t += f.payment === 'nasiya'
+      ? `\n📒 Mijoz qarzidan ayrildi: <b>${money(total)}</b>`
+      : `\n💸 Pul qaytarildi: <b>${money(total)}</b> · ${PAYMENT[f.payment] ?? esc(f.payment)}`
+    if (f.counterparty) t += `\n👤 Mijoz: ${esc(f.counterparty)}`
+    if (f.note) t += `\n📝 Sabab: ${esc(f.note)}`
+    if (f.seller) t += `\n🧑‍💼 ${esc(f.seller)}`
+    t += `\n🕒 ${hm(f.date)}`
+    this.fire(t)
+  }
+
   onMovement(m) {
     if (!this.ready || !m) return
     const c = this.cfg
@@ -217,7 +237,7 @@ export class Telegram {
 
   onUndo(m, who) {
     if (!this.ready || !this.cfg.notifyUndo || !m) return
-    const kind = m.type === 'out' ? `savdo (chek №${esc(m.saleId)})` : m.type === 'in' ? 'kirim' : 'inventarizatsiya'
+    const kind = m.type === 'out' ? `savdo (chek №${esc(m.saleId)})` : m.type === 'return' ? `qaytarish №${esc(m.batchId)} (chek №${esc(m.saleId)})` : m.type === 'in' ? 'kirim' : 'inventarizatsiya'
     let t = `↩️ <b>Bekor qilindi: ${kind}</b>\n${esc(m.productName)} — ${qtyFmt(m.qty)}`
     if (m.type !== 'adjust') t += ` × ${money(m.price)} = ${money(m.qty * m.price)}`
     if (who) t += `\n🧑‍💼 ${esc(who)}`
@@ -237,13 +257,16 @@ export class Telegram {
   report(from, to, title) {
     const db = this.store.db
     const rows = db.prepare('SELECT * FROM movements WHERE date >= ? AND date < ?').all(from.toISOString(), to.toISOString())
-    const sales = rows.filter((m) => m.type === 'out')
+    // Qaytarishlar savdodan ayriladi (manfiy miqdor sifatida)
+    const sales = rows.filter((m) => m.type === 'out' || m.type === 'return').map((m) => (m.type === 'return' ? { ...m, qty: -m.qty } : m))
+    const returns = rows.filter((m) => m.type === 'return')
     const ins = rows.filter((m) => m.type === 'in')
     const products = db.prepare('SELECT * FROM products').all()
     const byId = new Map(products.map((p) => [p.id, p]))
     const revenue = sales.reduce((s, m) => s + m.qty * m.price, 0)
+    const returnedSum = returns.reduce((s, m) => s + m.qty * m.price, 0)
     const profit = sales.reduce((s, m) => s + m.qty * (m.price - (m.cost ?? byId.get(m.productId)?.buyPrice ?? 0)), 0)
-    const receipts = new Set(sales.map((m) => m.saleId)).size
+    const receipts = new Set(rows.filter((m) => m.type === 'out').map((m) => m.saleId)).size
     const purchased = ins.reduce((s, m) => s + m.qty * m.price, 0)
     const expenses = db.prepare('SELECT * FROM expenses WHERE date >= ? AND date < ?').all(from.toISOString(), to.toISOString())
     const spent = expenses.reduce((s, e) => s + e.amount, 0)
@@ -272,6 +295,7 @@ export class Telegram {
     t += `💸 Xarajatlar: <b>${money(spent)}</b>\n`
     t += `${profit - spent >= 0 ? '✅' : '🔻'} Sof foyda: <b>${money(profit - spent)}</b>\n`
     t += `🧾 Cheklar soni: ${receipts}\n`
+    if (returns.length) t += `↩️ Qaytarilgan: ${money(returnedSum)} (${new Set(returns.map((m) => m.batchId)).size} ta)\n`
     t += `📥 Kirim: ${money(purchased)}\n`
     if (debtPaid) t += `💵 Qarzdan tushgan: ${money(debtPaid)}\n`
     if (pay.size) {

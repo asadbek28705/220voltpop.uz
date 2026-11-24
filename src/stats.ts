@@ -34,6 +34,10 @@ export const inRange = (m: Movement, from: string, to: string) => dateInRange(m.
 export const unitCost = (m: Movement, products: Product[]) =>
   m.cost ?? products.find((p) => p.id === m.productId)?.buyPrice ?? 0
 
+/** Savdo hisoblari uchun: sotuvlar + qaytarishlar (qaytarish manfiy miqdor bilan — savdo va foydadan ayriladi) */
+export const saleLines = (movements: Movement[]) =>
+  movements.filter((m) => m.type === 'out' || m.type === 'return').map((m) => (m.type === 'return' ? { ...m, qty: -m.qty } : m))
+
 export const profitOf = (m: Movement, products: Product[]) => m.qty * (m.price - unitCost(m, products))
 
 export const MONTHS = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'].map((m) => tr(m))

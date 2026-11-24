@@ -24,7 +24,7 @@ export interface Product {
 
 export type Currency = 'UZS' | 'USD'
 
-export type MovementType = 'in' | 'out' | 'adjust'
+export type MovementType = 'in' | 'out' | 'adjust' | 'return' // return — mijoz qaytargan tovar
 
 export type Payment = 'naqd' | 'karta' | 'otkazma' | 'nasiya'
 /** Pul bilan to'lov usullari (xarajat, qarz to'lovi) */
@@ -51,7 +51,7 @@ export interface Movement {
   saleId?: string | null // chek raqami
   payment?: Payment | null
   seller?: string | null
-  batchId?: string | null // kirim nakladnoyi raqami
+  batchId?: string | null // kirim nakladnoyi raqami; qaytarishda — qaytarish raqami (saleId — asl chek)
   customerId?: string | null // doimiy mijoz
   priceUsd?: number | null // dollar kirimda: $ narx
   rate?: number | null // kirim paytidagi kurs

@@ -50,6 +50,16 @@ export default function CustomerCard({ wh, customer: initial, onClose, onSell, o
   const ledger = useMemo(() => {
     const rows: { key: string; date: string; title: string; sub: string; amount: number; txId?: string; saleId?: string }[] = []
     for (const s of sales) if (s.payment === 'nasiya') rows.push({ key: 's' + s.saleId, date: s.date, title: tr("Nasiya — chek №{0}", s.saleId), sub: s.items.join(', '), amount: s.sum, saleId: s.saleId })
+    // Nasiya chekdan qaytarilgan tovar — qarzdan ayriladi
+    const back = new Map<string, { date: string; sum: number; saleId: string; items: string[] }>()
+    for (const m of wh.data.movements) {
+      if (m.type !== 'return' || m.customerId !== c.id || m.payment !== 'nasiya' || !m.batchId) continue
+      const r = back.get(m.batchId) ?? { date: m.date, sum: 0, saleId: m.saleId ?? '', items: [] }
+      r.sum += m.qty * m.price
+      r.items.push(`${m.productName} × ${fmtNum(m.qty)}`)
+      back.set(m.batchId, r)
+    }
+    for (const [id, r] of back) rows.push({ key: 'r' + id, date: r.date, title: tr("Qaytarildi — chek №{0}", r.saleId), sub: r.items.join(', '), amount: -r.sum, saleId: r.saleId })
     for (const t of wh.data.customerTx) {
       if (t.customerId !== c.id) continue
       rows.push({
@@ -59,7 +69,7 @@ export default function CustomerCard({ wh, customer: initial, onClose, onSell, o
       })
     }
     return rows.sort((a, b) => b.date.localeCompare(a.date))
-  }, [sales, wh.data.customerTx, c.id])
+  }, [sales, wh.data.customerTx, wh.data.movements, c.id])
 
   const undoTx = (id: string) => {
     if (confirm(tr("Bu yozuv bekor qilinsinmi? Qarz qayta hisoblanadi."))) wh.deleteCustomerTx(id).catch((e) => alert(e.message))

@@ -151,8 +151,8 @@ class Store {
   customers() {
     return this.db.prepare(`
       SELECT c.*,
-        COALESCE((SELECT SUM(qty * price) FROM movements WHERE customerId = c.id AND type = 'out'), 0) AS bought,
-        COALESCE((SELECT SUM(qty * price) FROM movements WHERE customerId = c.id AND type = 'out' AND payment = 'nasiya'), 0) AS nasiya,
+        COALESCE((SELECT SUM(CASE type WHEN 'out' THEN qty * price ELSE -qty * price END) FROM movements WHERE customerId = c.id AND type IN ('out', 'return')), 0) AS bought,
+        COALESCE((SELECT SUM(CASE type WHEN 'out' THEN qty * price ELSE -qty * price END) FROM movements WHERE customerId = c.id AND type IN ('out', 'return') AND payment = 'nasiya'), 0) AS nasiya,
         COALESCE((SELECT SUM(amount) FROM customer_tx WHERE customerId = c.id AND type = 'debt'), 0) AS extraDebt,
         COALESCE((SELECT SUM(amount) FROM customer_tx WHERE customerId = c.id AND type = 'pay'), 0) AS paid,
         (SELECT COUNT(DISTINCT saleId) FROM movements WHERE customerId = c.id AND type = 'out') AS receipts,
@@ -467,6 +467,55 @@ class Store {
     })
   }
 
+  /**
+   * Tovar qaytarish: chek bo'yicha qaytgan tovar omborga qaytadi, pul qaytarilgani yoziladi.
+   * payment: qanday qaytarildi — naqd/karta/otkazma yoki 'nasiya' (mijoz qarzidan ayriladi).
+   * Qaytarish yozuvi: type 'return', saleId — asl chek, batchId — qaytarish raqami.
+   */
+  returnSale(b, seller) {
+    return this.tx(() => {
+      const saleId = str(b.saleId)
+      const sold = this.db.prepare("SELECT * FROM movements WHERE type = 'out' AND saleId = ?").all(saleId)
+      if (!saleId || !sold.length) throw new HttpError('Chek topilmadi', 404)
+      const items = (Array.isArray(b.items) ? b.items : []).filter((it) => num(it.qty) > 0)
+      if (!items.length) throw new HttpError('Qaytariladigan tovarni tanlang')
+      const first = sold[0]
+      const payment = ['naqd', 'karta', 'otkazma', 'nasiya'].includes(b.payment) ? b.payment : first.payment === 'nasiya' ? 'nasiya' : first.payment || 'naqd'
+      if (payment === 'nasiya' && !first.customerId) throw new HttpError("Qarzdan ayirish faqat mijozli chek uchun")
+      const returned = this.db.prepare("SELECT productId, SUM(qty) q FROM movements WHERE type = 'return' AND saleId = ? GROUP BY productId").all(saleId)
+      const done = new Map(returned.map((r) => [r.productId, r.q]))
+      const v = this.bump()
+      const n = Number(this.getMeta('returnNo') ?? 0) + 1
+      this.setMeta('returnNo', n)
+      const returnId = String(n)
+      const date = new Date().toISOString()
+      let total = 0
+      const seen = new Set()
+      for (const it of items) {
+        if (seen.has(it.productId)) throw new HttpError('Tovar ikki marta berilgan')
+        seen.add(it.productId)
+        const lines = sold.filter((m) => m.productId === it.productId)
+        if (!lines.length) throw new HttpError("Bu tovar shu chekda yo'q")
+        const soldQty = lines.reduce((s, m) => s + m.qty, 0)
+        const left = round(soldQty - (done.get(it.productId) ?? 0))
+        const qty = round(num(it.qty))
+        if (qty > left + 1e-9) throw new HttpError(`"${lines[0].productName}": ko'pi bilan ${left} ta qaytarish mumkin`)
+        // Narx va tannarx — chekdagi o'rtacha (bir tovar chekda bir necha qatorda bo'lishi mumkin)
+        const price = Math.round(lines.reduce((s, m) => s + m.qty * m.price, 0) / soldQty * 100) / 100
+        const cost = lines.every((m) => m.cost == null) ? null : lines.reduce((s, m) => s + m.qty * (m.cost ?? 0), 0) / soldQty
+        total += qty * price
+        const p = this.db.prepare('SELECT qty FROM products WHERE id = ?').get(it.productId)
+        if (p) this.db.prepare('UPDATE products SET qty = ? WHERE id = ?').run(round(p.qty + qty), it.productId)
+        this.insertMovement({
+          id: randomUUID(), productId: it.productId, productName: lines[0].productName, type: 'return', qty, price, cost,
+          counterparty: first.counterparty, note: str(b.note), date, saleId, payment, seller, batchId: returnId,
+          customerId: first.customerId ?? null, rev: v,
+        })
+      }
+      return { returnId, saleId, total: Math.round(total) }
+    })
+  }
+
   // ---------- ichki shtrix-kodlar ----------
   /** EAN-13: "200" + 9 xonali tartib raqami + nazorat raqami. 200–299 do'kon ichki kodlari uchun ajratilgan. */
   nextBarcode() {
@@ -564,6 +613,8 @@ class Store {
     return this.tx(() => {
       const m = this.db.prepare('SELECT * FROM movements WHERE id = ?').get(id)
       if (!m) throw new HttpError('Yozuv topilmadi', 404)
+      if (m.type === 'out' && this.db.prepare("SELECT 1 FROM movements WHERE type = 'return' AND saleId = ? AND productId = ?").get(m.saleId, m.productId))
+        throw new HttpError('Bu tovar qaytarilgan — avval qaytarishni bekor qiling')
       const delta = m.type === 'out' ? m.qty : -m.qty
       const p = this.db.prepare('SELECT qty FROM products WHERE id = ?').get(m.productId)
       if (p) this.db.prepare('UPDATE products SET qty = ? WHERE id = ?').run(Math.max(0, round(p.qty + delta)), m.productId)

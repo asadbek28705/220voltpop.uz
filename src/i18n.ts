@@ -45,6 +45,7 @@ const SERVER_PATTERNS: [RegExp, string][] = [
   [/^Bu artikul "(.+)" tovarida ishlatilgan$/, 'Bu artikul "{0}" tovarida ishlatilgan'],
   [/^Mijozda (.+) so'm qarz bor — avval qarzni yoping$/, "Mijozda {0} so'm qarz bor — avval qarzni yoping"],
   [/^Telegram: (.+)$/, 'Telegram: {0}'],
+  [/^"(.+)": ko'pi bilan (.+) ta qaytarish mumkin$/, "\"{0}\": ko'pi bilan {1} ta qaytarish mumkin"],
 ]
 export function tServer(msg: string): string {
   if (lang === 'uz') return msg

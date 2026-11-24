@@ -11,7 +11,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import type { Warehouse } from '../store'
 import type { MovementType } from '../types'
 import { fmtDate, fmtMoney, fmtNum } from '../utils'
-import { currentPeriod, dayKey, daysAgo, expenseInRange, fmtDay, inRange, profitOf, today } from '../stats'
+import { currentPeriod, dayKey, daysAgo, expenseInRange, fmtDay, inRange, profitOf, saleLines, today } from '../stats'
 import { useState } from 'react'
 import { Alert, Snackbar } from '@mui/material'
 import RestartIcon from '@mui/icons-material/RestartAlt'
@@ -35,7 +35,7 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
   const low = products.filter((p) => p.qty <= p.minQty).sort((a, b) => a.qty / (a.minQty || 1) - b.qty / (b.minQty || 1))
 
   const t = today()
-  const todaySales = movements.filter((m) => m.type === 'out' && dayKey(m.date) === t)
+  const todaySales = saleLines(movements).filter((m) => dayKey(m.date) === t)
   const todayRevenue = todaySales.reduce((s, m) => s + m.qty * m.price, 0)
   const todayProfit = todaySales.reduce((s, m) => s + profitOf(m, products), 0)
   const todayExpenses = wh.data.expenses.filter((e) => dayKey(e.date) === t).reduce((s, e) => s + e.amount, 0)
@@ -47,7 +47,7 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
   const [toast, setToast] = useState('')
   const q = currentPeriod(wh.data.settings)
   const qs = useMemo(() => {
-    const sales = movements.filter((m) => m.type === 'out' && inRange(m, q.from, q.to))
+    const sales = saleLines(movements).filter((m) => inRange(m, q.from, q.to))
     const revenue = sales.reduce((s, m) => s + m.qty * m.price, 0)
     const profit = sales.reduce((s, m) => s + profitOf(m, products), 0)
     const spent = wh.data.expenses.filter((e) => expenseInRange(e, q.from, q.to)).reduce((s, e) => s + e.amount, 0)
@@ -62,7 +62,7 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
       return { k, name: `${k.slice(8)}.${k.slice(5, 7)}`, Savdo: 0 }
     })
     const idx = new Map(rows.map((r) => [r.k, r]))
-    for (const m of movements) if (m.type === 'out') { const r = idx.get(dayKey(m.date)); if (r) r.Savdo += m.qty * m.price }
+    for (const m of saleLines(movements)) { const r = idx.get(dayKey(m.date)); if (r) r.Savdo += m.qty * m.price }
     return rows
   }, [movements])
 
@@ -163,13 +163,13 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
                 {movements.slice(0, 8).map((m) => (
                   <ListItem key={m.id} disableGutters sx={{ borderRadius: 2, px: 1, '&:hover': { bgcolor: 'action.hover' } }}>
                     <Box sx={{ width: 120, flexShrink: 0 }}>
-                      <Chip size="small" variant="outlined" label={m.type === 'in' ? tr("Kirim") : m.type === 'out' ? tr("Savdo") : tr("Inventarizatsiya")}
-                        color={m.type === 'in' ? 'info' : m.type === 'out' ? 'success' : 'default'} />
+                      <Chip size="small" variant="outlined" label={m.type === 'in' ? tr("Kirim") : m.type === 'out' ? tr("Savdo") : m.type === 'return' ? tr("Qaytarish") : tr("Inventarizatsiya")}
+                        color={m.type === 'in' ? 'info' : m.type === 'out' ? 'success' : m.type === 'return' ? 'error' : 'default'} />
                     </Box>
                     <ListItemText primary={`${m.productName} — ${m.type === 'adjust' && m.qty > 0 ? '+' : ''}${fmtNum(m.qty)}`}
                       secondary={`${fmtDate(m.date)}${m.counterparty ? ' · ' + m.counterparty : ''}`} />
                     <Typography variant="body2" sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>
-                      {m.type !== 'adjust' ? fmtMoney(m.qty * m.price) : ''}
+                      {m.type === 'return' ? '−' + fmtMoney(m.qty * m.price) : m.type !== 'adjust' ? fmtMoney(m.qty * m.price) : ''}
                     </Typography>
                   </ListItem>
                 ))}

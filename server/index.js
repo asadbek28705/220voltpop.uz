@@ -141,7 +141,7 @@ function forSeller(d) {
     ...d,
     products: d.products.map((p) => ({ ...p, buyPrice: 0, buyPriceUsd: 0, markup: 0 })),
     movements: d.movements
-      .filter((m) => m.type === 'out' || m.type === 'in')
+      .filter((m) => m.type === 'out' || m.type === 'in' || m.type === 'return')
       .map((m) => ({ ...m, cost: null, price: m.type === 'in' ? 0 : m.price, priceUsd: null })),
     expenses: [],
     customers: d.customers.map(({ paid: _p, ...c }) => c),
@@ -157,6 +157,12 @@ app.get('/api/data', need('seller'), (req, res) => {
 app.post('/api/sales', need('seller'), write((req) => {
   const r = store.sell(req.body, seller(req))
   tg.onSale(r.saleId)
+  return r
+}))
+// Tovar qaytarish: tovar omborga qaytadi, pul qaytarilgani (yoki qarzdan ayrilgani) yoziladi
+app.post('/api/returns', need('seller'), write((req) => {
+  const r = store.returnSale(req.body ?? {}, seller(req))
+  tg.onReturn(r.returnId)
   return r
 }))
 app.post('/api/movements', need('seller'), write((req) => {

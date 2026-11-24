@@ -71,7 +71,7 @@ export default function MovementDialog({ wh, initialType, initialProductId, onCl
     onClose()
   }
 
-  const titles: Record<MovementType, string> = { in: tr("Kirim (omborga qabul)"), out: tr("Chiqim / Sotuv"), adjust: tr("Inventarizatsiya") }
+  const titles: Record<MovementType, string> = { in: tr("Kirim (omborga qabul)"), out: tr("Chiqim / Sotuv"), adjust: tr("Inventarizatsiya"), return: tr("Qaytarish") }
 
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="sm" fullScreen={fullScreen}>

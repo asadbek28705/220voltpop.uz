@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Alert, Autocomplete, Box, Button, Card, Chip, Divider, IconButton, InputAdornment, Paper, Stack, TextField,
   ToggleButton, ToggleButtonGroup, Typography, useMediaQuery, useTheme,
@@ -10,7 +10,11 @@ import AddIcon from '@mui/icons-material/Add'
 import RemoveIcon from '@mui/icons-material/Remove'
 import CartIcon from '@mui/icons-material/ShoppingCartOutlined'
 import type { Warehouse } from '../store'
-import type { Cart } from '../hooks/useCart'
+import type { SaleTabs } from '../hooks/useSaleTabs'
+import { MAX_TABS } from '../hooks/useSaleTabs'
+import CloseIcon from '@mui/icons-material/Close'
+import ReturnIcon from '@mui/icons-material/AssignmentReturnOutlined'
+import ReturnDialog from './ReturnDialog'
 import type { Customer, Payment, Product } from '../types'
 import { SALE_PAYMENTS } from '../types'
 import PersonIcon from '@mui/icons-material/PersonOutline'
@@ -24,24 +28,30 @@ import CameraScanner from './CameraScanner'
 import ReceiptDialog from './ReceiptDialog'
 import { t as tr } from '../i18n'
 
-interface Props {
-  wh: Warehouse; cart: Cart; onUnknownCode: (code: string) => void
-  customerId: string; onCustomerChange: (id: string) => void
-}
+interface Props { wh: Warehouse; sale: SaleTabs; onUnknownCode: (code: string) => void }
 type NewOption = { newName: string }
 
 const num = (s: string) => Number(s.replace(/\s/g, '').replace(',', '.'))
 
-export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerChange }: Props) {
+export default function Pos({ wh, sale, onUnknownCode }: Props) {
+  const { cart, tab, patch } = sale
+  // Har bir xaridor oynasining o'z mijozi, to'lov usuli va savati bor
+  const customerId = tab.customerId
+  const customer = tab.customerText // bazada yo'q, bir martalik mijoz nomi
+  const payment = tab.payment
+  const paidNow = tab.paidNow
+  const onCustomerChange = (id: string) => patch({ customerId: id })
+  const setCustomer = (v: string) => patch({ customerText: v })
+  const setPayment = (v: Payment) => patch({ payment: v })
+  const setPaidNow = (v: string) => patch({ paidNow: v })
+  const [returning, setReturning] = useState(false)
+  const [returnReceipt, setReturnReceipt] = useState<string | null>(null)
   const theme = useTheme()
   const mobile = useMediaQuery(theme.breakpoints.down('md'))
   const { products } = wh.data
   const [input, setInput] = useState('')
   const [camera, setCamera] = useState(false)
-  const [customer, setCustomer] = useState('') // bazada yo'q, bir martalik mijoz nomi
   const [newCustomer, setNewCustomer] = useState<string | null>(null)
-  const [payment, setPayment] = useState<Payment>('naqd')
-  const [paidNow, setPaidNow] = useState('')
   const selected = wh.data.customers.find((c) => c.id === customerId) ?? null
 
   // Shu mijoz oldin ko'p olgan tovarlar — bir bosishda savatga
@@ -54,6 +64,7 @@ export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerCha
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [receipt, setReceipt] = useState<string | null>(null)
+  useEffect(() => setError(''), [tab.id])
 
   const lines = cart.items
     .map((it) => ({ ...it, product: products.find((p) => p.id === it.productId) }))
@@ -80,6 +91,7 @@ export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerCha
     if (payment === 'nasiya' && !selected) return setError(tr("Nasiya uchun mijozni tanlang yoki yangi mijoz qo'shing"))
     const paid = payment === 'nasiya' ? Math.round(num(paidNow) || 0) : 0
     if (paid >= total && paid > 0) return setError(tr("To'liq to'layapti — naqd yoki kartani tanlang"))
+    const tabId = tab.id
     setBusy(true)
     const r = await attempt(() => wh.sell({
       items: lines.map((l) => ({ productId: l.productId, qty: l.qty, price: l.price })),
@@ -88,11 +100,7 @@ export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerCha
     }))
     setBusy(false)
     if (!r.ok) return setError(r.error)
-    cart.clear()
-    setCustomer('')
-    onCustomerChange('')
-    setPayment('naqd')
-    setPaidNow('')
+    sale.close(tabId) // shu xaridor oynasi yopiladi, qolganlari turadi
     setReceipt(r.value.saleId)
   }
 
@@ -271,7 +279,43 @@ export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerCha
 
   return (
     <Box sx={{ pb: mobile ? 10 : 0 }}>
-      <PageHeader title={tr("Kassa")} subtitle={tr("Shtrix-kodni skaner qiling — tovar savatga tushadi")} />
+      <PageHeader title={tr("Kassa")} subtitle={tr("Shtrix-kodni skaner qiling — tovar savatga tushadi")} actions={
+        <Button color="warning" variant="outlined" startIcon={<ReturnIcon />} onClick={() => setReturning(true)}>{tr("Tovar qaytarish")}</Button>
+      } />
+      {/* Xaridor oynalari: bir xaridor bilan ishlayotganda ikkinchisi kelsa — yangi oyna */}
+      <Stack direction="row" spacing={1} sx={{ mb: 2, overflowX: 'auto', pb: 0.5 }} className="no-print">
+        {sale.tabs.map((x) => {
+          const on = x.id === tab.id
+          const c = x.customerId ? wh.data.customers.find((k) => k.id === x.customerId)?.name : x.customerText
+          const sum = x.items.reduce((s, it) => s + it.qty * it.price, 0)
+          return (
+            <Paper key={x.id} variant="outlined" onClick={() => sale.select(x.id)}
+              sx={{
+                pl: 1.5, pr: 0.5, py: 0.75, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 0.5, borderRadius: 2.5,
+                borderWidth: 2, borderColor: on ? 'primary.main' : 'divider', bgcolor: on ? 'action.selected' : 'background.paper',
+              }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  {tr("Xaridor {0}", x.n)}{x.items.length > 0 && <Chip component="span" size="small" color={on ? 'primary' : 'default'} label={x.items.length} sx={{ ml: 0.75, height: 18 }} />}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', maxWidth: 150 }}>
+                  {c || (sum > 0 ? fmtMoney(sum) : tr("bo'sh"))}
+                </Typography>
+              </Box>
+              {(sale.tabs.length > 1 || x.items.length > 0) && (
+                <IconButton size="small" aria-label={tr("Oynani yopish")} onClick={(e) => {
+                  e.stopPropagation()
+                  if (!x.items.length || confirm(tr("«Xaridor {0}» oynasi yopilsinmi? Savatdagi tovarlar o'chadi.", x.n))) sale.close(x.id)
+                }}><CloseIcon fontSize="small" /></IconButton>
+              )}
+            </Paper>
+          )
+        })}
+        <Button variant="contained" color="secondary" startIcon={<AddIcon />} onClick={() => sale.newTab()} disabled={sale.tabs.length >= MAX_TABS}
+          sx={{ flexShrink: 0, whiteSpace: 'nowrap', borderRadius: 2.5 }}>
+          {tr("Yangi xaridor")}
+        </Button>
+      </Stack>
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="flex-start">
         <Stack spacing={2} sx={{ flex: 1, width: '100%', minWidth: 0 }}>
           {search}
@@ -300,6 +344,8 @@ export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerCha
       {newCustomer != null && <CustomerDialog wh={wh} initialName={newCustomer} onClose={() => setNewCustomer(null)}
         onSaved={(c) => { onCustomerChange(c.id); setCustomer('') }} />}
       {receipt && <ReceiptDialog wh={wh} saleId={receipt} justSold onClose={() => setReceipt(null)} />}
+      {returning && <ReturnDialog wh={wh} onClose={() => setReturning(false)} onDone={(id) => { setReturning(false); setReturnReceipt(id) }} />}
+      {returnReceipt && <ReceiptDialog wh={wh} returnId={returnReceipt} justReturned onClose={() => setReturnReceipt(null)} />}
     </Box>
   )
 }

@@ -16,7 +16,7 @@ import type { Warehouse } from '../store'
 import type { Expense } from '../types'
 import { paymentLabel } from '../types'
 import { download, fmtDate, fmtMoney, toCsv } from '../utils'
-import { currentPeriod, dayBounds, expenseInRange, inRange, profitOf } from '../stats'
+import { currentPeriod, dayBounds, expenseInRange, inRange, profitOf, saleLines } from '../stats'
 import PeriodPicker from './PeriodPicker'
 import PageHeader from './PageHeader'
 import StatCard from './StatCard'
@@ -38,7 +38,7 @@ export default function Expenses({ wh }: { wh: Warehouse }) {
   const total = list.reduce((s, e) => s + e.amount, 0)
   const periodTotal = inPeriod.reduce((s, e) => s + e.amount, 0)
   const profit = useMemo(
-    () => movements.filter((m) => m.type === 'out' && inRange(m, from, to)).reduce((s, m) => s + profitOf(m, products), 0),
+    () => saleLines(movements).filter((m) => inRange(m, from, to)).reduce((s, m) => s + profitOf(m, products), 0),
     [movements, products, from, to],
   )
   const net = profit - periodTotal

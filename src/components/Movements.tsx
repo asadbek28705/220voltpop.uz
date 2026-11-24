@@ -15,15 +15,17 @@ import type { Warehouse } from '../store'
 import { useIsAdmin } from '../auth'
 import type { Movement, MovementType } from '../types'
 import { download, fmtDate, fmtMoney, fmtNum, fmtUsd, toCsv } from '../utils'
-import { daysAgo, inRange, profitOf, today } from '../stats'
+import { daysAgo, inRange, profitOf, saleLines, today } from '../stats'
 import PageHeader from './PageHeader'
 import ReceiptDialog from './ReceiptDialog'
+import ReturnDialog from './ReturnDialog'
+import ReturnIcon from '@mui/icons-material/AssignmentReturnOutlined'
 import { paymentLabel } from '../types'
 import StatCard from './StatCard'
 import { t as tr } from '../i18n'
 
-const label = { in: tr("Kirim"), out: tr("Chiqim"), adjust: tr("Inventarizatsiya") } as const
-const color = { in: 'success', out: 'warning', adjust: 'default' } as const
+const label = { in: tr("Kirim"), out: tr("Chiqim"), adjust: tr("Inventarizatsiya"), return: tr("Qaytarish") } as const
+const color = { in: 'success', out: 'warning', adjust: 'default', return: 'error' } as const
 
 interface Props {
   wh: Warehouse
@@ -40,9 +42,11 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
   const [from, setFrom] = useState(daysAgo(29))
   const [to, setTo] = useState(today())
   const [q, setQ] = useState('')
-  const [receipt, setReceipt] = useState<string | null>(null)
+  const [receipt, setReceipt] = useState<{ saleId?: string; returnId?: string } | null>(null)
   const t = fixedType ?? type
+  const isSale = t === 'out' || t === 'return'
   const admin = useIsAdmin()
+  const [returning, setReturning] = useState(false)
 
   const list = useMemo(() => {
     const s = q.trim().toLowerCase()
@@ -51,7 +55,7 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
   }, [movements, t, from, to, q])
 
   const total = (tp: MovementType) => list.filter((m) => m.type === tp).reduce((s, m) => s + m.qty * m.price, 0)
-  const profit = list.filter((m) => m.type === 'out').reduce((s, m) => s + profitOf(m, products), 0)
+  const profit = saleLines(list).reduce((s, m) => s + profitOf(m, products), 0)
 
   const undo = (m: Movement) => {
     if (confirm(tr("Bu yozuv bekor qilinsinmi? \"{0}\" qoldig'i qayta hisoblanadi.", m.productName))) wh.deleteMovement(m.id).catch((e) => alert(e.message))
@@ -63,7 +67,7 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
     download(`${title.toLowerCase().replace(/\s+/g, '-')}-${from}_${to}.csv`, toCsv(rows), 'text/csv;charset=utf-8')
   }
 
-  const showMoney = t !== 'adjust' && (admin || t === 'out')
+  const showMoney = t !== 'adjust' && (admin || isSale)
 
   return (
     <>
@@ -71,14 +75,19 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
         <TextField size="small" type="date" label={tr("Dan")} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
         <TextField size="small" type="date" label={tr("Gacha")} value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
         <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>{tr("Excel")}</Button>
+        {isSale && <Button variant={t === 'return' ? 'contained' : 'outlined'} color="warning" startIcon={<ReturnIcon />} onClick={() => setReturning(true)}>{tr("Tovar qaytarish")}</Button>}
         {onNew && <Button variant="contained" startIcon={<AddIcon />} onClick={onNew}>{newLabel}</Button>}
       </>} />
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {(!t || t === 'out') && <>
           <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<CartIcon />} title={tr("Jami savdo")} value={fmtMoney(total('out'))} /></Grid>
+          {total('return') > 0 && <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<ReturnIcon />} title={tr("Qaytarilgan")} value={'−' + fmtMoney(total('return'))} color="#E5533D" /></Grid>}
           {admin && <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title={tr("Foyda")} value={fmtMoney(profit)} valueColor={profit >= 0 ? 'primary.main' : 'error.main'} /></Grid>}
         </>}
+        {t === 'return' && (
+          <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<ReturnIcon />} title={tr("Jami qaytarilgan")} value={fmtMoney(total('return'))} color="#E5533D" /></Grid>
+        )}
         {(!t || t === 'in') && admin && (
           <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<InboxIcon />} title={tr("Jami kirim")} value={fmtMoney(total('in'))} color="#3B82F6" /></Grid>
         )}
@@ -93,6 +102,7 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
               <MenuItem value="">{tr("Barchasi")}</MenuItem>
               <MenuItem value="in">{tr("Kirim")}</MenuItem>
               <MenuItem value="out">{tr("Chiqim")}</MenuItem>
+              <MenuItem value="return">{tr("Qaytarish")}</MenuItem>
               <MenuItem value="adjust">{tr("Inventarizatsiya")}</MenuItem>
             </TextField>
           )}
@@ -102,15 +112,16 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
             <TableHead>
               <TableRow>
                 <TableCell>{tr("Sana")}</TableCell>
-                {t === 'out' && <TableCell>{tr("Chek")}</TableCell>}
+                {isSale && <TableCell>{tr("Chek")}</TableCell>}
                 {!fixedType && <TableCell>{tr("Turi")}</TableCell>}
                 <TableCell>{tr("Mahsulot")}</TableCell>
                 <TableCell align="right">{tr("Miqdor")}</TableCell>
                 {showMoney && <TableCell align="right">{tr("Narx")}</TableCell>}
                 {showMoney && <TableCell align="right">{tr("Summa")}</TableCell>}
-                {showMoney && <TableCell>{t === 'in' ? tr("Ta'minotchi") : t === 'out' ? tr("Mijoz") : tr("Kontragent")}</TableCell>}
-                {t === 'out' && <TableCell>{tr("To'lov")}</TableCell>}
-                <TableCell>{t === 'out' ? tr("Sotuvchi") : tr("Izoh")}</TableCell>
+                {showMoney && <TableCell>{t === 'in' ? tr("Ta'minotchi") : isSale ? tr("Mijoz") : tr("Kontragent")}</TableCell>}
+                {isSale && <TableCell>{t === 'return' ? tr("Qanday qaytarildi") : tr("To'lov")}</TableCell>}
+                <TableCell>{isSale ? tr("Sotuvchi") : tr("Izoh")}</TableCell>
+                {t === 'return' && <TableCell>{tr("Sabab")}</TableCell>}
                 {admin && <TableCell className="no-print" />}
               </TableRow>
             </TableHead>
@@ -118,9 +129,12 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
               {list.map((m) => (
                 <TableRow key={m.id} hover>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{fmtDate(m.date)}</TableCell>
-                  {t === 'out' && (
-                    <TableCell>
-                      {m.saleId && <Chip size="small" clickable label={`№${m.saleId}`} onClick={() => setReceipt(m.saleId!)} />}
+                  {isSale && (
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                      {m.type === 'return' ? <>
+                        <Chip size="small" clickable color="error" variant="outlined" label={`↩ №${m.batchId}`} onClick={() => setReceipt({ returnId: m.batchId! })} />
+                        <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>{tr("chek")} №{m.saleId}</Typography>
+                      </> : m.saleId && <Chip size="small" clickable label={`№${m.saleId}`} onClick={() => setReceipt({ saleId: m.saleId! })} />}
                     </TableCell>
                   )}
                   {!fixedType && <TableCell><Chip size="small" variant="outlined" label={label[m.type]} color={color[m.type]} /></TableCell>}
@@ -130,8 +144,9 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
                     {m.priceUsd ? <Typography variant="caption" display="block" color="text.secondary">{fmtUsd(m.priceUsd)} × {fmtNum(m.rate ?? 0)}</Typography> : null}</TableCell>}
                   {showMoney && <TableCell align="right" sx={{ fontWeight: 600 }}>{m.type === 'adjust' ? '' : fmtMoney(m.qty * m.price)}</TableCell>}
                   {showMoney && <TableCell>{m.counterparty}</TableCell>}
-                  {t === 'out' && <TableCell>{paymentLabel(m.payment)}</TableCell>}
-                  <TableCell>{t === 'out' ? m.seller : m.note}</TableCell>
+                  {isSale && <TableCell>{m.type === 'return' && m.payment === 'nasiya' ? tr("Qarzidan ayrildi") : paymentLabel(m.payment)}</TableCell>}
+                  <TableCell>{isSale ? m.seller : m.note}</TableCell>
+                  {t === 'return' && <TableCell>{m.note}</TableCell>}
                   {admin && <TableCell className="no-print">
                     <Tooltip title={tr("Bekor qilish (qoldiq qaytariladi)")}><IconButton size="small" onClick={() => undo(m)}><UndoIcon fontSize="small" /></IconButton></Tooltip>
                   </TableCell>}
@@ -144,7 +159,8 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
           </Table>
         </TableContainer>
       </Paper>
-      {receipt && <ReceiptDialog wh={wh} saleId={receipt} onClose={() => setReceipt(null)} />}
+      {receipt && <ReceiptDialog wh={wh} saleId={receipt.saleId} returnId={receipt.returnId} onClose={() => setReceipt(null)} />}
+      {returning && <ReturnDialog wh={wh} onClose={() => setReturning(false)} onDone={(id) => { setReturning(false); setReceipt({ returnId: id }) }} />}
     </>
   )
 }
