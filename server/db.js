@@ -237,6 +237,30 @@ class Store {
     return r
   }
 
+  /** Joriy hisob davri boshlanishi: oxirgi yopilgan davr tugagan payt */
+  periodStart() {
+    const ps = this.settings().periods ?? []
+    return ps.length ? ps[ps.length - 1].to : null
+  }
+
+  closePeriod(b, by) {
+    return this.tx(() => {
+      const s = this.settings()
+      const periods = s.periods ?? []
+      const now = new Date()
+      // Birinchi yopishda boshlanish sanasi brauzerdan keladi (joriy chorak boshi)
+      let from = this.periodStart()
+      if (!from) {
+        const d = new Date(b.from)
+        from = isNaN(d) || d > now ? new Date(0).toISOString() : d.toISOString()
+      }
+      const p = { from, to: now.toISOString(), closedBy: by ?? '', note: str(b.note) }
+      this.setMeta('settings', JSON.stringify({ ...s, periods: [...periods, p] }))
+      this.bump()
+      return p
+    })
+  }
+
   /** Dollar kursini o'zgartirish: $ tovarlarning tannarxi qayta hisoblanadi, xohlansa sotuv narxi ham */
   setRate(b) {
     return this.tx(() => {

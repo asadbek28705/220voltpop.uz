@@ -1,4 +1,4 @@
-import type { Expense, Movement, Product } from './types'
+import type { Expense, Movement, Product, ShopSettings } from './types'
 
 const pad = (n: number) => n.toString().padStart(2, '0')
 
@@ -16,15 +16,18 @@ export const daysAgo = (n: number) => {
   return dayKey(d)
 }
 
-export const expenseInRange = (e: Expense, from: string, to: string) => {
-  const k = dayKey(e.date)
-  return (!from || k >= from) && (!to || k <= to)
+/**
+ * Davr chegarasi: "YYYY-MM-DD" — kun bo'yicha (ikkala chegara kiradi),
+ * to'liq ISO vaqt ("...T...") — aniq payt bo'yicha (hisob davri yopilgan soniya).
+ */
+export const dateInRange = (iso: string, from: string, to: string) => {
+  const k = dayKey(iso)
+  const okFrom = !from || (from.includes('T') ? iso >= from : k >= from)
+  const okTo = !to || (to.includes('T') ? iso < to : k <= to)
+  return okFrom && okTo
 }
-
-export const inRange = (m: Movement, from: string, to: string) => {
-  const k = dayKey(m.date)
-  return (!from || k >= from) && (!to || k <= to)
-}
+export const expenseInRange = (e: Expense, from: string, to: string) => dateInRange(e.date, from, to)
+export const inRange = (m: Movement, from: string, to: string) => dateInRange(m.date, from, to)
 
 /** Sotuv tannarxi: sotuv paytida saqlangan, bo'lmasa hozirgi kelish narxi */
 export const unitCost = (m: Movement, products: Product[]) =>
@@ -61,4 +64,22 @@ export function quarter(offset = 0, base = new Date()): Period {
 export function yearPeriod(offset = 0): Period {
   const y = new Date().getFullYear() + offset
   return { from: `${y}-01-01`, to: `${y}-12-31`, label: `${y} yil`, short: `${y} yil` }
+}
+
+/** Davr chegaralarini kunlarga aylantirish (grafiklar va fayl nomi uchun). Ochiq oxir — bugun. */
+export const dayBounds = (from: string, to: string) => ({
+  from: from.includes('T') ? dayKey(from) : from,
+  to: !to ? today() : to.includes('T') ? dayKey(new Date(new Date(to).getTime() - 1)) : to,
+})
+
+/** Joriy hisob davri: oxirgi «Davrni yopish» dan beri; hali yopilmagan bo'lsa — chorak boshidan */
+export function currentPeriod(settings: ShopSettings) {
+  const ps = settings.periods ?? []
+  const from = ps.length ? ps[ps.length - 1].to : new Date(quarter(0).from + 'T00:00:00').toISOString()
+  return { from, to: '', closedBefore: ps.length > 0 }
+}
+
+export const fmtDay = (iso: string) => {
+  const d = new Date(iso)
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`
 }

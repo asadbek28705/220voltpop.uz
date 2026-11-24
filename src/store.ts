@@ -102,6 +102,8 @@ export function useWarehouse() {
   const addCustomerTx = useCallback((customerId: string, t: { type: 'pay' | 'debt'; amount: number; payment?: string; note: string }) =>
     mutate<{ tx: CustomerTx; customer: Customer }>('POST', `/customers/${customerId}/tx`, t), [mutate])
   const deleteCustomerTx = useCallback((id: string) => mutate('DELETE', `/customer-tx/${id}`), [mutate])
+  const closePeriod = useCallback((from: string, note: string) =>
+    mutate<{ from: string; to: string }>('POST', '/period/close', { from, note }), [mutate])
   const setRate = useCallback((rate: number, updateSellPrices: boolean) =>
     mutate<RateResult>('PUT', '/rate', { rate, updateSellPrices }), [mutate])
   const saveSettings = useCallback((s: ShopSettings) => mutate('PUT', '/settings', s), [mutate])
@@ -117,7 +119,7 @@ export function useWarehouse() {
 
   return {
     data, loading, online, refresh, findByCode,
-    saveProduct, deleteProduct, addMovement, deleteMovement, sell, receive, addExpense, deleteExpense, nextBarcode, generateBarcodes, setRate, saveCustomer, deleteCustomer, addCustomerTx, deleteCustomerTx, saveSettings, replaceAll, reset, clearAll,
+    saveProduct, deleteProduct, addMovement, deleteMovement, sell, receive, addExpense, deleteExpense, nextBarcode, generateBarcodes, closePeriod, setRate, saveCustomer, deleteCustomer, addCustomerTx, deleteCustomerTx, saveSettings, replaceAll, reset, clearAll,
   }
 }
 

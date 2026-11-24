@@ -16,7 +16,7 @@ import type { Warehouse } from '../store'
 import type { Expense } from '../types'
 import { paymentLabel } from '../types'
 import { download, fmtDate, fmtMoney, toCsv } from '../utils'
-import { expenseInRange, inRange, profitOf, quarter } from '../stats'
+import { currentPeriod, dayBounds, expenseInRange, inRange, profitOf } from '../stats'
 import PeriodPicker from './PeriodPicker'
 import PageHeader from './PageHeader'
 import StatCard from './StatCard'
@@ -27,8 +27,8 @@ import { PIE_COLORS, useChartStyle } from './charts'
 export default function Expenses({ wh }: { wh: Warehouse }) {
   const { expenses, movements, products } = wh.data
   const cs = useChartStyle()
-  const [from, setFrom] = useState(() => quarter(0).from)
-  const [to, setTo] = useState(() => quarter(0).to)
+  const [from, setFrom] = useState(() => currentPeriod(wh.data.settings).from)
+  const [to, setTo] = useState('')
   const [cat, setCat] = useState('')
   const [open, setOpen] = useState(false)
 
@@ -55,13 +55,13 @@ export default function Expenses({ wh }: { wh: Warehouse }) {
     const rows: (string | number)[][] = [['Sana', 'Turi', 'Summa', "To'lov", 'Izoh', 'Kiritdi']]
     list.forEach((e) => rows.push([fmtDate(e.date), e.category, e.amount, paymentLabel(e.payment), e.note, e.seller ?? '']))
     rows.push([], ['Jami', '', total])
-    download(`xarajatlar-${from}_${to}.csv`, toCsv(rows), 'text/csv;charset=utf-8')
+    download(`xarajatlar-${dayBounds(from, to).from}_${dayBounds(from, to).to}.csv`, toCsv(rows), 'text/csv;charset=utf-8')
   }
 
   return (
     <>
       <PageHeader title="Xarajatlar" subtitle="Ijara, ish haqi, kommunal va boshqa chiqimlar" actions={<>
-        <PeriodPicker from={from} to={to} onChange={(f, t) => { setFrom(f); setTo(t) }} />
+        <PeriodPicker from={from} to={to} settings={wh.data.settings} onChange={(f, t) => { setFrom(f); setTo(t) }} />
         <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>Excel</Button>
         <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>Yangi xarajat</Button>
       </>} />

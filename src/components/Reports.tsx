@@ -17,7 +17,7 @@ import {
 import type { Warehouse } from '../store'
 import { download, fmtMoney, fmtNum, toCsv } from '../utils'
 import { paymentLabel } from '../types'
-import { MONTHS, dayKey, expenseInRange, inRange, profitOf, quarter } from '../stats'
+import { MONTHS, currentPeriod, dayBounds, dayKey, expenseInRange, fmtDay, inRange, profitOf } from '../stats'
 import PeriodPicker from './PeriodPicker'
 import { GREEN, YELLOW } from '../theme'
 import PageHeader from './PageHeader'
@@ -28,8 +28,10 @@ import { PIE_COLORS, useChartStyle } from './charts'
 export default function Reports({ wh }: { wh: Warehouse }) {
   const { movements, products, expenses } = wh.data
   // Standart: joriy chorak — har 3 oyda hisob 0 dan boshlanadi
-  const [from, setFrom] = useState(() => quarter(0).from)
-  const [to, setTo] = useState(() => quarter(0).to)
+  // Standart: joriy hisob davri (oxirgi «Davrni yopish» dan beri)
+  const [from, setFrom] = useState(() => currentPeriod(wh.data.settings).from)
+  const [to, setTo] = useState('')
+  const db = dayBounds(from, to)
   const cs = useChartStyle()
 
   const r = useMemo(() => {
@@ -45,9 +47,9 @@ export default function Reports({ wh }: { wh: Warehouse }) {
     const monthMap = new Map<string, { name: string; Savdo: number; Foyda: number; Xarajat: number; 'Sof foyda': number }>()
     // Kunlik — oraliqdagi har bir kun
     const dayMap = new Map<string, { name: string; Savdo: number }>()
-    if (from && to && from <= to) {
-      const d = new Date(from + 'T00:00:00')
-      const end = new Date(to + 'T00:00:00')
+    if (db.from && db.to && db.from <= db.to) {
+      const d = new Date(db.from + 'T00:00:00')
+      const end = new Date(db.to + 'T00:00:00')
       let guard = 0
       while (d <= end && guard++ < 1000) {
         const k = dayKey(d)
@@ -85,22 +87,22 @@ export default function Reports({ wh }: { wh: Warehouse }) {
       payments: [...payMap.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
       top: [...prodMap.values()].sort((a, b) => b.sum - a.sum).slice(0, 10),
     }
-  }, [movements, products, expenses, from, to])
+  }, [movements, products, expenses, from, to, db.from, db.to])
 
   const exportCsv = () => {
     const rows: (string | number)[][] = [
-      ['Hisobot', `${from} — ${to}`], [],
+      ['Hisobot', `${db.from} — ${db.to}`], [],
       ['Jami savdo', r.revenue], ['Savdodan foyda', r.profit], ['Xarajatlar', r.spent], ['Sof foyda', r.net], ['Savdolar soni', r.count], ['Jami kirim', r.purchased], [],
       ['Tovar', 'Sotilgan miqdor', 'Birlik', 'Summa', 'Foyda'],
       ...r.top.map((t) => [t.name, t.qty, t.unit, t.sum, t.profit]),
     ]
-    download(`hisobot-${from}_${to}.csv`, toCsv(rows), 'text/csv;charset=utf-8')
+    download(`hisobot-${db.from}_${db.to}.csv`, toCsv(rows), 'text/csv;charset=utf-8')
   }
 
   return (
     <>
-      <PageHeader title="Hisobotlar" subtitle={quarter(0).from === from && quarter(0).to === to ? `Joriy chorak: ${quarter(0).label}` : `${from} — ${to}`} actions={<>
-        <PeriodPicker from={from} to={to} onChange={(f, t) => { setFrom(f); setTo(t) }} />
+      <PageHeader title="Hisobotlar" subtitle={!to && from === currentPeriod(wh.data.settings).from ? `Joriy hisob davri: ${fmtDay(from)} dan` : `${fmtDay(db.from + 'T12:00')} — ${fmtDay(db.to + 'T12:00')}`} actions={<>
+        <PeriodPicker from={from} to={to} settings={wh.data.settings} onChange={(f, t) => { setFrom(f); setTo(t) }} />
         <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>Excel</Button>
         <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => window.print()}>Chop etish</Button>
       </>} />

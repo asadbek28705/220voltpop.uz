@@ -6,9 +6,10 @@ const common = {
   max_memory_restart: '300M',
   time: true,
 }
+// Barcha sanalar va kunlik hisobot vaqti — Toshkent vaqti bilan
 module.exports = {
   apps: [
-    { ...common, name: 'ombor', env: { NODE_ENV: 'production', HOST: '127.0.0.1', PORT: '8100', NO_HTTPS: '1', TRUST_PROXY: '1', NO_SEED: '1' } },
-    { ...common, name: 'ombor-demo', env: { NODE_ENV: 'production', DEMO: '1', HOST: '127.0.0.1', PORT: '8101', TRUST_PROXY: '1' } },
+    { ...common, name: 'ombor', env: { NODE_ENV: 'production', TZ: 'Asia/Tashkent', HOST: '127.0.0.1', PORT: '8100', NO_HTTPS: '1', TRUST_PROXY: '1', NO_SEED: '1' } },
+    { ...common, name: 'ombor-demo', env: { NODE_ENV: 'production', TZ: 'Asia/Tashkent', DEMO: '1', HOST: '127.0.0.1', PORT: '8101', TRUST_PROXY: '1' } },
   ],
 }

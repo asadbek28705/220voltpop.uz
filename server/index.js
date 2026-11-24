@@ -13,6 +13,9 @@ import { ensureCert } from './cert.js'
 import { DEFAULT_TG, Telegram } from './telegram.js'
 import { Auth } from './auth.js'
 
+// Sanalar, kunlar chegarasi va hisobot vaqti — Toshkent vaqti (server UTC da bo'lsa ham)
+process.env.TZ ||= 'Asia/Tashkent'
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HTTP_PORT = Number(process.env.PORT ?? 8080)
 const HTTPS_PORT = Number(process.env.HTTPS_PORT ?? 8443)
@@ -217,6 +220,12 @@ app.delete('/api/expenses/:id', admin, write((req) => {
   return { ok: true }
 }))
 app.put('/api/settings', admin, write((req) => store.saveSettings(req.body)))
+/** Hisob davrini yopish: savdo/foyda/xarajat hisoblagichlari shu paytdan 0 dan boshlanadi. Yozuvlar o'chirilmaydi. */
+app.post('/api/period/close', admin, write((req) => {
+  const p = store.closePeriod(req.body ?? {}, seller(req))
+  tg.onPeriodClose(p)
+  return p
+}))
 app.put('/api/rate', admin, write((req) => {
   const r = store.setRate(req.body ?? {})
   tg.onRate?.(r, seller(req))

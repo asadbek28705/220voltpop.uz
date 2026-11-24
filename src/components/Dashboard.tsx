@@ -11,7 +11,12 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import type { Warehouse } from '../store'
 import type { MovementType } from '../types'
 import { fmtDate, fmtMoney, fmtNum } from '../utils'
-import { dayKey, daysAgo, expenseInRange, inRange, profitOf, quarter, today } from '../stats'
+import { currentPeriod, dayKey, daysAgo, expenseInRange, fmtDay, inRange, profitOf, today } from '../stats'
+import { useState } from 'react'
+import { Alert, Snackbar } from '@mui/material'
+import RestartIcon from '@mui/icons-material/RestartAlt'
+import { useIsAdmin } from '../auth'
+import ClosePeriodDialog from './ClosePeriodDialog'
 import DebtIcon from '@mui/icons-material/MenuBookOutlined'
 import BalanceIcon from '@mui/icons-material/AccountBalanceOutlined'
 import { GREEN, YELLOW } from '../theme'
@@ -35,7 +40,11 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
   const todayExpenses = wh.data.expenses.filter((e) => dayKey(e.date) === t).reduce((s, e) => s + e.amount, 0)
 
   // Joriy chorak: 1-yanvar / 1-aprel / 1-iyul / 1-oktabrdan 0 dan boshlanadi
-  const q = quarter(0)
+  // Joriy hisob davri: oxirgi «Davrni yopish» dan beri hisoblanadi
+  const admin = useIsAdmin()
+  const [closing, setClosing] = useState(false)
+  const [toast, setToast] = useState('')
+  const q = currentPeriod(wh.data.settings)
   const qs = useMemo(() => {
     const sales = movements.filter((m) => m.type === 'out' && inRange(m, q.from, q.to))
     const revenue = sales.reduce((s, m) => s + m.qty * m.price, 0)
@@ -72,18 +81,23 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
       </Grid>
 
       <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: 1 }}>
-        <Typography variant="h6">{q.label}</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>— har chorak boshida 0 dan boshlanadi</Typography>
+        <Typography variant="h6">Joriy davr</Typography>
+        <Typography variant="body2" color="text.secondary">{fmtDay(q.from)} dan</Typography>
         <Box sx={{ flexGrow: 1 }} />
         {totalDebt > 0 && <Chip icon={<DebtIcon />} color="error" variant="outlined" clickable onClick={() => navigate('debtors')}
           label={`Mijozlar qarzi: ${fmtMoney(totalDebt)} (${debtors.length})`} sx={{ fontWeight: 600 }} />}
         <Button size="small" onClick={() => navigate('reports')}>Batafsil</Button>
+        {admin && <Button size="small" color="warning" variant="outlined" startIcon={<RestartIcon />} onClick={() => setClosing(true)}>Davrni yopish</Button>}
       </Stack>
+      {closing && <ClosePeriodDialog wh={wh} from={q.from} totals={qs} onClose={() => setClosing(false)} onDone={setToast} />}
+      <Snackbar open={!!toast} autoHideDuration={5000} onClose={() => setToast('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert severity="success" variant="filled" onClose={() => setToast('')}>{toast}</Alert>
+      </Snackbar>
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<CartIcon />} title="Chorak savdosi" value={fmtMoney(qs.revenue)} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title="Chorak foydasi" value={fmtMoney(qs.profit)} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<MoneyOffIcon />} title="Chorak xarajati" value={fmtMoney(qs.spent)} color="#E5533D" /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<BalanceIcon />} title="Chorak sof foydasi" value={fmtMoney(qs.net)} color={qs.net >= 0 ? '#2E9E5B' : '#E5533D'} valueColor={qs.net >= 0 ? 'primary.main' : 'error.main'} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<CartIcon />} title="Davr savdosi" value={fmtMoney(qs.revenue)} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title="Davr foydasi" value={fmtMoney(qs.profit)} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<MoneyOffIcon />} title="Davr xarajati" value={fmtMoney(qs.spent)} color="#E5533D" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<BalanceIcon />} title="Davr sof foydasi" value={fmtMoney(qs.net)} color={qs.net >= 0 ? '#2E9E5B' : '#E5533D'} valueColor={qs.net >= 0 ? 'primary.main' : 'error.main'} /></Grid>
       </Grid>
 
       <Grid container spacing={2}>

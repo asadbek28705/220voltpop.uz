@@ -2,11 +2,8 @@
 // Token faqat serverda (data/ombor.db) saqlanadi.
 
 const PAYMENT = { naqd: 'Naqd', karta: 'Karta', otkazma: "O'tkazma", nasiya: 'Nasiya (qarzga)' }
-const QUARTERS = ['I', 'II', 'III', 'IV']
 /** Chorak boshi: 1-yanvar, 1-aprel, 1-iyul, 1-oktabr */
 const quarterStart = (d) => new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1)
-const quarterKey = (d) => `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`
-const quarterTitle = (d) => `${d.getFullYear()} yil ${QUARTERS[Math.floor(d.getMonth() / 3)]} chorak`
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 const money = (n) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + " so'm"
 const qtyFmt = (n) => String(Math.round(n * 100) / 100).replace('.', ',')
@@ -20,7 +17,7 @@ const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 
 export const DEFAULT_TG = {
   token: '', chatId: '', enabled: false,
   notifySales: true, notifyIncoming: true, notifyExpenses: true, notifyAdjust: true, notifyUndo: true, notifyLowStock: true,
-  dailyEnabled: true, dailyTime: '20:00', lastDaily: '', lastQuarter: '',
+  dailyEnabled: true, dailyTime: '20:00', lastDaily: '',
 }
 
 export class Telegram {
@@ -304,11 +301,11 @@ export class Telegram {
     return this.dayReport(h >= 12 ? now : addDays(now, -1))
   }
 
-  quarterReport(d) {
-    const from = quarterStart(d)
-    const to = new Date(from.getFullYear(), from.getMonth() + 3, 1)
-    const end = to > new Date() ? addDays(startOfDay(new Date()), 1) : to
-    return this.report(from, end, `${quarterTitle(from)} — ${dmy(from)} – ${dmy(addDays(end, -1))}`)
+  /** Joriy hisob davri (oxirgi «Davrni yopish» dan beri, hali yopilmagan bo'lsa — chorak boshidan) */
+  periodReport() {
+    const start = this.store.periodStart()
+    const from = start ? new Date(start) : quarterStart(new Date())
+    return this.report(from, new Date(), `Joriy hisob davri — ${dmy(from)} dan`)
   }
 
   debtReport() {
@@ -320,23 +317,17 @@ export class Telegram {
       (list.length > 40 ? `\n… yana ${list.length - 40} ta` : '') + `\n\n💰 Jami: <b>${money(total)}</b>`
   }
 
-  /** Yangi chorak boshlanganda — o'tgan chorak yakuni guruhga yuboriladi */
-  checkQuarter() {
-    const c = this.cfg
+  onPeriodClose(p) {
     if (!this.ready) return
-    const now = new Date()
-    const key = quarterKey(now)
-    if (c.lastQuarter === key) return
-    this.setCfg({ lastQuarter: key })
-    if (!c.lastQuarter) return // birinchi ishga tushish — faqat belgilab qo'yamiz
-    const prev = addDays(quarterStart(now), -1)
-    this.send(`🗓 <b>Yangi chorak boshlandi: ${quarterTitle(now)}</b>\nSavdo, foyda va xarajat hisoblagichlari 0 dan boshlandi. O'tgan chorak yakuni:\n\n` + this.quarterReport(prev))
-      .catch((e) => { console.warn('Chorak hisoboti yuborilmadi:', e.message); this.setCfg({ lastQuarter: c.lastQuarter }) })
+    const from = new Date(p.from), to = new Date(p.to)
+    const title = `Hisob davri yopildi: ${from.getTime() ? dmy(from) : 'boshidan'} – ${dmy(to)}`
+    let t = `🗓 <b>${title}</b>\nSavdo, foyda va xarajat hisoblagichlari 0 dan boshlandi. Qarzlar saqlanib qoladi.`
+    if (p.closedBy) t += `\n🧑‍💼 ${esc(p.closedBy)}`
+    this.fire(t + '\n\n' + this.report(from, to, 'Yopilgan davr yakuni'))
   }
 
   startScheduler() {
     setInterval(() => {
-      if (new Date().getHours() >= 9) this.checkQuarter()
       const c = this.cfg
       if (!this.ready || !c.dailyEnabled) return
       const now = new Date()
@@ -364,7 +355,7 @@ export class Telegram {
         { command: 'hisobot', description: 'Bugungi hisobot' },
         { command: 'kecha', description: 'Kechagi hisobot' },
         { command: 'oy', description: 'Shu oy hisoboti' },
-        { command: 'chorak', description: 'Shu chorak hisoboti' },
+        { command: 'davr', description: 'Joriy hisob davri hisoboti' },
         { command: 'qarz', description: 'Qarzdor mijozlar' },
         { command: 'kam', description: 'Kam qolgan tovarlar' },
         { command: 'qoldiq', description: 'Tovar qoldig\'i: /qoldiq sement' },
@@ -401,7 +392,8 @@ export class Telegram {
         const from = new Date(now.getFullYear(), now.getMonth(), 1)
         return reply(this.report(from, addDays(startOfDay(now), 1), `Oylik hisobot — ${pad(now.getMonth() + 1)}.${now.getFullYear()}`))
       }
-      case 'chorak': return reply(this.quarterReport(now))
+      case 'chorak':
+      case 'davr': return reply(this.periodReport())
       case 'qarz': return reply(this.debtReport())
       case 'kam': {
         const low = this.store.db.prepare('SELECT * FROM products WHERE qty <= minQty ORDER BY qty').all()
@@ -426,7 +418,7 @@ export class Telegram {
           '/hisobot — bugungi hisobot',
           '/kecha — kechagi hisobot',
           '/oy — shu oy hisoboti',
-          '/chorak — shu chorak (3 oy) hisoboti',
+          '/davr — joriy hisob davri (oxirgi yopishdan beri)',
           '/qarz — qarzdor mijozlar',
           '/kam — kam qolgan tovarlar',
           '/qoldiq <i>nomi</i> — tovar qoldig\'i',

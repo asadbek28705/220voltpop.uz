@@ -61,7 +61,15 @@ export interface ShopSettings {
   phone: string
   receiptFooter: string
   usdRate?: number // 1$ = ? so'm
+  periods?: ClosedPeriod[] // qo'lda yopilgan hisob davrlari
   rateDate?: string
+}
+
+export interface ClosedPeriod {
+  from: string // ISO
+  to: string // ISO — yopilgan payt
+  closedBy: string
+  note?: string
 }
 
 export interface Expense {
