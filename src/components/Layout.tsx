@@ -75,12 +75,12 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
         <Stack direction="row" alignItems="center" spacing={1.5} className="no-print"
           sx={{ height: 64, px: { xs: 2, md: 4 }, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider', position: 'sticky', top: 0, zIndex: 10 }}>
-          {!desktop && <IconButton onClick={() => setOpen(true)}><MenuIcon /></IconButton>}
+          {!desktop && <IconButton aria-label="Menyu" onClick={() => setOpen(true)}><MenuIcon /></IconButton>}
           {!desktop && <Typography sx={{ fontWeight: 800, letterSpacing: 1.5, color: '#C9A227' }}>OMBOR</Typography>}
           <Box sx={{ flexGrow: 1 }} />
           <Chip size="small" variant="outlined" color={online ? 'success' : 'error'} label={online ? 'Onlayn' : "Aloqa yo'q"}
             sx={{ '& .MuiChip-label': { px: 1 } }} />
-          <IconButton onClick={onToggleMode} sx={{ border: 1, borderColor: 'divider' }} title="Rejimni almashtirish">
+          <IconButton aria-label="Rejimni almashtirish" onClick={onToggleMode} sx={{ border: 1, borderColor: 'divider' }} title="Rejimni almashtirish">
             {mode === 'dark' ? <LightIcon fontSize="small" /> : <DarkIcon fontSize="small" />}
           </IconButton>
           <Stack direction="row" spacing={1.25} alignItems="center" sx={{ pl: 1 }}>

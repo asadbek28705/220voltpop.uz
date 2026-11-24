@@ -71,7 +71,20 @@ export class Telegram {
   }
 
   /** Xabarlar navbat bilan yuboriladi (Telegram cheklovi: guruhga daqiqasiga ~20 ta) */
+  /** Telegram 4096 belgidan uzun xabarni qabul qilmaydi — qatorlar bo'yicha bo'laklaymiz */
   send(text, chatId = this.cfg.chatId) {
+    if (text.length > 4000) {
+      const parts = ['']
+      for (const line of text.split('\n')) {
+        if ((parts[parts.length - 1] + line).length > 3900) parts.push('')
+        parts[parts.length - 1] += (parts[parts.length - 1] ? '\n' : '') + line.slice(0, 3900)
+      }
+      return parts.reduce((p, part) => p.then(() => this.sendOne(part, chatId)), Promise.resolve())
+    }
+    return this.sendOne(text, chatId)
+  }
+
+  sendOne(text, chatId = this.cfg.chatId) {
     if (!this.cfg.token || !chatId) return Promise.resolve()
     const job = async () => {
       for (let attempt = 0; attempt < 3; attempt++) {
