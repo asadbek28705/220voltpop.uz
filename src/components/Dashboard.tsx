@@ -6,6 +6,7 @@ import CartIcon from '@mui/icons-material/ShoppingCartOutlined'
 import MoneyOffIcon from '@mui/icons-material/MoneyOffOutlined'
 import WalletIcon from '@mui/icons-material/AccountBalanceWalletOutlined'
 import TrendIcon from '@mui/icons-material/TrendingUp'
+import BoxIcon from '@mui/icons-material/Inventory2Outlined'
 import WarningIcon from '@mui/icons-material/WarningAmberRounded'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { Warehouse } from '../store'
@@ -19,12 +20,22 @@ import { useIsAdmin } from '../auth'
 import ClosePeriodDialog from './ClosePeriodDialog'
 import DebtIcon from '@mui/icons-material/MenuBookOutlined'
 import BalanceIcon from '@mui/icons-material/AccountBalanceOutlined'
-import { GREEN, YELLOW } from '../theme'
-import PageHeader from './PageHeader'
+import { GOLD_GRADIENT, GREEN, INK, YELLOW } from '../theme'
+import { useMe } from '../auth'
+import { alpha } from '@mui/material'
 import StatCard from './StatCard'
 import ChartCard from './ChartCard'
 import { useChartStyle } from './charts'
-import { t as tr } from '../i18n'
+import { lang, t as tr } from '../i18n'
+
+// Brauzerlarda o'zbekcha sana formati yo'q — o'zimiz yozamiz
+const UZ_DAYS = ['yakshanba', 'dushanba', 'seshanba', 'chorshanba', 'payshanba', 'juma', 'shanba']
+const UZ_MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr']
+const longDate = (d: Date) => lang === 'uz'
+  ? `${d.getDate()}-${UZ_MONTHS[d.getMonth()]}, ${d.getFullYear()} · ${UZ_DAYS[d.getDay()]}`
+  : d.toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+const glassBtn = { color: '#fff', bgcolor: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.16)', backdropFilter: 'blur(6px)', '&:hover': { bgcolor: 'rgba(255,255,255,.18)' } }
 
 interface Props { wh: Warehouse; onMovement: (t: MovementType, id?: string) => void; navigate: (page: string) => void; onExpense: () => void }
 
@@ -39,6 +50,11 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
   const todayRevenue = todaySales.reduce((s, m) => s + m.qty * m.price, 0)
   const todayProfit = todaySales.reduce((s, m) => s + profitOf(m, products), 0)
   const todayExpenses = wh.data.expenses.filter((e) => dayKey(e.date) === t).reduce((s, e) => s + e.amount, 0)
+  const todayReceipts = new Set(movements.filter((m) => m.type === 'out' && dayKey(m.date) === t).map((m) => m.saleId)).size
+  const userName = (useMe().user?.name ?? '').split(' ')[0]
+  const hour = new Date().getHours()
+  const greeting = hour < 11 ? tr("Xayrli tong") : hour < 18 ? tr("Xayrli kun") : tr("Xayrli kech")
+  const todayLabel = longDate(new Date())
 
   // Joriy chorak: 1-yanvar / 1-aprel / 1-iyul / 1-oktabrdan 0 dan boshlanadi
   // Joriy hisob davri: oxirgi «Davrni yopish» dan beri hisoblanadi
@@ -68,17 +84,48 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
 
   return (
     <>
-      <PageHeader title={tr("Bosh sahifa")} subtitle={tr("Bugungi holat")} actions={<>
-        <Button variant="outlined" startIcon={<MoneyOffIcon />} onClick={onExpense}>{tr("Xarajat")}</Button>
-        <Button variant="outlined" startIcon={<AddIcon />} onClick={() => onMovement('in')}>{tr("Kirim")}</Button>
-        <Button variant="contained" startIcon={<CartIcon />} onClick={() => onMovement('out')}>{tr("Yangi savdo")}</Button>
-      </>} />
+      {/* Premium banner: salomlashish, bugungi savdo va tezkor amallar */}
+      <Box sx={{
+        position: 'relative', overflow: 'hidden', borderRadius: '24px', p: { xs: 2.5, md: 3.5 }, mb: 3, color: '#fff',
+        background: `radial-gradient(80% 120% at 100% 0%, ${alpha(YELLOW, 0.28)} 0%, transparent 55%), radial-gradient(70% 120% at 0% 100%, ${alpha(GREEN, 0.55)} 0%, transparent 60%), linear-gradient(135deg, #0E1626 0%, ${INK} 100%)`,
+        boxShadow: '0 20px 40px rgba(11,18,32,.25)',
+      }}>
+        <Box sx={{ position: 'absolute', right: -60, bottom: -80, width: 260, height: 260, borderRadius: '50%', border: '1px solid rgba(255,255,255,.08)' }} />
+        <Box sx={{ position: 'absolute', right: 40, bottom: -120, width: 260, height: 260, borderRadius: '50%', border: '1px solid rgba(255,255,255,.06)' }} />
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} justifyContent="space-between" alignItems={{ md: 'flex-end' }} sx={{ position: 'relative' }}>
+          <Box>
+            <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,.6)' }}>{todayLabel}</Typography>
+            <Typography sx={{ fontSize: { xs: 24, md: 30 }, fontWeight: 800, letterSpacing: -0.5, mt: 0.5 }}>{greeting}{userName ? `, ${userName}` : ''} 👋</Typography>
+            <Stack direction="row" spacing={{ xs: 2.5, md: 4 }} sx={{ mt: 2.5 }} flexWrap="wrap" useFlexGap rowGap={2}>
+              <Box>
+                <Typography sx={{ fontSize: 12.5, color: 'rgba(255,255,255,.6)', fontWeight: 600 }}>{tr("Bugungi savdo")}</Typography>
+                <Typography sx={{ fontSize: { xs: 26, md: 34 }, fontWeight: 800, letterSpacing: -0.8, lineHeight: 1.15, background: GOLD_GRADIENT, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                  {fmtMoney(todayRevenue)}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography sx={{ fontSize: 12.5, color: 'rgba(255,255,255,.6)', fontWeight: 600 }}>{tr("Cheklar")}</Typography>
+                <Typography sx={{ fontSize: { xs: 22, md: 26 }, fontWeight: 800, lineHeight: 1.3 }}>{todayReceipts}</Typography>
+              </Box>
+              <Box>
+                <Typography sx={{ fontSize: 12.5, color: 'rgba(255,255,255,.6)', fontWeight: 600 }}>{tr("Bugungi sof foyda")}</Typography>
+                <Typography sx={{ fontSize: { xs: 22, md: 26 }, fontWeight: 800, lineHeight: 1.3, color: todayProfit - todayExpenses >= 0 ? '#4ADE80' : '#FF8A8A' }}>{fmtMoney(todayProfit - todayExpenses)}</Typography>
+              </Box>
+            </Stack>
+          </Box>
+          <Stack direction="row" spacing={1.25} flexWrap="wrap" useFlexGap className="no-print">
+            <Button startIcon={<MoneyOffIcon />} onClick={onExpense} sx={glassBtn}>{tr("Xarajat")}</Button>
+            <Button startIcon={<AddIcon />} onClick={() => onMovement('in')} sx={glassBtn}>{tr("Kirim")}</Button>
+            <Button variant="contained" color="secondary" size="large" startIcon={<CartIcon />} onClick={() => navigate('pos')}>{tr("Yangi savdo")}</Button>
+          </Stack>
+        </Stack>
+      </Box>
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<CartIcon />} title={tr("Bugungi savdo")} value={fmtMoney(todayRevenue)} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title={tr("Bugungi sof foyda")} value={fmtMoney(todayProfit - todayExpenses)} valueColor={todayProfit - todayExpenses >= 0 ? 'primary.main' : 'error.main'} /></Grid>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<WalletIcon />} title={tr("Ombor qiymati (tannarx)")} value={fmtMoney(costValue)} color="#3B82F6" /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<MoneyOffIcon />} title={tr("Bugungi xarajat")} value={fmtMoney(todayExpenses)} color="#E5533D" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<BoxIcon />} title={tr("Tovar turlari")} value={String(products.length)} color="#8B5CF6" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<DebtIcon />} title={tr("Mijozlar qarzi")} value={fmtMoney(totalDebt)} color="#F08C00" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<MoneyOffIcon />} title={tr("Bugungi xarajat")} value={fmtMoney(todayExpenses)} color="#E5484D" /></Grid>
       </Grid>
 
       {/* Telefonda qator sig'masa — keyingi qatorga o'tadi, tugma ekrandan chiqib ketmaydi */}

@@ -11,7 +11,7 @@ export default function LangSwitcher() {
   return (
     <>
       <Button color="inherit" size="small" startIcon={<LanguageIcon fontSize="small" />} onClick={(e) => setAnchor(e.currentTarget)}
-        aria-label={tr('Til')} sx={{ minWidth: 0, px: 1.25, border: 1, borderColor: 'divider', borderRadius: 5, fontWeight: 700 }}>
+        aria-label={tr('Til')} sx={{ minWidth: 0, height: 38, px: 1.5, border: 1, borderColor: 'divider', borderRadius: 5, fontWeight: 700 }}>
         {cur.short}
       </Button>
       <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}>

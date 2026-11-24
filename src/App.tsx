@@ -78,8 +78,10 @@ const NAV: NavGroup[] = [
   { title: tr('SOZLAMALAR'), items: [{ key: 'settings', label: tr('Sozlamalar'), icon: <SettingsIcon fontSize="small" /> }] },
 ]
 const buyPriceOf = (p: Product) => p.buyPrice
+/** Sotuvchiga faqat kassa (va parol/chiqish uchun sozlamalar) */
+const SELLER_PAGES = ['pos', 'settings']
 const navFor = (admin: boolean) =>
-  NAV.map((g) => ({ ...g, items: g.items.filter((i) => admin || !i.admin) })).filter((g) => g.items.length)
+  NAV.map((g) => ({ ...g, items: g.items.filter((i) => admin || SELLER_PAGES.includes(i.key)) })).filter((g) => g.items.length)
 
 function useThemeMode() {
   const [mode, setMode] = useState<'light' | 'dark'>(() => (localStorage.getItem('ombor-mode') as 'dark') ?? 'light')

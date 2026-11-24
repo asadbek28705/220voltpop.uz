@@ -591,5 +591,9 @@ const dict: Record<string, string> = {
   "oldin qaytgan: {0}": "ранее возвращено: {0}",
   "«Xaridor {0}» oynasi yopilsinmi? Savatdagi tovarlar o'chadi.": "Закрыть окно «Покупатель {0}»? Товары в корзине удалятся.",
   "№{0} chek topilmadi": "Чек №{0} не найден",
+  "Mijozlar qarzi": "Долги клиентов",
+  "Xayrli tong": "Доброе утро",
+  "Xayrli kun": "Добрый день",
+  "Xayrli kech": "Добрый вечер",
 }
 export default dict
