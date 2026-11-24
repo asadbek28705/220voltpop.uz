@@ -134,7 +134,6 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
       backgroundImage: dark
         ? `radial-gradient(60% 40% at 100% 0%, ${alpha(GREEN, 0.08)} 0%, transparent 70%)`
         : `radial-gradient(60% 40% at 100% 0%, ${alpha(GREEN, 0.07)} 0%, transparent 70%), radial-gradient(40% 30% at 30% 0%, ${alpha(YELLOW, 0.06)} 0%, transparent 70%)`,
-      backgroundAttachment: 'fixed',
     }}>
       <Drawer
         variant={desktop ? 'permanent' : 'temporary'}
@@ -150,7 +149,7 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
         <Stack direction="row" alignItems="center" spacing={1.25} className="no-print"
           sx={{
             height: 68, px: { xs: 2, md: 4 }, position: 'sticky', top: 0, zIndex: 10,
-            bgcolor: alpha(theme.palette.background.paper, dark ? 0.7 : 0.75), backdropFilter: 'saturate(180%) blur(14px)',
+            bgcolor: alpha(theme.palette.background.paper, dark ? 0.96 : 0.97),
             borderBottom: 1, borderColor: 'divider',
           }}>
           {!desktop && <IconButton aria-label={tr("Menyu")} onClick={() => setOpen(true)} sx={{ ml: -1 }}><MenuIcon /></IconButton>}

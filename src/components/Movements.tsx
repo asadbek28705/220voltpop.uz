@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import {
   Button, Chip, IconButton, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead,
-  TableRow, TextField, Tooltip, Typography,
+  TablePagination, TableRow, TextField, Tooltip, Typography,
 } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import UndoIcon from '@mui/icons-material/Undo'
@@ -48,11 +48,16 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
   const admin = useIsAdmin()
   const [returning, setReturning] = useState(false)
 
+  // Ko'p yozuvda ham tez: qidiruv kechiktiriladi, jadval sahifalarga bo'linadi
+  const dq = useDeferredValue(q)
+  const [page, setPage] = useState(0)
+  const [perPage, setPerPage] = useState(() => Number(localStorage.getItem('ombor-per-page')) || 50)
+  useEffect(() => setPage(0), [dq, t, from, to])
   const list = useMemo(() => {
-    const s = q.trim().toLowerCase()
+    const s = dq.trim().toLowerCase()
     return movements.filter((m) => (!t || m.type === t) && inRange(m, from, to) &&
       (!s || m.productName.toLowerCase().includes(s) || m.counterparty.toLowerCase().includes(s) || m.note.toLowerCase().includes(s)))
-  }, [movements, t, from, to, q])
+  }, [movements, t, from, to, dq])
 
   const total = (tp: MovementType) => list.filter((m) => m.type === tp).reduce((s, m) => s + m.qty * m.price, 0)
   const profit = saleLines(list).reduce((s, m) => s + profitOf(m, products), 0)
@@ -126,7 +131,7 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
               </TableRow>
             </TableHead>
             <TableBody>
-              {list.map((m) => (
+              {list.slice(page * perPage, page * perPage + perPage).map((m) => (
                 <TableRow key={m.id} hover>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{fmtDate(m.date)}</TableCell>
                   {isSale && (
@@ -158,6 +163,13 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
             </TableBody>
           </Table>
         </TableContainer>
+        {list.length > 25 && (
+          <TablePagination component="div" count={list.length} page={Math.min(page, Math.max(0, Math.ceil(list.length / perPage) - 1))}
+            onPageChange={(_, n) => { setPage(n); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+            rowsPerPage={perPage} rowsPerPageOptions={[25, 50, 100, 200]}
+            onRowsPerPageChange={(e) => { const v = Number(e.target.value); setPerPage(v); localStorage.setItem('ombor-per-page', String(v)); setPage(0) }}
+            labelRowsPerPage={tr("Sahifada:")} labelDisplayedRows={({ from: a, to: b, count }) => tr("{0}–{1} / {2}", a, b, count)} />
+        )}
       </Paper>
       {receipt && <ReceiptDialog wh={wh} saleId={receipt.saleId} returnId={receipt.returnId} onClose={() => setReceipt(null)} />}
       {returning && <ReturnDialog wh={wh} onClose={() => setReturning(false)} onDone={(id) => { setReturning(false); setReceipt({ returnId: id }) }} />}
