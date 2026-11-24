@@ -22,6 +22,7 @@ import { fmtMoney, fmtNum } from '../utils'
 import PageHeader from './PageHeader'
 import CameraScanner from './CameraScanner'
 import ReceiptDialog from './ReceiptDialog'
+import { t as tr } from '../i18n'
 
 interface Props {
   wh: Warehouse; cart: Cart; onUnknownCode: (code: string) => void
@@ -61,7 +62,7 @@ export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerCha
   const short = lines.filter((l) => l.qty > l.product.qty)
 
   const addProduct = (p: Product) => {
-    if (p.qty <= 0) { beep(false); setError(`"${p.name}" omborda qolmagan`); return }
+    if (p.qty <= 0) { beep(false); setError(tr("\"{0}\" omborda qolmagan", p.name)); return }
     cart.add(p)
     beep(true)
     setError('')
@@ -75,10 +76,10 @@ export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerCha
   const checkout = async () => {
     setError('')
     if (!lines.length) return
-    if (short.length) return setError('Omborda yetarli bo\'lmagan tovarlar bor')
-    if (payment === 'nasiya' && !selected) return setError("Nasiya uchun mijozni tanlang yoki yangi mijoz qo'shing")
+    if (short.length) return setError(tr("Omborda yetarli bo'lmagan tovarlar bor"))
+    if (payment === 'nasiya' && !selected) return setError(tr("Nasiya uchun mijozni tanlang yoki yangi mijoz qo'shing"))
     const paid = payment === 'nasiya' ? Math.round(num(paidNow) || 0) : 0
-    if (paid >= total && paid > 0) return setError("To'liq to'layapti — naqd yoki kartani tanlang")
+    if (paid >= total && paid > 0) return setError(tr("To'liq to'layapti — naqd yoki kartani tanlang"))
     setBusy(true)
     const r = await attempt(() => wh.sell({
       items: lines.map((l) => ({ productId: l.productId, qty: l.qty, price: l.price })),
@@ -119,19 +120,19 @@ export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerCha
             <Stack direction="row" justifyContent="space-between" sx={{ width: '100%' }} spacing={2}>
               <Box>
                 <Typography>{p.name}</Typography>
-                <Typography variant="caption" color="text.secondary">{p.sku} · {fmtNum(p.qty)} {p.unit} bor</Typography>
+                <Typography variant="caption" color="text.secondary">{p.sku} · {tr('{0} {1} bor', fmtNum(p.qty), tr(p.unit))}</Typography>
               </Box>
               <Typography sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{fmtMoney(p.sellPrice)}</Typography>
             </Stack>
           </li>
         )}
         renderInput={(params) => (
-          <TextField {...params} autoFocus={!mobile} placeholder="Skaner qiling yoki tovar nomini yozing"
+          <TextField {...params} autoFocus={!mobile} placeholder={tr("Skaner qiling yoki tovar nomini yozing")}
             slotProps={{ input: { ...params.InputProps, startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> } }} />
         )}
       />
       <Button variant="contained" onClick={() => setCamera(true)} sx={{ minWidth: 56, px: mobile ? 1.5 : 2 }} startIcon={mobile ? undefined : <CameraIcon />}>
-        {mobile ? <CameraIcon /> : 'Kamera'}
+        {mobile ? <CameraIcon /> : tr("Kamera")}
       </Button>
     </Stack>
   )
@@ -141,7 +142,7 @@ export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerCha
       {lines.length === 0 && (
         <Paper variant="outlined" sx={{ p: 5, textAlign: 'center', color: 'text.secondary' }}>
           <CartIcon sx={{ fontSize: 48, opacity: 0.4 }} />
-          <Typography>Savat bo'sh. Tovarni skaner qiling yoki qidiring.</Typography>
+          <Typography>{tr("Savat bo'sh. Tovarni skaner qiling yoki qidiring.")}</Typography>
         </Paper>
       )}
       {lines.map((l) => {
@@ -152,7 +153,7 @@ export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerCha
               <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                 <Typography sx={{ fontWeight: 600 }}>{l.product.name}</Typography>
                 <Typography variant="caption" color={over ? 'error' : 'text.secondary'}>
-                  Omborda: {fmtNum(l.product.qty)} {l.product.unit}{over && ' — yetarli emas!'}
+                  {tr("Omborda:")} {fmtNum(l.product.qty)} {tr(l.product.unit)}{over && tr(" — yetarli emas!")}
                 </Typography>
               </Box>
               <IconButton size="small" onClick={() => cart.remove(l.productId)}><DeleteIcon fontSize="small" /></IconButton>
@@ -165,10 +166,10 @@ export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerCha
                   slotProps={{ input: { disableUnderline: true }, htmlInput: { style: { textAlign: 'center', width: 56, fontWeight: 700 } } }} />
                 <IconButton size="small" onClick={() => cart.update(l.productId, { qty: l.qty + 1 })}><AddIcon fontSize="small" /></IconButton>
               </Stack>
-              <Typography color="text.secondary">{l.product.unit} ×</Typography>
+              <Typography color="text.secondary">{tr(l.product.unit)} ×</Typography>
               <TextField size="small" value={l.price} inputMode="decimal" sx={{ width: 160 }}
                 onChange={(e) => { const v = num(e.target.value); if (!isNaN(v)) cart.update(l.productId, { price: v }) }}
-                slotProps={{ input: { endAdornment: <InputAdornment position="end">so'm</InputAdornment> } }} />
+                slotProps={{ input: { endAdornment: <InputAdornment position="end">{tr("so'm")}</InputAdornment> } }} />
               <Typography sx={{ ml: 'auto !important', fontWeight: 700 }}>{fmtMoney(l.qty * l.price)}</Typography>
             </Stack>
           </Card>
@@ -200,7 +201,7 @@ export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerCha
           getOptionLabel={(o) => (typeof o === 'string' ? o : 'newName' in o ? o.newName : o.name)}
           isOptionEqualToValue={(a, b) => 'id' in a && 'id' in b && a.id === b.id}
           renderOption={(props, o) => 'newName' in o ? (
-            <li {...props} key="__new"><Typography color="primary" sx={{ fontWeight: 600 }}>➕ Yangi mijoz: «{o.newName}»</Typography></li>
+            <li {...props} key="__new"><Typography color="primary" sx={{ fontWeight: 600 }}>{tr("➕ Yangi mijoz: «")}{o.newName}»</Typography></li>
           ) : (
             <li {...props} key={o.id}>
               <Stack direction="row" justifyContent="space-between" sx={{ width: '100%' }} spacing={1}>
@@ -208,20 +209,20 @@ export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerCha
                   <Typography noWrap>{o.name}</Typography>
                   {o.phone && <Typography variant="caption" color="text.secondary">{o.phone}</Typography>}
                 </Box>
-                {o.debt > 0 && <Typography variant="body2" color="error" sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>qarz {fmtMoney(o.debt)}</Typography>}
+                {o.debt > 0 && <Typography variant="body2" color="error" sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{tr('qarz {0}', fmtMoney(o.debt))}</Typography>}
               </Stack>
             </li>
           )}
           renderInput={(params) => (
-            <TextField {...params} label="Mijoz" placeholder="Ism yoki telefon bilan qidiring"
+            <TextField {...params} label={tr("Mijoz")} placeholder={tr("Ism yoki telefon bilan qidiring")}
               slotProps={{ input: { ...params.InputProps, startAdornment: <><InputAdornment position="start"><PersonIcon fontSize="small" /></InputAdornment>{params.InputProps.startAdornment}</> } }} />
           )}
         />
         {selected && (
           <Box sx={{ mt: '8px !important' }}>
-            {selected.debt > 0 && <Typography variant="body2" color="error" sx={{ fontWeight: 600 }}>Oldingi qarzi: {fmtMoney(selected.debt)}</Typography>}
+            {selected.debt > 0 && <Typography variant="body2" color="error" sx={{ fontWeight: 600 }}>{tr("Oldingi qarzi:")} {fmtMoney(selected.debt)}</Typography>}
             {usual.length > 0 && <>
-              <Typography variant="caption" color="text.secondary">Odatda oladi — bosing, savatga tushadi:</Typography>
+              <Typography variant="caption" color="text.secondary">{tr("Odatda oladi — bosing, savatga tushadi:")}</Typography>
               <Stack direction="row" flexWrap="wrap" useFlexGap spacing={0.75} sx={{ mt: 0.5 }}>
                 {usual.map((p) => <Chip key={p.id} size="small" label={p.name} onClick={() => addProduct(p)} variant="outlined" disabled={p.qty <= 0} />)}
               </Stack>
@@ -229,48 +230,48 @@ export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerCha
           </Box>
         )}
         <Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>To'lov usuli</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>{tr("To'lov usuli")}</Typography>
           <ToggleButtonGroup exclusive fullWidth size="small" value={payment} onChange={(_, v) => v && setPayment(v)}>
             {SALE_PAYMENTS.map((p) => (
               <ToggleButton key={p.value} value={p.value} color={p.value === 'nasiya' ? 'error' : 'primary'} sx={{ px: 0.5 }}>
-                {p.value === 'otkazma' ? "O'tkazma" : p.value === 'nasiya' ? 'Nasiya' : p.label}
+                {p.value === 'otkazma' ? tr("O'tkazma") : p.value === 'nasiya' ? tr("Nasiya") : p.label}
               </ToggleButton>
             ))}
           </ToggleButtonGroup>
         </Box>
         {payment === 'nasiya' && (
           <Stack spacing={1}>
-            {!selected && <Alert severity="warning" sx={{ py: 0 }}>Nasiya uchun mijozni tanlang</Alert>}
-            <TextField size="small" label="Hozir to'lagani (ixtiyoriy)" value={paidNow} onChange={(e) => setPaidNow(e.target.value)} inputMode="decimal"
-              slotProps={{ input: { endAdornment: <InputAdornment position="end">so'm</InputAdornment> } }} />
+            {!selected && <Alert severity="warning" sx={{ py: 0 }}>{tr("Nasiya uchun mijozni tanlang")}</Alert>}
+            <TextField size="small" label={tr("Hozir to'lagani (ixtiyoriy)")} value={paidNow} onChange={(e) => setPaidNow(e.target.value)} inputMode="decimal"
+              slotProps={{ input: { endAdornment: <InputAdornment position="end">{tr("so'm")}</InputAdornment> } }} />
             {selected && total > 0 && (
               <Typography variant="body2">
-                Qarzga yoziladi: <b>{fmtMoney(total - (num(paidNow) || 0))}</b>
-                {selected.debt > 0 && <> · Umumiy qarzi bo'ladi: <b style={{ color: '#E5533D' }}>{fmtMoney(selected.debt + total - (num(paidNow) || 0))}</b></>}
+                {tr("Qarzga yoziladi:")} <b>{fmtMoney(total - (num(paidNow) || 0))}</b>
+                {selected.debt > 0 && <> {tr("· Umumiy qarzi bo'ladi:")} <b style={{ color: '#E5533D' }}>{fmtMoney(selected.debt + total - (num(paidNow) || 0))}</b></>}
               </Typography>
             )}
           </Stack>
         )}
         <Divider />
-        <Stack direction="row" justifyContent="space-between"><Typography color="text.secondary">Tovarlar</Typography><Typography>{lines.length} xil</Typography></Stack>
+        <Stack direction="row" justifyContent="space-between"><Typography color="text.secondary">{tr("Tovarlar")}</Typography><Typography>{tr('{0} xil', lines.length)}</Typography></Stack>
         <Stack direction="row" justifyContent="space-between" alignItems="baseline">
-          <Typography variant="h6">Jami</Typography>
+          <Typography variant="h6">{tr("Jami")}</Typography>
           <Typography variant="h5" sx={{ color: 'primary.main' }}>{fmtMoney(total)}</Typography>
         </Stack>
         {error && <Alert severity="error">{error}</Alert>}
         {!mobile && (
           <Button variant="contained" size="large" disabled={!lines.length || busy} onClick={checkout} sx={{ py: 1.5, fontSize: 17 }}>
-            {busy ? 'Saqlanmoqda...' : 'Sotish'}
+            {busy ? tr("Saqlanmoqda...") : tr("Sotish")}
           </Button>
         )}
-        {lines.length > 0 && <Button color="inherit" onClick={() => confirm('Savat tozalansinmi?') && cart.clear()}>Savatni tozalash</Button>}
+        {lines.length > 0 && <Button color="inherit" onClick={() => confirm(tr("Savat tozalansinmi?")) && cart.clear()}>{tr("Savatni tozalash")}</Button>}
       </Stack>
     </Card>
   )
 
   return (
     <Box sx={{ pb: mobile ? 10 : 0 }}>
-      <PageHeader title="Kassa" subtitle="Shtrix-kodni skaner qiling — tovar savatga tushadi" />
+      <PageHeader title={tr("Kassa")} subtitle={tr("Shtrix-kodni skaner qiling — tovar savatga tushadi")} />
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="flex-start">
         <Stack spacing={2} sx={{ flex: 1, width: '100%', minWidth: 0 }}>
           {search}
@@ -284,18 +285,18 @@ export default function Pos({ wh, cart, onUnknownCode, customerId, onCustomerCha
           sx={{ position: 'fixed', left: 0, right: 0, bottom: 0, p: 1.5, zIndex: 20, borderRadius: 0, borderTop: 1, borderColor: 'divider' }}>
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="caption" color="text.secondary">Jami</Typography>
+              <Typography variant="caption" color="text.secondary">{tr("Jami")}</Typography>
               <Typography variant="h6" sx={{ lineHeight: 1.1 }}>{fmtMoney(total)}</Typography>
             </Box>
             <IconButton onClick={() => setCamera(true)} sx={{ border: 1, borderColor: 'divider' }}><CameraIcon /></IconButton>
             <Button variant="contained" size="large" disabled={!lines.length || busy} onClick={checkout} sx={{ px: 4, py: 1.25 }}>
-              {busy ? '...' : 'Sotish'}
+              {busy ? '...' : tr("Sotish")}
             </Button>
           </Stack>
         </Paper>
       )}
 
-      <CameraScanner open={camera} continuous title="Kassa: skaner qiling" onClose={() => setCamera(false)} onScan={addByCode} />
+      <CameraScanner open={camera} continuous title={tr("Kassa: skaner qiling")} onClose={() => setCamera(false)} onScan={addByCode} />
       {newCustomer != null && <CustomerDialog wh={wh} initialName={newCustomer} onClose={() => setNewCustomer(null)}
         onSaved={(c) => { onCustomerChange(c.id); setCustomer('') }} />}
       {receipt && <ReceiptDialog wh={wh} saleId={receipt} justSold onClose={() => setReceipt(null)} />}

@@ -7,6 +7,7 @@ import type { Customer, Payment } from '../types'
 import { PAYMENTS } from '../types'
 import { attempt } from '../api'
 import { fmtMoney } from '../utils'
+import { t as tr } from '../i18n'
 
 interface Props { wh: Warehouse; customer: Customer; type: 'pay' | 'debt'; onClose: () => void; onDone?: (msg: string) => void }
 
@@ -23,45 +24,45 @@ export default function DebtDialog({ wh, customer, type, onClose, onDone }: Prop
   const after = customer.debt + (type === 'debt' ? a : -a)
 
   const save = async () => {
-    if (!(a > 0)) return setErr('Summani kiriting')
+    if (!(a > 0)) return setErr(tr("Summani kiriting"))
     setBusy(true)
     const r = await attempt(() => wh.addCustomerTx(customer.id, { type, amount: a, payment: type === 'pay' ? payment : undefined, note: note.trim() }))
     setBusy(false)
     if (!r.ok) return setErr(r.error)
-    onDone?.(type === 'pay' ? `${customer.name}: ${fmtMoney(a)} to'lov qabul qilindi` : `${customer.name}: ${fmtMoney(a)} qarz yozildi`)
+    onDone?.(type === 'pay' ? tr("{0}: {1} to'lov qabul qilindi", customer.name, fmtMoney(a)) : tr("{0}: {1} qarz yozildi", customer.name, fmtMoney(a)))
     onClose()
   }
 
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>{type === 'pay' ? "Qarz to'lovini qabul qilish" : "Qarz qo'shish"}</DialogTitle>
+      <DialogTitle>{type === 'pay' ? tr("Qarz to'lovini qabul qilish") : tr("Qarz qo'shish")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <Typography>
-            <b>{customer.name}</b> · hozirgi qarzi:{' '}
+            <b>{customer.name}</b> {tr("· hozirgi qarzi:")}{' '}
             <Typography component="span" sx={{ fontWeight: 700, color: customer.debt > 0 ? 'error.main' : 'text.primary' }}>{fmtMoney(customer.debt)}</Typography>
           </Typography>
-          <TextField label="Summa" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" autoFocus
-            slotProps={{ input: { endAdornment: <InputAdornment position="end">so'm</InputAdornment> } }} />
+          <TextField label={tr("Summa")} value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" autoFocus
+            slotProps={{ input: { endAdornment: <InputAdornment position="end">{tr("so'm")}</InputAdornment> } }} />
           {type === 'pay' && (
             <ToggleButtonGroup exclusive fullWidth size="small" value={payment} onChange={(_, v) => v && setPayment(v)}>
-              {PAYMENTS.map((p) => <ToggleButton key={p.value} value={p.value}>{p.value === 'otkazma' ? "O'tkazma" : p.label}</ToggleButton>)}
+              {PAYMENTS.map((p) => <ToggleButton key={p.value} value={p.value}>{p.value === 'otkazma' ? tr("O'tkazma") : p.label}</ToggleButton>)}
             </ToggleButtonGroup>
           )}
-          <TextField label="Izoh" value={note} onChange={(e) => setNote(e.target.value)}
-            placeholder={type === 'debt' ? "Masalan: daftardagi eski qarz" : ''} />
+          <TextField label={tr("Izoh")} value={note} onChange={(e) => setNote(e.target.value)}
+            placeholder={type === 'debt' ? tr("Masalan: daftardagi eski qarz") : ''} />
           {a > 0 && (
             <Alert severity={after > 0 ? 'warning' : 'success'} icon={false}>
-              {after > 0 ? <>Qoladigan qarz: <b>{fmtMoney(after)}</b></> : after === 0 ? <b>Qarz to'liq yopiladi</b> : <>Ortiqcha to'lov (keyingi xaridga): <b>{fmtMoney(-after)}</b></>}
+              {after > 0 ? <>{tr("Qoladigan qarz:")} <b>{fmtMoney(after)}</b></> : after === 0 ? <b>{tr("Qarz to'liq yopiladi")}</b> : <>{tr("Ortiqcha to'lov (keyingi xaridga):")} <b>{fmtMoney(-after)}</b></>}
             </Alert>
           )}
           {err && <Alert severity="error">{err}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Bekor qilish</Button>
+        <Button onClick={onClose}>{tr("Bekor qilish")}</Button>
         <Button variant="contained" color={type === 'pay' ? 'primary' : 'warning'} onClick={save} disabled={busy}>
-          {type === 'pay' ? 'Qabul qilish' : "Qarz yozish"}
+          {type === 'pay' ? tr("Qabul qilish") : tr("Qarz yozish")}
         </Button>
       </DialogActions>
     </Dialog>

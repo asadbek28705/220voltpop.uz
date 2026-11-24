@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import JsBarcode from 'jsbarcode'
 import type { Product } from '../types'
+import { t as tr } from '../i18n'
 
 export interface LabelFormat {
   key: string
@@ -11,10 +12,10 @@ export interface LabelFormat {
 }
 
 export const LABEL_FORMATS: LabelFormat[] = [
-  { key: 't58x40', label: 'Termo etiketka 58×40 mm', width: 58, height: 40 },
-  { key: 't40x30', label: 'Termo etiketka 40×30 mm', width: 40, height: 30 },
-  { key: 'a4x24', label: 'A4 varaq — 24 ta (70×37 mm)', width: 70, height: 37.125, sheet: { cols: 3, rows: 8 } },
-  { key: 'a4x40', label: 'A4 varaq — 40 ta (52,5×29,7 mm)', width: 52.5, height: 29.7, sheet: { cols: 4, rows: 10 } },
+  { key: 't58x40', label: tr('Termo etiketka 58×40 mm'), width: 58, height: 40 },
+  { key: 't40x30', label: tr('Termo etiketka 40×30 mm'), width: 40, height: 30 },
+  { key: 'a4x24', label: tr('A4 varaq — 24 ta (70×37 mm)'), width: 70, height: 37.125, sheet: { cols: 3, rows: 8 } },
+  { key: 'a4x40', label: tr('A4 varaq — 40 ta (52,5×29,7 mm)'), width: 52.5, height: 29.7, sheet: { cols: 4, rows: 10 } },
 ]
 
 const isEan13 = (c: string) => /^\d{13}$/.test(c)
@@ -60,7 +61,7 @@ export function Label({ product, format, showPrice, shopName }: { product: Produ
       <div className="label-name" style={{ fontSize: `${nameSize}pt`, WebkitLineClamp: small ? 1 : 2 }}>{product.name}</div>
       {showPrice && (
         <div className="label-price" style={{ fontSize: `${priceSize}pt` }}>
-          {money(product.sellPrice)} so'm{product.unit !== 'dona' ? ` / ${product.unit}` : ''}
+          {money(product.sellPrice)} {tr("so'm")}{product.unit !== 'dona' ? ` / ${tr(product.unit)}` : ''}
         </div>
       )}
       <div className="label-code">

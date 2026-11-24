@@ -4,6 +4,7 @@ import InIcon from '@mui/icons-material/MoveToInboxOutlined'
 import AddIcon from '@mui/icons-material/Add'
 import type { Product } from '../types'
 import { fmtMoney, fmtNum } from '../utils'
+import { t as tr } from '../i18n'
 
 interface Props {
   code: string
@@ -18,16 +19,16 @@ export default function ScanResultDialog({ code, product: p, onClose, onAddToCar
   if (!p) {
     return (
       <Dialog open onClose={onClose} fullWidth maxWidth="xs">
-        <DialogTitle>Tovar topilmadi</DialogTitle>
+        <DialogTitle>{tr("Tovar topilmadi")}</DialogTitle>
         <DialogContent>
-          <Typography>Shtrix-kod: <b>{code}</b></Typography>
+          <Typography>{tr("Shtrix-kod:")} <b>{code}</b></Typography>
           <Typography color="text.secondary" sx={{ mt: 1 }}>
-            {onCreate ? "Bu kod bilan tovar yo'q. Yangi tovar sifatida qo'shasizmi?" : "Bu kod bilan tovar yo'q. Yangi tovarni do'kon egasi qo'shadi."}
+            {onCreate ? tr("Bu kod bilan tovar yo'q. Yangi tovar sifatida qo'shasizmi?") : tr("Bu kod bilan tovar yo'q. Yangi tovarni do'kon egasi qo'shadi.")}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Yopish</Button>
-          {onCreate && <Button variant="contained" startIcon={<AddIcon />} onClick={() => onCreate(code)}>Yangi tovar</Button>}
+          <Button onClick={onClose}>{tr("Yopish")}</Button>
+          {onCreate && <Button variant="contained" startIcon={<AddIcon />} onClick={() => onCreate(code)}>{tr("Yangi tovar")}</Button>}
         </DialogActions>
       </Dialog>
     )
@@ -40,16 +41,16 @@ export default function ScanResultDialog({ code, product: p, onClose, onAddToCar
         <Typography variant="body2" color="text.secondary">{p.category}</Typography>
         <Typography variant="h4" sx={{ fontWeight: 800, my: 2, color: 'primary.main' }}>{fmtMoney(p.sellPrice)}</Typography>
         <Stack spacing={1}>
-          <Row label="Omborda"><Chip size="small" variant="outlined" color={status} label={`${fmtNum(p.qty)} ${p.unit}`} /></Row>
-          <Row label="Joyi">{p.location || '—'}</Row>
-          <Row label="Artikul">{p.sku || '—'}</Row>
-          <Row label="Shtrix-kod">{p.barcode || code}</Row>
+          <Row label={tr("Omborda")}><Chip size="small" variant="outlined" color={status} label={`${fmtNum(p.qty)} ${tr(p.unit)}`} /></Row>
+          <Row label={tr("Joyi")}>{p.location || '—'}</Row>
+          <Row label={tr("Artikul")}>{p.sku || '—'}</Row>
+          <Row label={tr("Shtrix-kod")}>{p.barcode || code}</Row>
         </Stack>
       </DialogContent>
       <DialogActions sx={{ flexWrap: 'wrap', gap: 1, px: 3, pb: 2 }}>
-        <Button onClick={onClose}>Yopish</Button>
-        <Button variant="outlined" startIcon={<InIcon />} onClick={() => onIncoming(p)}>Kirim</Button>
-        <Button variant="contained" startIcon={<CartIcon />} disabled={p.qty <= 0} onClick={() => onAddToCart(p)}>Savatga</Button>
+        <Button onClick={onClose}>{tr("Yopish")}</Button>
+        <Button variant="outlined" startIcon={<InIcon />} onClick={() => onIncoming(p)}>{tr("Kirim")}</Button>
+        <Button variant="contained" startIcon={<CartIcon />} disabled={p.qty <= 0} onClick={() => onAddToCart(p)}>{tr("Savatga")}</Button>
       </DialogActions>
     </Dialog>
   )

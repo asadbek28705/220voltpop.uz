@@ -9,6 +9,7 @@ import { EXPENSE_CATEGORIES, PAYMENTS } from '../types'
 import { attempt } from '../api'
 import { today } from '../stats'
 import { fmtMoney } from '../utils'
+import { t as tr } from '../i18n'
 
 export default function ExpenseDialog({ wh, onClose }: { wh: Warehouse; onClose: () => void }) {
   const fullScreen = useMediaQuery(useTheme().breakpoints.down('sm'))
@@ -25,8 +26,8 @@ export default function ExpenseDialog({ wh, onClose }: { wh: Warehouse; onClose:
   const value = Number(amount.replace(/\s/g, '').replace(',', '.')) || 0
 
   const save = async () => {
-    if (!category.trim()) return setErr('Xarajat turini tanlang')
-    if (!(value > 0)) return setErr('Summani kiriting')
+    if (!category.trim()) return setErr(tr("Xarajat turini tanlang"))
+    if (!(value > 0)) return setErr(tr("Summani kiriting"))
     // Bugungi sana — hozirgi vaqt bilan; o'tgan kun — kun o'rtasi bilan saqlanadi
     const iso = date === today() ? undefined : new Date(date + 'T12:00:00').toISOString()
     setBusy(true)
@@ -38,29 +39,29 @@ export default function ExpenseDialog({ wh, onClose }: { wh: Warehouse; onClose:
 
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="xs" fullScreen={fullScreen}>
-      <DialogTitle>Yangi xarajat</DialogTitle>
+      <DialogTitle>{tr("Yangi xarajat")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <Autocomplete freeSolo options={options} inputValue={category} onInputChange={(_, v) => setCategory(v)}
-            renderInput={(params) => <TextField {...params} label="Xarajat turi *" autoFocus />} />
-          <TextField label="Summa *" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal"
+            renderInput={(params) => <TextField {...params} label={tr("Xarajat turi *")} autoFocus />} />
+          <TextField label={tr("Summa *")} value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal"
             helperText={value > 0 ? fmtMoney(value) : ' '}
-            slotProps={{ input: { endAdornment: <InputAdornment position="end">so'm</InputAdornment> } }} />
-          <TextField label="Izoh" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Masalan: noyabr ijarasi, Ali — ish haqi" />
+            slotProps={{ input: { endAdornment: <InputAdornment position="end">{tr("so'm")}</InputAdornment> } }} />
+          <TextField label={tr("Izoh")} value={note} onChange={(e) => setNote(e.target.value)} placeholder={tr("Masalan: noyabr ijarasi, Ali — ish haqi")} />
           <Stack spacing={0.75}>
-            <Typography variant="body2" color="text.secondary">To'lov usuli</Typography>
+            <Typography variant="body2" color="text.secondary">{tr("To'lov usuli")}</Typography>
             <ToggleButtonGroup exclusive fullWidth size="small" value={payment} onChange={(_, v) => v && setPayment(v)}>
-              {PAYMENTS.map((p) => <ToggleButton key={p.value} value={p.value}>{p.value === 'otkazma' ? "O'tkazma" : p.label}</ToggleButton>)}
+              {PAYMENTS.map((p) => <ToggleButton key={p.value} value={p.value}>{p.value === 'otkazma' ? tr("O'tkazma") : p.label}</ToggleButton>)}
             </ToggleButtonGroup>
           </Stack>
-          <TextField type="date" label="Sana" value={date} onChange={(e) => setDate(e.target.value)}
+          <TextField type="date" label={tr("Sana")} value={date} onChange={(e) => setDate(e.target.value)}
             slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today() } }} />
           {err && <Alert severity="error">{err}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Bekor qilish</Button>
-        <Button variant="contained" onClick={save} disabled={busy}>Saqlash</Button>
+        <Button onClick={onClose}>{tr("Bekor qilish")}</Button>
+        <Button variant="contained" onClick={save} disabled={busy}>{tr("Saqlash")}</Button>
       </DialogActions>
     </Dialog>
   )

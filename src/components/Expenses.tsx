@@ -23,6 +23,7 @@ import StatCard from './StatCard'
 import ChartCard from './ChartCard'
 import ExpenseDialog from './ExpenseDialog'
 import { PIE_COLORS, useChartStyle } from './charts'
+import { t as tr } from '../i18n'
 
 export default function Expenses({ wh }: { wh: Warehouse }) {
   const { expenses, movements, products } = wh.data
@@ -48,38 +49,38 @@ export default function Expenses({ wh }: { wh: Warehouse }) {
   }, [inPeriod])
 
   const remove = (e: Expense) => {
-    if (confirm(`"${e.category} — ${fmtMoney(e.amount)}" xarajati o'chirilsinmi?`)) wh.deleteExpense(e.id).catch((x) => alert(x.message))
+    if (confirm(tr("\"{0} — {1}\" xarajati o'chirilsinmi?", e.category, fmtMoney(e.amount)))) wh.deleteExpense(e.id).catch((x) => alert(x.message))
   }
 
   const exportCsv = () => {
-    const rows: (string | number)[][] = [['Sana', 'Turi', 'Summa', "To'lov", 'Izoh', 'Kiritdi']]
+    const rows: (string | number)[][] = [[tr("Sana"), tr("Turi"), tr("Summa"), tr("To'lov"), tr("Izoh"), tr("Kiritdi")]]
     list.forEach((e) => rows.push([fmtDate(e.date), e.category, e.amount, paymentLabel(e.payment), e.note, e.seller ?? '']))
-    rows.push([], ['Jami', '', total])
+    rows.push([], [tr("Jami"), '', total])
     download(`xarajatlar-${dayBounds(from, to).from}_${dayBounds(from, to).to}.csv`, toCsv(rows), 'text/csv;charset=utf-8')
   }
 
   return (
     <>
-      <PageHeader title="Xarajatlar" subtitle="Ijara, ish haqi, kommunal va boshqa chiqimlar" actions={<>
+      <PageHeader title={tr("Xarajatlar")} subtitle={tr("Ijara, ish haqi, kommunal va boshqa chiqimlar")} actions={<>
         <PeriodPicker from={from} to={to} settings={wh.data.settings} onChange={(f, t) => { setFrom(f); setTo(t) }} />
-        <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>Excel</Button>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>Yangi xarajat</Button>
+        <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>{tr("Excel")}</Button>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>{tr("Yangi xarajat")}</Button>
       </>} />
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<MoneyOffIcon />} title="Jami xarajat" value={fmtMoney(periodTotal)} color="#E5533D" /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title="Savdodan foyda" value={fmtMoney(profit)} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<MoneyOffIcon />} title={tr("Jami xarajat")} value={fmtMoney(periodTotal)} color="#E5533D" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title={tr("Savdodan foyda")} value={fmtMoney(profit)} /></Grid>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <StatCard icon={<BalanceIcon />} title="Sof foyda" value={fmtMoney(net)} color={net >= 0 ? '#2E9E5B' : '#E5533D'} valueColor={net >= 0 ? 'primary.main' : 'error.main'} />
+          <StatCard icon={<BalanceIcon />} title={tr("Sof foyda")} value={fmtMoney(net)} color={net >= 0 ? '#2E9E5B' : '#E5533D'} valueColor={net >= 0 ? 'primary.main' : 'error.main'} />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<ReceiptIcon />} title="Xarajatlar soni" value={String(inPeriod.length)} color="#C9A227" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<ReceiptIcon />} title={tr("Xarajatlar soni")} value={String(inPeriod.length)} color="#C9A227" /></Grid>
       </Grid>
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, lg: 4 }}>
-          <ChartCard title="Turlari bo'yicha" height={340}>
+          <ChartCard title={tr("Turlari bo'yicha")} height={340}>
             {byCat.length === 0 ? (
-              <Typography color="text.secondary">Tanlangan davrda xarajat yo'q</Typography>
+              <Typography color="text.secondary">{tr("Tanlangan davrda xarajat yo'q")}</Typography>
             ) : (
               <ResponsiveContainer>
                 <PieChart>
@@ -99,9 +100,9 @@ export default function Expenses({ wh }: { wh: Warehouse }) {
         <Grid size={{ xs: 12, lg: 8 }}>
           <Card sx={{ height: '100%' }}>
             <Stack direction="row" alignItems="center" spacing={2} sx={{ p: 2 }}>
-              <Typography variant="h6" sx={{ flexGrow: 1 }}>Ro'yxat</Typography>
-              <TextField size="small" select label="Turi" value={cat} onChange={(e) => setCat(e.target.value)} sx={{ minWidth: 200 }}>
-                <MenuItem value="">Barchasi</MenuItem>
+              <Typography variant="h6" sx={{ flexGrow: 1 }}>{tr("Ro'yxat")}</Typography>
+              <TextField size="small" select label={tr("Turi")} value={cat} onChange={(e) => setCat(e.target.value)} sx={{ minWidth: 200 }}>
+                <MenuItem value="">{tr("Barchasi")}</MenuItem>
                 {byCat.map((c) => <MenuItem key={c.name} value={c.name}>{c.name}</MenuItem>)}
               </TextField>
             </Stack>
@@ -109,11 +110,11 @@ export default function Expenses({ wh }: { wh: Warehouse }) {
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Sana</TableCell>
-                    <TableCell>Turi</TableCell>
-                    <TableCell>Izoh</TableCell>
-                    <TableCell>To'lov</TableCell>
-                    <TableCell align="right">Summa</TableCell>
+                    <TableCell>{tr("Sana")}</TableCell>
+                    <TableCell>{tr("Turi")}</TableCell>
+                    <TableCell>{tr("Izoh")}</TableCell>
+                    <TableCell>{tr("To'lov")}</TableCell>
+                    <TableCell align="right">{tr("Summa")}</TableCell>
                     <TableCell className="no-print" />
                   </TableRow>
                 </TableHead>
@@ -129,12 +130,12 @@ export default function Expenses({ wh }: { wh: Warehouse }) {
                       <TableCell>{paymentLabel(e.payment)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 600, whiteSpace: 'nowrap', color: 'error.main' }}>−{fmtMoney(e.amount)}</TableCell>
                       <TableCell className="no-print">
-                        <Tooltip title="O'chirish"><IconButton size="small" onClick={() => remove(e)}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
+                        <Tooltip title={tr("O'chirish")}><IconButton size="small" onClick={() => remove(e)}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
                       </TableCell>
                     </TableRow>
                   ))}
                   {list.length === 0 && (
-                    <TableRow><TableCell colSpan={6} align="center" sx={{ py: 5, color: 'text.secondary' }}>Xarajat yo'q</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} align="center" sx={{ py: 5, color: 'text.secondary' }}>{tr("Xarajat yo'q")}</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>

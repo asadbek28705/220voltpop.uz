@@ -11,6 +11,7 @@ import Users from './Users'
 import { useMe } from '../auth'
 import { api } from '../api'
 import LogoutIcon from '@mui/icons-material/Logout'
+import { t as tr } from '../i18n'
 
 export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSellerChange: (name: string) => void }) {
   const fileRef = useRef<HTMLInputElement>(null)
@@ -21,9 +22,9 @@ export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSell
   const admin = me.user?.role === 'admin'
   const [pw, setPw] = useState({ old: '', next: '', next2: '' })
   const changePassword = async () => {
-    if (pw.next !== pw.next2) return setMsg({ ok: false, text: 'Yangi parollar bir xil emas' })
+    if (pw.next !== pw.next2) return setMsg({ ok: false, text: tr("Yangi parollar bir xil emas") })
     const r = await attempt(() => api('POST', '/password', { oldPassword: pw.old, newPassword: pw.next }))
-    setMsg(r.ok ? { ok: true, text: "Parol o'zgartirildi" } : { ok: false, text: r.error })
+    setMsg(r.ok ? { ok: true, text: tr("Parol o'zgartirildi") } : { ok: false, text: r.error })
     if (r.ok) setPw({ old: '', next: '', next2: '' })
   }
   const logout = async () => { await attempt(() => api('POST', '/logout')); location.reload() }
@@ -41,11 +42,11 @@ export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSell
     try {
       const d = JSON.parse(await file.text()) as WarehouseData
       if (!Array.isArray(d.products) || !Array.isArray(d.movements)) throw new Error()
-      if (confirm(`Zaxiradan ${d.products.length} ta tovar va ${d.movements.length} ta harakat tiklansinmi? Hozirgi ma'lumotlar almashtiriladi.`)) {
-        run(() => wh.replaceAll(d), 'Zaxiradan tiklandi')
+      if (confirm(tr("Zaxiradan {0} ta tovar va {1} ta harakat tiklansinmi? Hozirgi ma'lumotlar almashtiriladi.", d.products.length, d.movements.length))) {
+        run(() => wh.replaceAll(d), tr("Zaxiradan tiklandi"))
       }
     } catch {
-      setMsg({ ok: false, text: "Fayl noto'g'ri yoki buzilgan" })
+      setMsg({ ok: false, text: tr("Fayl noto'g'ri yoki buzilgan") })
     }
   }
 
@@ -53,16 +54,16 @@ export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSell
 
   return (
     <Stack spacing={2} sx={{ maxWidth: 760 }}>
-      <PageHeader title="Sozlamalar" subtitle={admin ? "Hisob, xodimlar, chek, Telegram va ma'lumotlar" : 'Hisobingiz'} />
+      <PageHeader title={tr("Sozlamalar")} subtitle={admin ? tr("Hisob, xodimlar, chek, Telegram va ma'lumotlar") : tr("Hisobingiz")} />
       {msg && <Alert severity={msg.ok ? 'success' : 'error'} onClose={() => setMsg(null)}>{msg.text}</Alert>}
 
       {me.demo ? (
         <Paper variant="outlined" sx={{ p: 2.5 }}>
-          <Typography variant="h6" gutterBottom>Shu qurilmadagi sotuvchi</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Demo nusxa: ism chekda va savdolar tarixida ko'rinadi.</Typography>
+          <Typography variant="h6" gutterBottom>{tr("Shu qurilmadagi sotuvchi")}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{tr("Demo nusxa: ism chekda va savdolar tarixida ko'rinadi.")}</Typography>
           <Stack direction="row" spacing={2}>
-            <TextField size="small" label="Ism" value={seller} onChange={(e) => setSellerName(e.target.value)} fullWidth />
-            <Button variant="contained" onClick={() => { setSeller(seller); onSellerChange(seller.trim()); setMsg({ ok: true, text: 'Saqlandi' }) }}>Saqlash</Button>
+            <TextField size="small" label={tr("Ism")} value={seller} onChange={(e) => setSellerName(e.target.value)} fullWidth />
+            <Button variant="contained" onClick={() => { setSeller(seller); onSellerChange(seller.trim()); setMsg({ ok: true, text: tr("Saqlandi") }) }}>{tr("Saqlash")}</Button>
           </Stack>
         </Paper>
       ) : (
@@ -71,17 +72,17 @@ export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSell
             <Box>
               <Typography variant="h6">{me.user?.name}</Typography>
               <Typography variant="body2" color="text.secondary">
-                Login: {me.user?.login} · {admin ? 'Egasi (admin)' : 'Sotuvchi'}
+                {tr("Login:")} {me.user?.login} · {admin ? tr("Egasi (admin)") : tr("Sotuvchi")}
               </Typography>
             </Box>
-            <Button variant="outlined" startIcon={<LogoutIcon />} onClick={logout}>Chiqish</Button>
+            <Button variant="outlined" startIcon={<LogoutIcon />} onClick={logout}>{tr("Chiqish")}</Button>
           </Stack>
-          <Typography sx={{ fontWeight: 600, mb: 1 }}>Parolni almashtirish</Typography>
+          <Typography sx={{ fontWeight: 600, mb: 1 }}>{tr("Parolni almashtirish")}</Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-            <TextField size="small" type="password" label="Eski parol" value={pw.old} onChange={(e) => setPw({ ...pw, old: e.target.value })} autoComplete="current-password" />
-            <TextField size="small" type="password" label="Yangi parol" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} autoComplete="new-password" />
-            <TextField size="small" type="password" label="Takrorlang" value={pw.next2} onChange={(e) => setPw({ ...pw, next2: e.target.value })} autoComplete="new-password" />
-            <Button variant="contained" onClick={changePassword} disabled={!pw.old || pw.next.length < 6}>Saqlash</Button>
+            <TextField size="small" type="password" label={tr("Eski parol")} value={pw.old} onChange={(e) => setPw({ ...pw, old: e.target.value })} autoComplete="current-password" />
+            <TextField size="small" type="password" label={tr("Yangi parol")} value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} autoComplete="new-password" />
+            <TextField size="small" type="password" label={tr("Takrorlang")} value={pw.next2} onChange={(e) => setPw({ ...pw, next2: e.target.value })} autoComplete="new-password" />
+            <Button variant="contained" onClick={changePassword} disabled={!pw.old || pw.next.length < 6}>{tr("Saqlash")}</Button>
           </Stack>
         </Paper>
       )}
@@ -90,41 +91,41 @@ export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSell
       <Users />
 
       <Paper variant="outlined" sx={{ p: 2.5 }}>
-        <Typography variant="h6" gutterBottom>Chek ma'lumotlari</Typography>
+        <Typography variant="h6" gutterBottom>{tr("Chek ma'lumotlari")}</Typography>
         <Stack spacing={2}>
-          <TextField size="small" label="Do'kon nomi" value={shop.shopName} onChange={s('shopName')} />
-          <TextField size="small" label="Manzil" value={shop.address} onChange={s('address')} />
-          <TextField size="small" label="Telefon" value={shop.phone} onChange={s('phone')} />
-          <TextField size="small" label="Chek pastidagi yozuv" value={shop.receiptFooter} onChange={s('receiptFooter')} />
-          <Button variant="contained" sx={{ alignSelf: 'flex-start' }} onClick={() => run(() => wh.saveSettings(shop), 'Chek ma\'lumotlari saqlandi')}>Saqlash</Button>
+          <TextField size="small" label={tr("Do'kon nomi")} value={shop.shopName} onChange={s('shopName')} />
+          <TextField size="small" label={tr("Manzil")} value={shop.address} onChange={s('address')} />
+          <TextField size="small" label={tr("Telefon")} value={shop.phone} onChange={s('phone')} />
+          <TextField size="small" label={tr("Chek pastidagi yozuv")} value={shop.receiptFooter} onChange={s('receiptFooter')} />
+          <Button variant="contained" sx={{ alignSelf: 'flex-start' }} onClick={() => run(() => wh.saveSettings(shop), tr("Chek ma'lumotlari saqlandi"))}>{tr("Saqlash")}</Button>
         </Stack>
       </Paper>
 
       <TelegramSettings />
 
       <Paper variant="outlined" sx={{ p: 2.5 }}>
-        <Typography variant="h6" gutterBottom>Zaxira nusxa</Typography>
+        <Typography variant="h6" gutterBottom>{tr("Zaxira nusxa")}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Ma'lumotlar server bazasida saqlanadi (data/ombor.db). Haftada bir marta zaxira oling.
+          {tr("Ma'lumotlar server bazasida saqlanadi (data/ombor.db). Haftada bir marta zaxira oling.")}
         </Typography>
         <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-          <Button variant="contained" onClick={backup}>Zaxira yuklab olish</Button>
-          <Button variant="outlined" onClick={() => fileRef.current?.click()}>Zaxiradan tiklash</Button>
+          <Button variant="contained" onClick={backup}>{tr("Zaxira yuklab olish")}</Button>
+          <Button variant="outlined" onClick={() => fileRef.current?.click()}>{tr("Zaxiradan tiklash")}</Button>
           <input ref={fileRef} type="file" accept="application/json" hidden
             onChange={(e) => { const f = e.target.files?.[0]; if (f) restore(f); e.target.value = '' }} />
         </Stack>
       </Paper>
 
       <Paper variant="outlined" sx={{ p: 2.5 }}>
-        <Typography variant="h6" gutterBottom>Ma'lumotlarni tozalash</Typography>
+        <Typography variant="h6" gutterBottom>{tr("Ma'lumotlarni tozalash")}</Typography>
         <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
           <Button color="error" variant="outlined"
-            onClick={() => confirm("Barcha tovar va tarix o'chirilsinmi? Bu amalni qaytarib bo'lmaydi.") && run(wh.clearAll, "Hammasi o'chirildi")}>
-            Hammasini o'chirish
+            onClick={() => confirm(tr("Barcha tovar va tarix o'chirilsinmi? Bu amalni qaytarib bo'lmaydi.")) && run(wh.clearAll, tr("Hammasi o'chirildi"))}>
+            {tr("Hammasini o'chirish")}
           </Button>
           <Button variant="outlined"
-            onClick={() => confirm("Namuna ma'lumotlar yuklansinmi? Hozirgi ma'lumotlar almashtiriladi.") && run(wh.reset, 'Namuna ma\'lumotlar yuklandi')}>
-            Namuna ma'lumotlarni yuklash
+            onClick={() => confirm(tr("Namuna ma'lumotlar yuklansinmi? Hozirgi ma'lumotlar almashtiriladi.")) && run(wh.reset, tr("Namuna ma'lumotlar yuklandi"))}>
+            {tr("Namuna ma'lumotlarni yuklash")}
           </Button>
         </Stack>
       </Paper>

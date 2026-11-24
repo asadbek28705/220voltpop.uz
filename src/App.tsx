@@ -42,36 +42,37 @@ import MovementDialog from './components/MovementDialog'
 import ProductDialog from './components/ProductDialog'
 import ScanResultDialog from './components/ScanResultDialog'
 import CameraScanner from './components/CameraScanner'
+import { t as tr } from './i18n'
 
 const NAV: NavGroup[] = [
-  { items: [{ key: 'home', admin: true, label: 'Bosh sahifa', icon: <DashboardIcon fontSize="small" /> }] },
+  { items: [{ key: 'home', admin: true, label: tr('Bosh sahifa'), icon: <DashboardIcon fontSize="small" /> }] },
   {
-    title: 'SOTUV', items: [
-      { key: 'pos', label: 'Kassa', icon: <PosIcon fontSize="small" /> },
-      { key: 'sales', label: 'Savdolar', icon: <CartIcon fontSize="small" /> },
-      { key: 'customers', label: 'Mijozlar', icon: <PeopleIcon fontSize="small" /> },
-      { key: 'debtors', label: 'Qarzdorlar', icon: <DebtIcon fontSize="small" /> },
+    title: tr('SOTUV'), items: [
+      { key: 'pos', label: tr('Kassa'), icon: <PosIcon fontSize="small" /> },
+      { key: 'sales', label: tr('Savdolar'), icon: <CartIcon fontSize="small" /> },
+      { key: 'customers', label: tr('Mijozlar'), icon: <PeopleIcon fontSize="small" /> },
+      { key: 'debtors', label: tr('Qarzdorlar'), icon: <DebtIcon fontSize="small" /> },
     ],
   },
   {
-    title: 'OMBOR', items: [
-      { key: 'products', label: 'Tovarlar', icon: <BoxIcon fontSize="small" /> },
-      { key: 'products-usd', label: 'Dollarda olinadigan', icon: <UsdIcon fontSize="small" /> },
-      { key: 'products-uzs', label: "So'mda olinadigan", icon: <UzsIcon fontSize="small" /> },
-      { key: 'receive', label: 'Skaner bilan qabul', icon: <ReceiveIcon fontSize="small" /> },
-      { key: 'incoming', label: 'Kirim', icon: <InIcon fontSize="small" /> },
-      { key: 'audit', admin: true, label: 'Inventarizatsiya', icon: <TuneIcon fontSize="small" /> },
-      { key: 'labels', label: 'Shtrix-kod chop etish', icon: <LabelIcon fontSize="small" /> },
+    title: tr('OMBOR'), items: [
+      { key: 'products', label: tr('Tovarlar'), icon: <BoxIcon fontSize="small" /> },
+      { key: 'products-usd', label: tr('Dollarda olinadigan'), icon: <UsdIcon fontSize="small" /> },
+      { key: 'products-uzs', label: tr("So'mda olinadigan"), icon: <UzsIcon fontSize="small" /> },
+      { key: 'receive', label: tr('Skaner bilan qabul'), icon: <ReceiveIcon fontSize="small" /> },
+      { key: 'incoming', label: tr('Kirim'), icon: <InIcon fontSize="small" /> },
+      { key: 'audit', admin: true, label: tr('Inventarizatsiya'), icon: <TuneIcon fontSize="small" /> },
+      { key: 'labels', label: tr('Shtrix-kod chop etish'), icon: <LabelIcon fontSize="small" /> },
     ],
   },
   {
-    title: 'MOLIYA', items: [
-      { key: 'reports', admin: true, label: 'Hisobotlar', icon: <ChartIcon fontSize="small" /> },
-      { key: 'expenses', admin: true, label: 'Xarajatlar', icon: <ExpenseIcon fontSize="small" /> },
-      { key: 'history', admin: true, label: 'Barcha harakatlar', icon: <HistoryIcon fontSize="small" /> },
+    title: tr('MOLIYA'), items: [
+      { key: 'reports', admin: true, label: tr('Hisobotlar'), icon: <ChartIcon fontSize="small" /> },
+      { key: 'expenses', admin: true, label: tr('Xarajatlar'), icon: <ExpenseIcon fontSize="small" /> },
+      { key: 'history', admin: true, label: tr('Barcha harakatlar'), icon: <HistoryIcon fontSize="small" /> },
     ],
   },
-  { title: 'SOZLAMALAR', items: [{ key: 'settings', label: 'Sozlamalar', icon: <SettingsIcon fontSize="small" /> }] },
+  { title: tr('SOZLAMALAR'), items: [{ key: 'settings', label: tr('Sozlamalar'), icon: <SettingsIcon fontSize="small" /> }] },
 ]
 const buyPriceOf = (p: Product) => p.buyPrice
 const navFor = (admin: boolean) =>
@@ -107,7 +108,7 @@ export default function App() {
   if (!me) {
     body = (
       <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '100vh', p: 2 }}>
-        {failed ? <Alert severity="error" action={<button onClick={load}>Qayta</button>}>Server bilan aloqa yo'q</Alert> : <CircularProgress />}
+        {failed ? <Alert severity="error" action={<button onClick={load}>{tr("Qayta")}</button>}>{tr("Server bilan aloqa yo'q")}</Alert> : <CircularProgress />}
       </Box>
     )
   } else if (!me.user) {
@@ -161,14 +162,14 @@ function Main({ mode, onToggleMode }: { mode: 'light' | 'dark'; onToggleMode: ()
     if (page === 'pos' && product && product.qty > 0) {
       cart.add(product)
       beep(true)
-      setToast(`Savatga qo'shildi: ${product.name}`)
+      setToast(tr("Savatga qo'shildi: {0}", product.name))
       return
     }
     if (page === 'receive') {
       if (product) {
         receiving.add(product)
         beep(true)
-        setToast(`Qabul ro'yxatiga: ${product.name}`)
+        setToast(tr("Qabul ro'yxatiga: {0}", product.name))
       } else {
         beep(false)
         if (admin) setNewProduct({ barcode: code, forReceive: true })
@@ -197,7 +198,7 @@ function Main({ mode, onToggleMode }: { mode: 'light' | 'dark'; onToggleMode: ()
           <Customers key={page} wh={wh} debtorsOnly={page === 'debtors'} onSell={(c) => { setSaleCustomer(c.id); setPage('pos') }} />
         )}
         {page === 'sales' && (
-          <Movements wh={wh} fixedType="out" title="Savdolar" subtitle="Sotilgan tovarlar va cheklar" newLabel="Kassaga o'tish" onNew={() => setPage('pos')} />
+          <Movements wh={wh} fixedType="out" title={tr("Savdolar")} subtitle={tr("Sotilgan tovarlar va cheklar")} newLabel={tr("Kassaga o'tish")} onNew={() => setPage('pos')} />
         )}
         {page === 'receive' && (
           <Receive wh={wh} list={receiving} onUnknownCode={(code) => (admin ? setNewProduct({ barcode: code, forReceive: true }) : setScan({ code }))} onDone={setToast} />
@@ -206,15 +207,15 @@ function Main({ mode, onToggleMode }: { mode: 'light' | 'dark'; onToggleMode: ()
         {page === 'products-usd' && <Products key="usd" wh={wh} currency="USD" onMovement={(t, id) => setMv({ type: t, productId: id })} />}
         {page === 'products-uzs' && <Products key="uzs" wh={wh} currency="UZS" onMovement={(t, id) => setMv({ type: t, productId: id })} />}
         {page === 'incoming' && (
-          <Movements wh={wh} fixedType="in" title="Kirim" subtitle="Ta'minotchilardan qabul qilingan tovarlar" newLabel="Yangi kirim" onNew={() => setMv({ type: 'in' })} />
+          <Movements wh={wh} fixedType="in" title={tr("Kirim")} subtitle={tr("Ta'minotchilardan qabul qilingan tovarlar")} newLabel={tr("Yangi kirim")} onNew={() => setMv({ type: 'in' })} />
         )}
         {page === 'audit' && (
-          <Movements wh={wh} fixedType="adjust" title="Inventarizatsiya" subtitle="Sanoq natijasida qoldiqqa kiritilgan tuzatishlar" newLabel="Qoldiqni tuzatish" onNew={() => setMv({ type: 'adjust' })} />
+          <Movements wh={wh} fixedType="adjust" title={tr("Inventarizatsiya")} subtitle={tr("Sanoq natijasida qoldiqqa kiritilgan tuzatishlar")} newLabel={tr("Qoldiqni tuzatish")} onNew={() => setMv({ type: 'adjust' })} />
         )}
         {page === 'reports' && <Reports wh={wh} />}
         {page === 'expenses' && <Expenses wh={wh} />}
         {page === 'labels' && <Labels wh={wh} />}
-        {page === 'history' && <Movements wh={wh} title="Barcha harakatlar" subtitle="Kirim, chiqim va inventarizatsiya tarixi" />}
+        {page === 'history' && <Movements wh={wh} title={tr("Barcha harakatlar")} subtitle={tr("Kirim, chiqim va inventarizatsiya tarixi")} />}
         {page === 'settings' && <Settings wh={wh} onSellerChange={setSeller} />}
       </Layout>
 
@@ -236,8 +237,8 @@ function Main({ mode, onToggleMode }: { mode: 'light' | 'dark'; onToggleMode: ()
       {newProduct && (
         <ProductDialog wh={wh} initialBarcode={newProduct.barcode} noInitialQty={newProduct.forReceive} onClose={() => setNewProduct(null)}
           onSaved={(p) => {
-            if (newProduct.forReceive) { receiving.add(p); setToast(`Yangi tovar qabul ro'yxatiga qo'shildi: ${p.name}`) }
-            else setToast(`Qo'shildi: ${p.name}`)
+            if (newProduct.forReceive) { receiving.add(p); setToast(tr("Yangi tovar qabul ro'yxatiga qo'shildi: {0}", p.name)) }
+            else setToast(tr("Qo'shildi: {0}", p.name))
           }} />
       )}
       {expenseOpen && <ExpenseDialog wh={wh} onClose={() => setExpenseOpen(false)} />}

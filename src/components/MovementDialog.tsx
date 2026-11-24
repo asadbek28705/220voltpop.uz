@@ -8,6 +8,7 @@ import { useIsAdmin } from '../auth'
 import type { MovementType } from '../types'
 import { fmtMoney, fmtNum, fmtUsd, toUzs } from '../utils'
 import { attempt } from '../api'
+import { t as tr } from '../i18n'
 
 interface Props { wh: Warehouse; initialType: MovementType; initialProductId?: string; onClose: () => void }
 
@@ -57,12 +58,12 @@ export default function MovementDialog({ wh, initialType, initialProductId, onCl
 
   const [busy, setBusy] = useState(false)
   const save = async () => {
-    if (!prod) return setErr('Mahsulotni tanlang')
-    if (qty.trim() === '' || isNaN(num(qty))) return setErr("Miqdorni to'g'ri kiriting")
+    if (!prod) return setErr(tr("Mahsulotni tanlang"))
+    if (qty.trim() === '' || isNaN(num(qty))) return setErr(tr("Miqdorni to'g'ri kiriting"))
     // Inventarizatsiyada foydalanuvchi haqiqiy qoldiqni kiritadi, biz farqni saqlaymiz
     const amount = type === 'adjust' ? q - prod.qty : q
-    if (type === 'adjust' && amount === 0) return setErr("Qoldiq o'zgarmadi")
-    if (usdIn && !(rate > 0)) return setErr("Avval dollar kursini kiriting (Tovarlar → Dollar kursi)")
+    if (type === 'adjust' && amount === 0) return setErr(tr("Qoldiq o'zgarmadi"))
+    if (usdIn && !(rate > 0)) return setErr(tr("Avval dollar kursini kiriting (Tovarlar → Dollar kursi)"))
     setBusy(true)
     const r = await attempt(() => wh.addMovement({ productId: prod.id, type, qty: amount, price: pr, priceUsd: usdIn ? pu : undefined, counterparty: counterparty.trim(), note: note.trim() }))
     setBusy(false)
@@ -70,7 +71,7 @@ export default function MovementDialog({ wh, initialType, initialProductId, onCl
     onClose()
   }
 
-  const titles: Record<MovementType, string> = { in: 'Kirim (omborga qabul)', out: 'Chiqim / Sotuv', adjust: 'Inventarizatsiya' }
+  const titles: Record<MovementType, string> = { in: tr("Kirim (omborga qabul)"), out: tr("Chiqim / Sotuv"), adjust: tr("Inventarizatsiya") }
 
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="sm" fullScreen={fullScreen}>
@@ -78,9 +79,9 @@ export default function MovementDialog({ wh, initialType, initialProductId, onCl
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <ToggleButtonGroup exclusive fullWidth value={type} onChange={(_, v) => changeType(v)} size="small">
-            <ToggleButton value="in" color="success">Kirim</ToggleButton>
-            <ToggleButton value="out" color="primary">Chiqim</ToggleButton>
-            {admin && <ToggleButton value="adjust">Inventarizatsiya</ToggleButton>}
+            <ToggleButton value="in" color="success">{tr("Kirim")}</ToggleButton>
+            <ToggleButton value="out" color="primary">{tr("Chiqim")}</ToggleButton>
+            {admin && <ToggleButton value="adjust">{tr("Inventarizatsiya")}</ToggleButton>}
           </ToggleButtonGroup>
           <Autocomplete
             options={products}
@@ -92,50 +93,50 @@ export default function MovementDialog({ wh, initialType, initialProductId, onCl
               <li {...props} key={p.id}>
                 <Stack sx={{ width: '100%' }} direction="row" justifyContent="space-between">
                   <span>{p.name}</span>
-                  <Typography variant="body2" color="text.secondary">{fmtNum(p.qty)} {p.unit}</Typography>
+                  <Typography variant="body2" color="text.secondary">{fmtNum(p.qty)} {tr(p.unit)}</Typography>
                 </Stack>
               </li>
             )}
-            renderInput={(params) => <TextField {...params} label="Mahsulot" autoFocus={!prod} />}
+            renderInput={(params) => <TextField {...params} label={tr("Mahsulot")} autoFocus={!prod} />}
           />
           {prod && (
             <Typography variant="body2" color="text.secondary">
-              Hozirgi qoldiq: <b>{fmtNum(prod.qty)} {prod.unit}</b> · Joyi: {prod.location || '—'}
+              {tr("Hozirgi qoldiq:")} <b>{fmtNum(prod.qty)} {tr(prod.unit)}</b> {tr("· Joyi:")} {prod.location || '—'}
             </Typography>
           )}
           <Stack direction="row" spacing={2}>
-            <TextField label={type === 'adjust' ? `Haqiqiy qoldiq${prod ? ' (' + prod.unit + ')' : ''}` : `Miqdor${prod ? ' (' + prod.unit + ')' : ''}`}
+            <TextField label={type === 'adjust' ? tr("Haqiqiy qoldiq{0}", prod ? ' (' + tr(prod.unit) + ')' : '') : tr("Miqdor{0}", prod ? ' (' + tr(prod.unit) + ')' : '')}
               value={qty} onChange={(e) => setQty(e.target.value)} fullWidth inputMode="decimal" autoFocus={!!prod} />
             {usdIn && (
-              <TextField label="Kelish narxi ($)" value={priceUsd} onChange={(e) => setPriceUsd(e.target.value)} fullWidth inputMode="decimal"
-                error={!(rate > 0)} helperText={rate > 0 ? `= ${fmtMoney(pr)} (1$ = ${fmtMoney(rate)})` : 'Dollar kursi kiritilmagan'} />
+              <TextField label={tr("Kelish narxi ($)")} value={priceUsd} onChange={(e) => setPriceUsd(e.target.value)} fullWidth inputMode="decimal"
+                error={!(rate > 0)} helperText={rate > 0 ? `= ${fmtMoney(pr)} (1$ = ${fmtMoney(rate)})` : tr("Dollar kursi kiritilmagan")} />
             )}
             {!usdIn && type !== 'adjust' && (admin || type === 'out') && (
-              <TextField label={type === 'in' ? "Kelish narxi (so'm)" : "Sotuv narxi (so'm)"} value={price} onChange={(e) => setPrice(e.target.value)} fullWidth inputMode="decimal" />
+              <TextField label={type === 'in' ? tr("Kelish narxi (so'm)") : tr("Sotuv narxi (so'm)")} value={price} onChange={(e) => setPrice(e.target.value)} fullWidth inputMode="decimal" />
             )}
           </Stack>
           {type !== 'adjust' && (
-            <TextField label={type === 'in' ? 'Yetkazib beruvchi' : 'Mijoz / obyekt'} value={counterparty} onChange={(e) => setCounterparty(e.target.value)} />
+            <TextField label={type === 'in' ? tr("Yetkazib beruvchi") : tr("Mijoz / obyekt")} value={counterparty} onChange={(e) => setCounterparty(e.target.value)} />
           )}
-          <TextField label="Izoh" value={note} onChange={(e) => setNote(e.target.value)} multiline minRows={2}
-            placeholder={type === 'adjust' ? "Masalan: sanoqda kam chiqdi, singan" : ''} />
+          <TextField label={tr("Izoh")} value={note} onChange={(e) => setNote(e.target.value)} multiline minRows={2}
+            placeholder={type === 'adjust' ? tr("Masalan: sanoqda kam chiqdi, singan") : ''} />
           {prod && type !== 'adjust' && q > 0 && (admin || type === 'out') && (
             <Alert severity="info" icon={false}>
-              Jami summa: <b>{fmtMoney(q * pr)}</b>{usdIn && <> ({fmtUsd(q * pu)})</>}
-              {type === 'out' && prod.buyPrice > 0 && <> · Foyda: <b>{fmtMoney(q * (pr - prod.buyPrice))}</b></>}
+              {tr("Jami summa:")} <b>{fmtMoney(q * pr)}</b>{usdIn && <> ({fmtUsd(q * pu)})</>}
+              {type === 'out' && prod.buyPrice > 0 && <> {tr("· Foyda:")} <b>{fmtMoney(q * (pr - prod.buyPrice))}</b></>}
             </Alert>
           )}
           {prod && type === 'adjust' && qty.trim() !== '' && (
             <Alert severity={q - prod.qty < 0 ? 'warning' : 'info'} icon={false}>
-              Farq: <b>{q - prod.qty > 0 ? '+' : ''}{fmtNum(q - prod.qty)} {prod.unit}</b>
+              {tr("Farq:")} <b>{q - prod.qty > 0 ? '+' : ''}{fmtNum(q - prod.qty)} {tr(prod.unit)}</b>
             </Alert>
           )}
           {err && <Alert severity="error">{err}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Bekor qilish</Button>
-        <Button variant="contained" onClick={save} color="primary" disabled={busy}>Saqlash</Button>
+        <Button onClick={onClose}>{tr("Bekor qilish")}</Button>
+        <Button variant="contained" onClick={save} color="primary" disabled={busy}>{tr("Saqlash")}</Button>
       </DialogActions>
     </Dialog>
   )

@@ -1,3 +1,5 @@
+import { t as tr } from './i18n'
+
 export type Unit = 'dona' | 'qop' | 'metr' | 'kg' | 'litr' | 'pachka' | 'm²' | 'm³' | 'komplekt'
 
 export const UNITS: Unit[] = ['dona', 'qop', 'metr', 'kg', 'litr', 'pachka', 'm²', 'm³', 'komplekt']
@@ -27,12 +29,12 @@ export type MovementType = 'in' | 'out' | 'adjust'
 export type Payment = 'naqd' | 'karta' | 'otkazma' | 'nasiya'
 /** Pul bilan to'lov usullari (xarajat, qarz to'lovi) */
 export const PAYMENTS: { value: Payment; label: string }[] = [
-  { value: 'naqd', label: 'Naqd' },
-  { value: 'karta', label: 'Karta' },
-  { value: 'otkazma', label: "O'tkazma (Click/Payme)" },
+  { value: 'naqd', label: tr('Naqd') },
+  { value: 'karta', label: tr('Karta') },
+  { value: 'otkazma', label: tr("O'tkazma (Click/Payme)") },
 ]
 /** Savdoda qo'shimcha: nasiya (qarzga) */
-export const SALE_PAYMENTS: { value: Payment; label: string }[] = [...PAYMENTS, { value: 'nasiya', label: 'Nasiya (qarzga)' }]
+export const SALE_PAYMENTS: { value: Payment; label: string }[] = [...PAYMENTS, { value: 'nasiya', label: tr('Nasiya (qarzga)') }]
 export const paymentLabel = (p?: string | null) => SALE_PAYMENTS.find((x) => x.value === p)?.label ?? p ?? ''
 
 export interface Movement {

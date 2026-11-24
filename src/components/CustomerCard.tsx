@@ -15,6 +15,7 @@ import { paymentLabel } from '../types'
 import { useIsAdmin } from '../auth'
 import { fmtDate, fmtMoney, fmtNum } from '../utils'
 import ReceiptDialog from './ReceiptDialog'
+import { t as tr } from '../i18n'
 
 interface Props {
   wh: Warehouse
@@ -48,12 +49,12 @@ export default function CustomerCard({ wh, customer: initial, onClose, onSell, o
   // Qarz daftari: nasiya savdolar (+), qo'lda qarzlar (+), to'lovlar (−)
   const ledger = useMemo(() => {
     const rows: { key: string; date: string; title: string; sub: string; amount: number; txId?: string; saleId?: string }[] = []
-    for (const s of sales) if (s.payment === 'nasiya') rows.push({ key: 's' + s.saleId, date: s.date, title: `Nasiya — chek №${s.saleId}`, sub: s.items.join(', '), amount: s.sum, saleId: s.saleId })
+    for (const s of sales) if (s.payment === 'nasiya') rows.push({ key: 's' + s.saleId, date: s.date, title: tr("Nasiya — chek №{0}", s.saleId), sub: s.items.join(', '), amount: s.sum, saleId: s.saleId })
     for (const t of wh.data.customerTx) {
       if (t.customerId !== c.id) continue
       rows.push({
         key: t.id, date: t.date, txId: t.id, amount: t.type === 'pay' ? -t.amount : t.amount,
-        title: t.type === 'pay' ? `To'lov · ${paymentLabel(t.payment)}` : "Qarz yozildi",
+        title: t.type === 'pay' ? tr("To'lov · {0}", paymentLabel(t.payment)) : tr("Qarz yozildi"),
         sub: [t.note, t.seller].filter(Boolean).join(' · '),
       })
     }
@@ -61,7 +62,7 @@ export default function CustomerCard({ wh, customer: initial, onClose, onSell, o
   }, [sales, wh.data.customerTx, c.id])
 
   const undoTx = (id: string) => {
-    if (confirm("Bu yozuv bekor qilinsinmi? Qarz qayta hisoblanadi.")) wh.deleteCustomerTx(id).catch((e) => alert(e.message))
+    if (confirm(tr("Bu yozuv bekor qilinsinmi? Qarz qayta hisoblanadi."))) wh.deleteCustomerTx(id).catch((e) => alert(e.message))
   }
 
   return (
@@ -77,30 +78,30 @@ export default function CustomerCard({ wh, customer: initial, onClose, onSell, o
       <DialogContent>
         <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
           <Box sx={{ flex: 1, p: 1.5, borderRadius: 2, bgcolor: c.debt > 0 ? 'rgba(229,83,61,0.08)' : 'action.hover' }}>
-            <Typography variant="caption" color="text.secondary">{c.debt < 0 ? "Oldindan to'lagan" : 'Qarzi'}</Typography>
+            <Typography variant="caption" color="text.secondary">{c.debt < 0 ? tr("Oldindan to'lagan") : tr("Qarzi")}</Typography>
             <Typography variant="h5" sx={{ color: c.debt > 0 ? 'error.main' : 'primary.main' }}>{fmtMoney(Math.abs(c.debt))}</Typography>
           </Box>
           <Box sx={{ flex: 1, p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
-            <Typography variant="caption" color="text.secondary">Jami xaridlari ({c.receipts} chek)</Typography>
+            <Typography variant="caption" color="text.secondary">{tr("Jami xaridlari (")}{c.receipts} {tr("chek)")}</Typography>
             <Typography variant="h5">{fmtMoney(c.bought)}</Typography>
           </Box>
         </Stack>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
-          <Button variant="contained" startIcon={<CartIcon />} onClick={() => onSell(c)}>Sotuv</Button>
-          <Button variant="outlined" startIcon={<PayIcon />} onClick={() => onPay(c, 'pay')}>To'lov qabul qilish</Button>
-          {admin && <Button color="warning" onClick={() => onPay(c, 'debt')}>Qarz qo'shish</Button>}
-          {admin && <Button color="inherit" startIcon={<EditIcon />} onClick={() => onEdit(c)}>Tahrirlash</Button>}
+          <Button variant="contained" startIcon={<CartIcon />} onClick={() => onSell(c)}>{tr("Sotuv")}</Button>
+          <Button variant="outlined" startIcon={<PayIcon />} onClick={() => onPay(c, 'pay')}>{tr("To'lov qabul qilish")}</Button>
+          {admin && <Button color="warning" onClick={() => onPay(c, 'debt')}>{tr("Qarz qo'shish")}</Button>}
+          {admin && <Button color="inherit" startIcon={<EditIcon />} onClick={() => onEdit(c)}>{tr("Tahrirlash")}</Button>}
         </Stack>
         <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tab label={`Xaridlar (${sales.length})`} />
-          <Tab label={`Qarz daftari (${ledger.length})`} />
+          <Tab label={tr("Xaridlar ({0})", sales.length)} />
+          <Tab label={tr("Qarz daftari ({0})", ledger.length)} />
         </Tabs>
         {tab === 0 && (
           <List dense>
-            {sales.length === 0 && <Typography color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>Hali xarid yo'q</Typography>}
+            {sales.length === 0 && <Typography color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>{tr("Hali xarid yo'q")}</Typography>}
             {sales.map((s) => (
               <ListItemButton key={s.saleId} onClick={() => setReceipt(s.saleId)} sx={{ borderRadius: 2 }}>
-                <ListItemText primary={<>Chek №{s.saleId} · {fmtDate(s.date)}</>} secondary={s.items.join(', ')}
+                <ListItemText primary={<>{tr("Chek №")}{s.saleId} · {fmtDate(s.date)}</>} secondary={s.items.join(', ')}
                   slotProps={{ secondary: { noWrap: true } }} sx={{ minWidth: 0, mr: 2 }} />
                 <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
                   <Typography sx={{ fontWeight: 700 }}>{fmtMoney(s.sum)}</Typography>
@@ -112,10 +113,10 @@ export default function CustomerCard({ wh, customer: initial, onClose, onSell, o
         )}
         {tab === 1 && (
           <List dense>
-            {ledger.length === 0 && <Typography color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>Qarz yozuvlari yo'q</Typography>}
+            {ledger.length === 0 && <Typography color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>{tr("Qarz yozuvlari yo'q")}</Typography>}
             {ledger.map((r) => (
               <ListItem key={r.key} disableGutters sx={{ px: 1 }}
-                secondaryAction={admin && r.txId ? <Tooltip title="Bekor qilish"><IconButton size="small" onClick={() => undoTx(r.txId!)}><UndoIcon fontSize="small" /></IconButton></Tooltip> : undefined}>
+                secondaryAction={admin && r.txId ? <Tooltip title={tr("Bekor qilish")}><IconButton size="small" onClick={() => undoTx(r.txId!)}><UndoIcon fontSize="small" /></IconButton></Tooltip> : undefined}>
                 <ListItemText primary={<>{r.title} · <Typography component="span" variant="body2" color="text.secondary">{fmtDate(r.date)}</Typography></>}
                   secondary={r.sub} slotProps={{ secondary: { noWrap: true } }} sx={{ minWidth: 0, mr: 2 }} />
                 <Typography sx={{ fontWeight: 700, whiteSpace: 'nowrap', mr: admin && r.txId ? 4 : 0, color: r.amount > 0 ? 'error.main' : 'primary.main' }}>

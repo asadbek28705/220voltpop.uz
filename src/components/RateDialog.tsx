@@ -6,6 +6,7 @@ import BankIcon from '@mui/icons-material/AccountBalanceOutlined'
 import type { Warehouse } from '../store'
 import { api, attempt } from '../api'
 import { fmtDate, fmtMoney, sellFrom, toUzs } from '../utils'
+import { t as tr } from '../i18n'
 
 const num = (s: string) => Number(s.replace(/\s/g, '').replace(',', '.'))
 
@@ -27,7 +28,7 @@ export default function RateDialog({ wh, onClose, onDone }: { wh: Warehouse; onC
     const x = await attempt(() => api<{ rate: number; date: string }>('GET', '/rate/cbu'))
     if (!x.ok) return setErr(x.error)
     setRate(String(x.value.rate))
-    setInfo(`Markaziy bank kursi (${x.value.date})`)
+    setInfo(tr("Markaziy bank kursi ({0})", x.value.date))
   }
 
   const save = async () => {
@@ -35,39 +36,39 @@ export default function RateDialog({ wh, onClose, onDone }: { wh: Warehouse; onC
     const x = await attempt(() => wh.setRate(r, updateSell))
     setBusy(false)
     if (!x.ok) return setErr(x.error)
-    onDone?.(`Kurs saqlandi: 1$ = ${fmtMoney(r)}. ${x.value.products} ta tovar tannarxi qayta hisoblandi` +
-      (x.value.repriced ? `, ${x.value.repriced} ta tovarning sotuv narxi yangilandi` : ''))
+    onDone?.(tr("Kurs saqlandi: 1$ = {0}. {1} ta tovar tannarxi qayta hisoblandi", fmtMoney(r), x.value.products) +
+      (x.value.repriced ? tr(", {0} ta tovarning sotuv narxi yangilandi", x.value.repriced) : ''))
     onClose()
   }
 
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>Dollar kursi</DialogTitle>
+      <DialogTitle>{tr("Dollar kursi")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           {settings.usdRate ? (
             <Typography variant="body2" color="text.secondary">
-              Hozirgi: <b>1$ = {fmtMoney(settings.usdRate)}</b>{settings.rateDate && <> · {fmtDate(settings.rateDate)}</>}
+              {tr("Hozirgi:")} <b>1$ = {fmtMoney(settings.usdRate)}</b>{settings.rateDate && <> · {fmtDate(settings.rateDate)}</>}
             </Typography>
-          ) : <Alert severity="info">Dollarda olinadigan tovarlar uchun kursni kiriting.</Alert>}
-          <TextField label="1 dollar =" value={rate} onChange={(e) => { setRate(e.target.value); setInfo('') }} inputMode="decimal" autoFocus
+          ) : <Alert severity="info">{tr("Dollarda olinadigan tovarlar uchun kursni kiriting.")}</Alert>}
+          <TextField label={tr("1 dollar =")} value={rate} onChange={(e) => { setRate(e.target.value); setInfo('') }} inputMode="decimal" autoFocus
             helperText={info || ' '}
-            slotProps={{ input: { endAdornment: <InputAdornment position="end">so'm</InputAdornment> } }} />
-          <Button variant="outlined" startIcon={<BankIcon />} onClick={fromCbu} sx={{ alignSelf: 'flex-start' }}>Markaziy bank kursini olish</Button>
+            slotProps={{ input: { endAdornment: <InputAdornment position="end">{tr("so'm")}</InputAdornment> } }} />
+          <Button variant="outlined" startIcon={<BankIcon />} onClick={fromCbu} sx={{ alignSelf: 'flex-start' }}>{tr("Markaziy bank kursini olish")}</Button>
           <FormControlLabel control={<Checkbox checked={updateSell} onChange={(e) => setUpdateSell(e.target.checked)} />}
-            label={`Ustamasi bor tovarlarning sotuv narxini ham yangilash (${withMarkup.length} ta)`} />
+            label={tr("Ustamasi bor tovarlarning sotuv narxini ham yangilash ({0} ta)", withMarkup.length)} />
           {sample && r > 0 && (
             <Alert severity="info" icon={false}>
-              Masalan: <b>{sample.name}</b> — ${sample.buyPriceUsd} × {r} = <b>{fmtMoney(toUzs(sample.buyPriceUsd, r))}</b>
-              {updateSell && sample.markup > 0 && <> → sotuv: <b>{fmtMoney(sellFrom(toUzs(sample.buyPriceUsd, r), sample.markup))}</b> (+{sample.markup}%)</>}
+              {tr("Masalan:")} <b>{sample.name}</b> — ${sample.buyPriceUsd} × {r} = <b>{fmtMoney(toUzs(sample.buyPriceUsd, r))}</b>
+              {updateSell && sample.markup > 0 && <> {tr("→ sotuv:")} <b>{fmtMoney(sellFrom(toUzs(sample.buyPriceUsd, r), sample.markup))}</b> (+{sample.markup}%)</>}
             </Alert>
           )}
           {err && <Alert severity="error">{err}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Bekor qilish</Button>
-        <Button variant="contained" onClick={save} disabled={busy || !(r > 0)}>Saqlash</Button>
+        <Button onClick={onClose}>{tr("Bekor qilish")}</Button>
+        <Button variant="contained" onClick={save} disabled={busy || !(r > 0)}>{tr("Saqlash")}</Button>
       </DialogActions>
     </Dialog>
   )

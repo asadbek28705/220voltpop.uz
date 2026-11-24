@@ -1,4 +1,5 @@
 import { getSeller } from './device'
+import { t as tr, tServer } from './i18n'
 
 export class ApiError extends Error {}
 
@@ -11,12 +12,12 @@ export async function api<T = unknown>(method: string, path: string, body?: unkn
       body: body === undefined ? undefined : JSON.stringify(body),
     })
   } catch {
-    throw new ApiError("Server bilan aloqa yo'q. Wi-Fi ni tekshiring.")
+    throw new ApiError(tr("Server bilan aloqa yo'q. Wi-Fi ni tekshiring."))
   }
   const data = await res.json().catch(() => ({}))
   // Sessiya tugagan — login sahifasiga qaytarish
   if (res.status === 401 && path !== '/login') window.dispatchEvent(new Event('ombor-unauthorized'))
-  if (!res.ok) throw new ApiError(data.error ?? `Xato: ${res.status}`)
+  if (!res.ok) throw new ApiError(data.error ? tServer(data.error) : tr('Xato: {0}', res.status))
   return data as T
 }
 

@@ -8,6 +8,8 @@ import DarkIcon from '@mui/icons-material/DarkModeOutlined'
 import LightIcon from '@mui/icons-material/LightModeOutlined'
 import WarehouseIcon from '@mui/icons-material/WarehouseOutlined'
 import { GREEN, YELLOW } from '../theme'
+import { t as tr } from '../i18n'
+import LangSwitcher from './LangSwitcher'
 
 export interface NavItem { key: string; label: string; icon: ReactNode; admin?: boolean }
 export interface NavGroup { title?: string; items: NavItem[] }
@@ -37,7 +39,7 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
       <Stack alignItems="center" spacing={0.5} sx={{ py: 3 }}>
         <WarehouseIcon sx={{ fontSize: 34, color: YELLOW }} />
         <Typography sx={{ fontWeight: 800, letterSpacing: 2, color: '#C9A227', fontSize: 18 }}>OMBOR</Typography>
-        <Typography variant="caption" color="text.secondary">Qurilish & Santexnika</Typography>
+        <Typography variant="caption" color="text.secondary">{tr("Qurilish & Santexnika")}</Typography>
       </Stack>
       <Box sx={{ px: 1.5, pb: 2, overflowY: 'auto' }}>
         {groups.map((g, i) => (
@@ -75,12 +77,13 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
         <Stack direction="row" alignItems="center" spacing={1.5} className="no-print"
           sx={{ height: 64, px: { xs: 2, md: 4 }, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider', position: 'sticky', top: 0, zIndex: 10 }}>
-          {!desktop && <IconButton aria-label="Menyu" onClick={() => setOpen(true)}><MenuIcon /></IconButton>}
+          {!desktop && <IconButton aria-label={tr("Menyu")} onClick={() => setOpen(true)}><MenuIcon /></IconButton>}
           {!desktop && <Typography sx={{ fontWeight: 800, letterSpacing: 1.5, color: '#C9A227' }}>OMBOR</Typography>}
           <Box sx={{ flexGrow: 1 }} />
-          <Chip size="small" variant="outlined" color={online ? 'success' : 'error'} label={online ? 'Onlayn' : "Aloqa yo'q"}
+          <Chip size="small" variant="outlined" color={online ? 'success' : 'error'} label={online ? tr("Onlayn") : tr("Aloqa yo'q")}
             sx={{ '& .MuiChip-label': { px: 1 } }} />
-          <IconButton aria-label="Rejimni almashtirish" onClick={onToggleMode} sx={{ border: 1, borderColor: 'divider' }} title="Rejimni almashtirish">
+          <LangSwitcher />
+          <IconButton aria-label={tr("Rejimni almashtirish")} onClick={onToggleMode} sx={{ border: 1, borderColor: 'divider' }} title={tr("Rejimni almashtirish")}>
             {mode === 'dark' ? <LightIcon fontSize="small" /> : <DarkIcon fontSize="small" />}
           </IconButton>
           <Stack direction="row" spacing={1.25} alignItems="center" sx={{ pl: 1 }}>
@@ -88,8 +91,8 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
               {(seller || 'S').charAt(0).toUpperCase()}
             </Avatar>
             <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-              <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{seller || 'Ism kiritilmagan'}</Typography>
-              <Typography variant="caption" color="text.secondary">{role === 'admin' ? 'egasi' : role === 'demo' ? 'demo' : 'sotuvchi'}</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{seller || tr("Ism kiritilmagan")}</Typography>
+              <Typography variant="caption" color="text.secondary">{role === 'admin' ? tr('egasi') : role === 'demo' ? 'demo' : tr('sotuvchi')}</Typography>
             </Box>
           </Stack>
         </Stack>

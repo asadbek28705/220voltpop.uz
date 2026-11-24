@@ -4,6 +4,7 @@ import PrintIcon from '@mui/icons-material/PrintOutlined'
 import CheckIcon from '@mui/icons-material/CheckCircleRounded'
 import type { Warehouse } from '../store'
 import { PrintArea, Receipt, printReceipt } from './Receipt'
+import { t as tr } from '../i18n'
 
 interface Props { wh: Warehouse; saleId: string; justSold?: boolean; onClose: () => void }
 
@@ -20,7 +21,7 @@ export default function ReceiptDialog({ wh, saleId, justSold, onClose }: Props) 
         {justSold && (
           <Stack alignItems="center" spacing={0.5} sx={{ mb: 2, color: 'primary.main', fontWeight: 700 }}>
             <CheckIcon sx={{ fontSize: 48 }} />
-            <span>Savdo amalga oshirildi</span>
+            <span>{tr("Savdo amalga oshirildi")}</span>
           </Stack>
         )}
         {lines.length === 0 ? (
@@ -32,9 +33,9 @@ export default function ReceiptDialog({ wh, saleId, justSold, onClose }: Props) 
         )}
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button onClick={onClose}>{justSold ? 'Yangi savdo' : 'Yopish'}</Button>
+        <Button onClick={onClose}>{justSold ? tr("Yangi savdo") : tr("Yopish")}</Button>
         <Button variant="contained" size="large" startIcon={<PrintIcon />} disabled={!lines.length || printing} onClick={print}>
-          Chekni chop etish
+          {tr("Chekni chop etish")}
         </Button>
       </DialogActions>
       <PrintArea lines={lines.length ? lines : null} settings={wh.data.settings} paid={paid} />

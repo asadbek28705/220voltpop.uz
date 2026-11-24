@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@mui/material'
 import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
+import { t as tr } from '../i18n'
 
 interface Props {
   open: boolean
@@ -11,7 +12,7 @@ interface Props {
   title?: string
 }
 
-export default function CameraScanner({ open, onClose, onScan, continuous, title = 'Kamera bilan skaner' }: Props) {
+export default function CameraScanner({ open, onClose, onScan, continuous, title = tr("Kamera bilan skaner") }: Props) {
   const video = useRef<HTMLVideoElement>(null)
   const [error, setError] = useState('')
   const [lastCode, setLastCode] = useState('')
@@ -23,7 +24,7 @@ export default function CameraScanner({ open, onClose, onScan, continuous, title
     setError('')
     setLastCode('')
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-      setError("Kamera faqat xavfsiz (https://) manzilda ishlaydi. Dasturni https:// bilan boshlanadigan manzil orqali oching.")
+      setError(tr("Kamera faqat xavfsiz (https://) manzilda ishlaydi. Dasturni https:// bilan boshlanadigan manzil orqali oching."))
       return
     }
     let controls: IScannerControls | undefined
@@ -49,8 +50,8 @@ export default function CameraScanner({ open, onClose, onScan, continuous, title
         })
         .then((c) => { controls = c; if (stopped) c.stop() })
         .catch((e: Error) => setError(
-          e.name === 'NotAllowedError' ? "Kameraga ruxsat berilmadi. Brauzer sozlamalarida kameraga ruxsat bering."
-            : e.name === 'NotFoundError' ? 'Kamera topilmadi' : 'Kamerani ochib bo\'lmadi: ' + e.message,
+          e.name === 'NotAllowedError' ? tr("Kameraga ruxsat berilmadi. Brauzer sozlamalarida kameraga ruxsat bering.")
+            : e.name === 'NotFoundError' ? tr("Kamera topilmadi") : tr("Kamerani ochib bo'lmadi: ") + e.message,
         ))
     }
     start()
@@ -68,11 +69,11 @@ export default function CameraScanner({ open, onClose, onScan, continuous, title
           </Box>
         )}
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-          {lastCode ? <>O'qildi: <b>{lastCode}</b>{continuous && ' — keyingisini skaner qiling'}</> : 'Shtrix-kodni sariq ramka ichiga keltiring'}
+          {lastCode ? <>{tr("O'qildi:")} <b>{lastCode}</b>{continuous && tr(" — keyingisini skaner qiling")}</> : tr("Shtrix-kodni sariq ramka ichiga keltiring")}
         </Typography>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{continuous ? 'Tayyor' : 'Yopish'}</Button>
+        <Button onClick={onClose}>{continuous ? tr("Tayyor") : tr("Yopish")}</Button>
       </DialogActions>
     </Dialog>
   )

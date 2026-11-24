@@ -20,8 +20,9 @@ import PageHeader from './PageHeader'
 import ReceiptDialog from './ReceiptDialog'
 import { paymentLabel } from '../types'
 import StatCard from './StatCard'
+import { t as tr } from '../i18n'
 
-const label = { in: 'Kirim', out: 'Chiqim', adjust: 'Inventarizatsiya' } as const
+const label = { in: tr("Kirim"), out: tr("Chiqim"), adjust: tr("Inventarizatsiya") } as const
 const color = { in: 'success', out: 'warning', adjust: 'default' } as const
 
 interface Props {
@@ -53,11 +54,11 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
   const profit = list.filter((m) => m.type === 'out').reduce((s, m) => s + profitOf(m, products), 0)
 
   const undo = (m: Movement) => {
-    if (confirm(`Bu yozuv bekor qilinsinmi? "${m.productName}" qoldig'i qayta hisoblanadi.`)) wh.deleteMovement(m.id).catch((e) => alert(e.message))
+    if (confirm(tr("Bu yozuv bekor qilinsinmi? \"{0}\" qoldig'i qayta hisoblanadi.", m.productName))) wh.deleteMovement(m.id).catch((e) => alert(e.message))
   }
 
   const exportCsv = () => {
-    const rows: (string | number)[][] = [['Sana', 'Turi', 'Mahsulot', 'Miqdor', 'Narx', 'Summa', 'Kontragent', 'Izoh']]
+    const rows: (string | number)[][] = [[tr("Sana"), tr("Turi"), tr("Mahsulot"), tr("Miqdor"), tr("Narx"), tr("Summa"), tr("Kontragent"), tr("Izoh")]]
     list.forEach((m) => rows.push([fmtDate(m.date), label[m.type], m.productName, m.qty, m.price, m.type === 'adjust' ? '' : m.qty * m.price, m.counterparty, m.note]))
     download(`${title.toLowerCase().replace(/\s+/g, '-')}-${from}_${to}.csv`, toCsv(rows), 'text/csv;charset=utf-8')
   }
@@ -67,32 +68,32 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
   return (
     <>
       <PageHeader title={title} subtitle={subtitle} actions={<>
-        <TextField size="small" type="date" label="Dan" value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-        <TextField size="small" type="date" label="Gacha" value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-        <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>Excel</Button>
+        <TextField size="small" type="date" label={tr("Dan")} value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+        <TextField size="small" type="date" label={tr("Gacha")} value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+        <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>{tr("Excel")}</Button>
         {onNew && <Button variant="contained" startIcon={<AddIcon />} onClick={onNew}>{newLabel}</Button>}
       </>} />
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {(!t || t === 'out') && <>
-          <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<CartIcon />} title="Jami savdo" value={fmtMoney(total('out'))} /></Grid>
-          {admin && <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title="Foyda" value={fmtMoney(profit)} valueColor={profit >= 0 ? 'primary.main' : 'error.main'} /></Grid>}
+          <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<CartIcon />} title={tr("Jami savdo")} value={fmtMoney(total('out'))} /></Grid>
+          {admin && <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title={tr("Foyda")} value={fmtMoney(profit)} valueColor={profit >= 0 ? 'primary.main' : 'error.main'} /></Grid>}
         </>}
         {(!t || t === 'in') && admin && (
-          <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<InboxIcon />} title="Jami kirim" value={fmtMoney(total('in'))} color="#3B82F6" /></Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<InboxIcon />} title={tr("Jami kirim")} value={fmtMoney(total('in'))} color="#3B82F6" /></Grid>
         )}
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<ReceiptIcon />} title="Yozuvlar soni" value={String(list.length)} color="#C9A227" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<ReceiptIcon />} title={tr("Yozuvlar soni")} value={String(list.length)} color="#C9A227" /></Grid>
       </Grid>
 
       <Paper variant="outlined">
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ p: 2 }}>
-          <TextField size="small" label="Qidirish" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Mahsulot, mijoz, izoh" sx={{ minWidth: 260 }} />
+          <TextField size="small" label={tr("Qidirish")} value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("Mahsulot, mijoz, izoh")} sx={{ minWidth: 260 }} />
           {!fixedType && (
-            <TextField size="small" select label="Turi" value={type} onChange={(e) => setType(e.target.value)} sx={{ minWidth: 180 }}>
-              <MenuItem value="">Barchasi</MenuItem>
-              <MenuItem value="in">Kirim</MenuItem>
-              <MenuItem value="out">Chiqim</MenuItem>
-              <MenuItem value="adjust">Inventarizatsiya</MenuItem>
+            <TextField size="small" select label={tr("Turi")} value={type} onChange={(e) => setType(e.target.value)} sx={{ minWidth: 180 }}>
+              <MenuItem value="">{tr("Barchasi")}</MenuItem>
+              <MenuItem value="in">{tr("Kirim")}</MenuItem>
+              <MenuItem value="out">{tr("Chiqim")}</MenuItem>
+              <MenuItem value="adjust">{tr("Inventarizatsiya")}</MenuItem>
             </TextField>
           )}
         </Stack>
@@ -100,16 +101,16 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Sana</TableCell>
-                {t === 'out' && <TableCell>Chek</TableCell>}
-                {!fixedType && <TableCell>Turi</TableCell>}
-                <TableCell>Mahsulot</TableCell>
-                <TableCell align="right">Miqdor</TableCell>
-                {showMoney && <TableCell align="right">Narx</TableCell>}
-                {showMoney && <TableCell align="right">Summa</TableCell>}
-                {showMoney && <TableCell>{t === 'in' ? "Ta'minotchi" : t === 'out' ? 'Mijoz' : 'Kontragent'}</TableCell>}
-                {t === 'out' && <TableCell>To'lov</TableCell>}
-                <TableCell>{t === 'out' ? 'Sotuvchi' : 'Izoh'}</TableCell>
+                <TableCell>{tr("Sana")}</TableCell>
+                {t === 'out' && <TableCell>{tr("Chek")}</TableCell>}
+                {!fixedType && <TableCell>{tr("Turi")}</TableCell>}
+                <TableCell>{tr("Mahsulot")}</TableCell>
+                <TableCell align="right">{tr("Miqdor")}</TableCell>
+                {showMoney && <TableCell align="right">{tr("Narx")}</TableCell>}
+                {showMoney && <TableCell align="right">{tr("Summa")}</TableCell>}
+                {showMoney && <TableCell>{t === 'in' ? tr("Ta'minotchi") : t === 'out' ? tr("Mijoz") : tr("Kontragent")}</TableCell>}
+                {t === 'out' && <TableCell>{tr("To'lov")}</TableCell>}
+                <TableCell>{t === 'out' ? tr("Sotuvchi") : tr("Izoh")}</TableCell>
                 {admin && <TableCell className="no-print" />}
               </TableRow>
             </TableHead>
@@ -132,12 +133,12 @@ export default function Movements({ wh, title, subtitle, fixedType, newLabel, on
                   {t === 'out' && <TableCell>{paymentLabel(m.payment)}</TableCell>}
                   <TableCell>{t === 'out' ? m.seller : m.note}</TableCell>
                   {admin && <TableCell className="no-print">
-                    <Tooltip title="Bekor qilish (qoldiq qaytariladi)"><IconButton size="small" onClick={() => undo(m)}><UndoIcon fontSize="small" /></IconButton></Tooltip>
+                    <Tooltip title={tr("Bekor qilish (qoldiq qaytariladi)")}><IconButton size="small" onClick={() => undo(m)}><UndoIcon fontSize="small" /></IconButton></Tooltip>
                   </TableCell>}
                 </TableRow>
               ))}
               {list.length === 0 && (
-                <TableRow><TableCell colSpan={11} align="center" sx={{ py: 5, color: 'text.secondary' }}>Tanlangan davrda yozuv yo'q</TableCell></TableRow>
+                <TableRow><TableCell colSpan={11} align="center" sx={{ py: 5, color: 'text.secondary' }}>{tr("Tanlangan davrda yozuv yo'q")}</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

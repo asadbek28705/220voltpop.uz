@@ -22,6 +22,7 @@ import StatCard from './StatCard'
 import CustomerDialog from './CustomerDialog'
 import CustomerCard from './CustomerCard'
 import DebtDialog from './DebtDialog'
+import { t as tr } from '../i18n'
 
 interface Props { wh: Warehouse; debtorsOnly?: boolean; onSell: (c: Customer) => void }
 
@@ -53,46 +54,46 @@ export default function Customers({ wh, debtorsOnly, onSell }: Props) {
   const paidMonth = customerTx.filter((t) => t.type === 'pay' && new Date(t.date) >= monthStart).reduce((s, t) => s + t.amount, 0)
 
   const remove = (c: Customer) => {
-    if (confirm(`"${c.name}" mijozlar ro'yxatidan o'chirilsinmi? Savdolar tarixda qoladi.`)) wh.deleteCustomer(c.id).catch((e) => alert(e.message))
+    if (confirm(tr("\"{0}\" mijozlar ro'yxatidan o'chirilsinmi? Savdolar tarixda qoladi.", c.name))) wh.deleteCustomer(c.id).catch((e) => alert(e.message))
   }
   const exportCsv = () => {
-    const rows: (string | number)[][] = [['Mijoz', 'Telefon', 'Qarzi', 'Jami xaridlari', 'Cheklar', 'Oxirgi xarid', 'Izoh']]
+    const rows: (string | number)[][] = [[tr("Mijoz"), tr("Telefon"), tr("Qarzi"), tr("Jami xaridlari"), tr("Cheklar"), tr("Oxirgi xarid"), tr("Izoh")]]
     list.forEach((c) => rows.push([c.name, c.phone, c.debt, c.bought, c.receipts, c.lastDate ? fmtDate(c.lastDate) : '', c.note]))
-    rows.push([], ['Jami qarz', '', list.reduce((s, c) => s + Math.max(0, c.debt), 0)])
+    rows.push([], [tr("Jami qarz"), '', list.reduce((s, c) => s + Math.max(0, c.debt), 0)])
     download(`${debtorsOnly ? 'qarzdorlar' : 'mijozlar'}-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(rows), 'text/csv;charset=utf-8')
   }
 
   return (
     <Stack spacing={2}>
       <PageHeader
-        title={debtorsOnly ? 'Qarzdorlar' : 'Mijozlar'}
-        subtitle={debtorsOnly ? "Nasiyaga olgan mijozlar — qarz to'languncha shu yerda turadi" : "Doimiy mijozlar bazasi: tez toping, xaridini yozing, qarzini kuzating"}
+        title={debtorsOnly ? tr("Qarzdorlar") : tr("Mijozlar")}
+        subtitle={debtorsOnly ? tr("Nasiyaga olgan mijozlar — qarz to'languncha shu yerda turadi") : tr("Doimiy mijozlar bazasi: tez toping, xaridini yozing, qarzini kuzating")}
         actions={<>
-          {admin && <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>Excel</Button>}
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setEditing('new')}>Yangi mijoz</Button>
+          {admin && <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>{tr("Excel")}</Button>}
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setEditing('new')}>{tr("Yangi mijoz")}</Button>
         </>} />
 
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, sm: 4 }}><StatCard icon={<DebtIcon />} title="Jami qarz" value={fmtMoney(totalDebt)} color="#E5533D" valueColor={totalDebt > 0 ? 'error.main' : undefined} /></Grid>
-        <Grid size={{ xs: 12, sm: 4 }}><StatCard icon={<PeopleIcon />} title={debtorsOnly ? 'Qarzdorlar soni' : 'Mijozlar soni'} value={`${debtorsOnly ? debtors.length : customers.length} ta`} color="#3B82F6" /></Grid>
-        <Grid size={{ xs: 12, sm: 4 }}><StatCard icon={<WalletIcon />} title="Shu oy qarzdan tushgan" value={fmtMoney(paidMonth)} /></Grid>
+        <Grid size={{ xs: 12, sm: 4 }}><StatCard icon={<DebtIcon />} title={tr("Jami qarz")} value={fmtMoney(totalDebt)} color="#E5533D" valueColor={totalDebt > 0 ? 'error.main' : undefined} /></Grid>
+        <Grid size={{ xs: 12, sm: 4 }}><StatCard icon={<PeopleIcon />} title={debtorsOnly ? tr("Qarzdorlar soni") : tr("Mijozlar soni")} value={tr('{0} ta', debtorsOnly ? debtors.length : customers.length)} color="#3B82F6" /></Grid>
+        <Grid size={{ xs: 12, sm: 4 }}><StatCard icon={<WalletIcon />} title={tr("Shu oy qarzdan tushgan")} value={fmtMoney(paidMonth)} /></Grid>
       </Grid>
 
       <Paper variant="outlined">
         <Stack direction="row" sx={{ p: 2 }}>
-          <TextField size="small" placeholder="Qidirish: ism yoki telefon" value={q} onChange={(e) => setQ(e.target.value)} sx={{ minWidth: { sm: 320 } }} fullWidth
+          <TextField size="small" placeholder={tr("Qidirish: ism yoki telefon")} value={q} onChange={(e) => setQ(e.target.value)} sx={{ minWidth: { sm: 320 } }} fullWidth
             autoFocus slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> } }} />
         </Stack>
         <TableContainer>
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Mijoz</TableCell>
-                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Telefon</TableCell>
-                <TableCell align="right">Qarzi</TableCell>
-                <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>Jami xaridlari</TableCell>
-                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Oxirgi xarid</TableCell>
-                <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Amallar</TableCell>
+                <TableCell>{tr("Mijoz")}</TableCell>
+                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{tr("Telefon")}</TableCell>
+                <TableCell align="right">{tr("Qarzi")}</TableCell>
+                <TableCell align="right" sx={{ display: { xs: 'none', md: 'table-cell' } }}>{tr("Jami xaridlari")}</TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{tr("Oxirgi xarid")}</TableCell>
+                <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{tr("Amallar")}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -112,15 +113,15 @@ export default function Customers({ wh, debtorsOnly, onSell }: Props) {
                   <TableCell align="right" sx={{ whiteSpace: 'nowrap', display: { xs: 'none', md: 'table-cell' } }}>{fmtMoney(c.bought)}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap', display: { xs: 'none', md: 'table-cell' } }}>{c.lastDate ? fmtDate(c.lastDate) : '—'}</TableCell>
                   <TableCell align="center" sx={{ whiteSpace: 'nowrap', display: { xs: 'none', sm: 'table-cell' } }} onClick={(e) => e.stopPropagation()}>
-                    <Tooltip title="Shu mijozga sotish"><IconButton size="small" color="primary" onClick={() => onSell(c)}><CartIcon /></IconButton></Tooltip>
-                    <Tooltip title="Qarz to'lovini qabul qilish"><IconButton size="small" onClick={() => setDebt({ c, type: 'pay' })}><PayIcon /></IconButton></Tooltip>
-                    {admin && <Tooltip title="O'chirish"><IconButton size="small" color="error" onClick={() => remove(c)}><DeleteIcon /></IconButton></Tooltip>}
+                    <Tooltip title={tr("Shu mijozga sotish")}><IconButton size="small" color="primary" onClick={() => onSell(c)}><CartIcon /></IconButton></Tooltip>
+                    <Tooltip title={tr("Qarz to'lovini qabul qilish")}><IconButton size="small" onClick={() => setDebt({ c, type: 'pay' })}><PayIcon /></IconButton></Tooltip>
+                    {admin && <Tooltip title={tr("O'chirish")}><IconButton size="small" color="error" onClick={() => remove(c)}><DeleteIcon /></IconButton></Tooltip>}
                   </TableCell>
                 </TableRow>
               ))}
               {list.length === 0 && (
                 <TableRow><TableCell colSpan={6} align="center" sx={{ py: 5, color: 'text.secondary' }}>
-                  {debtorsOnly ? "Qarzdor mijoz yo'q 👍" : q ? 'Topilmadi' : "Hali mijoz yo'q — «Yangi mijoz» ni bosing"}
+                  {debtorsOnly ? tr("Qarzdor mijoz yo'q 👍") : q ? tr("Topilmadi") : tr("Hali mijoz yo'q — «Yangi mijoz» ni bosing")}
                 </TableCell></TableRow>
               )}
             </TableBody>
@@ -129,7 +130,7 @@ export default function Customers({ wh, debtorsOnly, onSell }: Props) {
       </Paper>
 
       {editing && <CustomerDialog wh={wh} customer={editing === 'new' ? undefined : editing} initialName={editing === 'new' ? q : undefined}
-        onClose={() => setEditing(null)} onSaved={(c) => setToast(`Saqlandi: ${c.name}`)} />}
+        onClose={() => setEditing(null)} onSaved={(c) => setToast(tr("Saqlandi: {0}", c.name))} />}
       {open && <CustomerCard wh={wh} customer={open} onClose={() => setOpen(null)} onSell={onSell}
         onPay={(c, type) => setDebt({ c, type })} onEdit={(c) => setEditing(c)} />}
       {debt && <DebtDialog wh={wh} customer={debt.c} type={debt.type} onClose={() => setDebt(null)} onDone={setToast} />}

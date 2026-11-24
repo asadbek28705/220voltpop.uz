@@ -12,6 +12,7 @@ import { UNITS } from '../types'
 import { attempt } from '../api'
 import CameraScanner from './CameraScanner'
 import { fmtMoney, sellFrom, toUzs } from '../utils'
+import { t as tr } from '../i18n'
 
 interface Props { wh: Warehouse; product?: Product; initialBarcode?: string; noInitialQty?: boolean; defaultCurrency?: Currency; onClose: () => void; onSaved?: (p: Product) => void }
 
@@ -51,10 +52,10 @@ export default function ProductDialog({ wh, product, initialBarcode, noInitialQt
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value })
 
   const save = async () => {
-    if (!f.name.trim()) return setErr('Tovar nomini kiriting')
-    if (!f.category.trim()) return setErr('Kategoriyani tanlang')
+    if (!f.name.trim()) return setErr(tr("Tovar nomini kiriting"))
+    if (!f.category.trim()) return setErr(tr("Kategoriyani tanlang"))
     const num = n
-    if (usd && !(rate > 0)) return setErr("Avval dollar kursini kiriting (Tovarlar sahifasida «Dollar kursi»)")
+    if (usd && !(rate > 0)) return setErr(tr("Avval dollar kursini kiriting (Tovarlar sahifasida «Dollar kursi»)"))
     setBusy(true)
     const r = await attempt(() => wh.saveProduct({
       id: product?.id,
@@ -71,16 +72,16 @@ export default function ProductDialog({ wh, product, initialBarcode, noInitialQt
 
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="sm" fullScreen={fullScreen}>
-      <DialogTitle>{isNew ? 'Yangi tovar' : 'Tovarni tahrirlash'}</DialogTitle>
+      <DialogTitle>{isNew ? tr("Yangi tovar") : tr("Tovarni tahrirlash")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
-          <TextField label="Nomi *" value={f.name} onChange={set('name')} autoFocus />
-          <TextField label="Shtrix-kod" value={f.barcode} onChange={set('barcode')} inputMode="numeric"
-            helperText="Skaner qiling, kamerani bosing yoki kodi bo'lmasa ✨ — dastur o'zi yaratadi"
+          <TextField label={tr("Nomi *")} value={f.name} onChange={set('name')} autoFocus />
+          <TextField label={tr("Shtrix-kod")} value={f.barcode} onChange={set('barcode')} inputMode="numeric"
+            helperText={tr("Skaner qiling, kamerani bosing yoki kodi bo'lmasa ✨ — dastur o'zi yaratadi")}
             slotProps={{ input: { endAdornment: (
               <InputAdornment position="end">
                 {!f.barcode && (
-                  <Tooltip title="Ichki shtrix-kod yaratish">
+                  <Tooltip title={tr("Ichki shtrix-kod yaratish")}>
                     <IconButton onClick={async () => { const r = await attempt(() => wh.nextBarcode()); if (r.ok) setF((s) => ({ ...s, barcode: r.value.barcode })); else setErr(r.error) }}>
                       <AutoIcon />
                     </IconButton>
@@ -90,42 +91,42 @@ export default function ProductDialog({ wh, product, initialBarcode, noInitialQt
               </InputAdornment>
             ) } }} />
           <Stack direction="row" spacing={2}>
-            <TextField label="Artikul / kod" value={f.sku} onChange={set('sku')} fullWidth />
-            <TextField select label="Birlik" value={f.unit} onChange={set('unit')} sx={{ minWidth: 130 }}>
-              {UNITS.map((u) => <MenuItem key={u} value={u}>{u}</MenuItem>)}
+            <TextField label={tr("Artikul / kod")} value={f.sku} onChange={set('sku')} fullWidth />
+            <TextField select label={tr("Birlik")} value={tr(f.unit)} onChange={set('unit')} sx={{ minWidth: 130 }}>
+              {UNITS.map((u) => <MenuItem key={u} value={u}>{tr(u)}</MenuItem>)}
             </TextField>
           </Stack>
           <Autocomplete freeSolo options={wh.data.categories} value={f.category}
             onInputChange={(_, v) => setF((s) => ({ ...s, category: v }))}
-            renderInput={(params) => <TextField {...params} label="Kategoriya *" helperText="Ro'yxatdan tanlang yoki yangisini yozing" />} />
+            renderInput={(params) => <TextField {...params} label={tr("Kategoriya *")} helperText={tr("Ro'yxatdan tanlang yoki yangisini yozing")} />} />
           <ToggleButtonGroup exclusive fullWidth size="small" value={f.currency} onChange={(_, v) => v && setF((s) => ({ ...s, currency: v }))}>
-            <ToggleButton value="UZS">So'mda sotib olinadi</ToggleButton>
-            <ToggleButton value="USD">💵 Dollarda sotib olinadi</ToggleButton>
+            <ToggleButton value="UZS">{tr("So'mda sotib olinadi")}</ToggleButton>
+            <ToggleButton value="USD">{tr("💵 Dollarda sotib olinadi")}</ToggleButton>
           </ToggleButtonGroup>
           <Stack direction="row" spacing={2}>
             {usd
-              ? <TextField label="Kelish narxi ($)" value={f.buyPriceUsd} onChange={setAuto('buyPriceUsd')} fullWidth inputMode="decimal"
-                  helperText={rate > 0 ? `= ${fmtMoney(costUzs)} (1$ = ${fmtMoney(rate)})` : 'Dollar kursi kiritilmagan'} error={!(rate > 0)} />
-              : <TextField label="Kelish narxi (so'm)" value={f.buyPrice} onChange={setAuto('buyPrice')} fullWidth inputMode="decimal" />}
-            <TextField label="Ustama %" value={f.markup} onChange={setAuto('markup')} sx={{ width: 120, flexShrink: 0 }} inputMode="decimal"
+              ? <TextField label={tr("Kelish narxi ($)")} value={f.buyPriceUsd} onChange={setAuto('buyPriceUsd')} fullWidth inputMode="decimal"
+                  helperText={rate > 0 ? `= ${fmtMoney(costUzs)} (1$ = ${fmtMoney(rate)})` : tr("Dollar kursi kiritilmagan")} error={!(rate > 0)} />
+              : <TextField label={tr("Kelish narxi (so'm)")} value={f.buyPrice} onChange={setAuto('buyPrice')} fullWidth inputMode="decimal" />}
+            <TextField label={tr("Ustama %")} value={f.markup} onChange={setAuto('markup')} sx={{ width: 120, flexShrink: 0 }} inputMode="decimal"
               helperText="ixtiyoriy" />
           </Stack>
-          <TextField label="Sotuv narxi (so'm)" value={f.sellPrice} onChange={set('sellPrice')} fullWidth inputMode="decimal"
-            helperText={suggested ? `Tannarx ${fmtMoney(costUzs)} + ${n(f.markup)}% = ${fmtMoney(suggested)}` : usd ? "Ustama % kiritsangiz — avtomatik hisoblanadi va kurs o'zgarganda yangilanadi" : ' '} />
+          <TextField label={tr("Sotuv narxi (so'm)")} value={f.sellPrice} onChange={set('sellPrice')} fullWidth inputMode="decimal"
+            helperText={suggested ? tr("Tannarx {0} + {1}% = {2}", fmtMoney(costUzs), n(f.markup), fmtMoney(suggested)) : usd ? tr("Ustama % kiritsangiz — avtomatik hisoblanadi va kurs o'zgarganda yangilanadi") : ' '} />
           {usd && <Typography variant="caption" color="text.secondary" sx={{ mt: '-8px !important' }}>
-            Tovarni dollarda olasiz, kassada so'mda sotiladi. Kirimda $ narxni kiritasiz — dastur kurs bo'yicha so'mga o'giradi.
+            {tr("Tovarni dollarda olasiz, kassada so'mda sotiladi. Kirimda $ narxni kiritasiz — dastur kurs bo'yicha so'mga o'giradi.")}
           </Typography>}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            {isNew && !noInitialQty && <TextField label="Boshlang'ich qoldiq" value={f.qty} onChange={set('qty')} fullWidth inputMode="decimal" />}
-            <TextField label="Minimal qoldiq" value={f.minQty} onChange={set('minQty')} fullWidth inputMode="decimal" />
-            <TextField label="Joyi (javon)" value={f.location} onChange={set('location')} fullWidth />
+            {isNew && !noInitialQty && <TextField label={tr("Boshlang'ich qoldiq")} value={f.qty} onChange={set('qty')} fullWidth inputMode="decimal" />}
+            <TextField label={tr("Minimal qoldiq")} value={f.minQty} onChange={set('minQty')} fullWidth inputMode="decimal" />
+            <TextField label={tr("Joyi (javon)")} value={f.location} onChange={set('location')} fullWidth />
           </Stack>
           {err && <Alert severity="error">{err}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Bekor qilish</Button>
-        <Button variant="contained" onClick={save} disabled={busy}>Saqlash</Button>
+        <Button onClick={onClose}>{tr("Bekor qilish")}</Button>
+        <Button variant="contained" onClick={save} disabled={busy}>{tr("Saqlash")}</Button>
       </DialogActions>
       <CameraScanner open={camera} onClose={() => setCamera(false)} onScan={(code) => setF((s) => ({ ...s, barcode: code }))} />
     </Dialog>

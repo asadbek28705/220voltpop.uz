@@ -24,6 +24,7 @@ import PageHeader from './PageHeader'
 import StatCard from './StatCard'
 import ChartCard from './ChartCard'
 import { PIE_COLORS, useChartStyle } from './charts'
+import { t as tr } from '../i18n'
 
 export default function Reports({ wh }: { wh: Warehouse }) {
   const { movements, products, expenses } = wh.data
@@ -69,9 +70,9 @@ export default function Reports({ wh }: { wh: Warehouse }) {
       const day = dayMap.get(k); if (day) day.Savdo += sum
       const mon = monthMap.get(k.slice(0, 7)); if (mon) { mon.Savdo += sum; mon.Foyda += pf }
       const prod = products.find((p) => p.id === m.productId)
-      const cat = prod?.category ?? 'Boshqa'
+      const cat = prod?.category ?? tr("Boshqa")
       catMap.set(cat, (catMap.get(cat) ?? 0) + sum)
-      const pay = paymentLabel(m.payment) || 'Naqd'
+      const pay = paymentLabel(m.payment) || tr("Naqd")
       payMap.set(pay, (payMap.get(pay) ?? 0) + sum)
       const pr = prodMap.get(m.productId) ?? { name: m.productName, qty: 0, unit: prod?.unit ?? '', sum: 0, profit: 0 }
       pr.qty += m.qty; pr.sum += sum; pr.profit += pf
@@ -91,34 +92,34 @@ export default function Reports({ wh }: { wh: Warehouse }) {
 
   const exportCsv = () => {
     const rows: (string | number)[][] = [
-      ['Hisobot', `${db.from} — ${db.to}`], [],
-      ['Jami savdo', r.revenue], ['Savdodan foyda', r.profit], ['Xarajatlar', r.spent], ['Sof foyda', r.net], ['Savdolar soni', r.count], ['Jami kirim', r.purchased], [],
-      ['Tovar', 'Sotilgan miqdor', 'Birlik', 'Summa', 'Foyda'],
-      ...r.top.map((t) => [t.name, t.qty, t.unit, t.sum, t.profit]),
+      [tr("Hisobot"), `${db.from} — ${db.to}`], [],
+      [tr("Jami savdo"), r.revenue], [tr("Savdodan foyda"), r.profit], [tr("Xarajatlar"), r.spent], [tr("Sof foyda"), r.net], [tr("Savdolar soni"), r.count], [tr("Jami kirim"), r.purchased], [],
+      [tr("Tovar"), tr("Sotilgan miqdor"), tr("Birlik"), tr("Summa"), tr("Foyda")],
+      ...r.top.map((t) => [t.name, t.qty, tr(t.unit), t.sum, t.profit]),
     ]
     download(`hisobot-${db.from}_${db.to}.csv`, toCsv(rows), 'text/csv;charset=utf-8')
   }
 
   return (
     <>
-      <PageHeader title="Hisobotlar" subtitle={!to && from === currentPeriod(wh.data.settings).from ? `Joriy hisob davri: ${fmtDay(from)} dan` : `${fmtDay(db.from + 'T12:00')} — ${fmtDay(db.to + 'T12:00')}`} actions={<>
+      <PageHeader title={tr("Hisobotlar")} subtitle={!to && from === currentPeriod(wh.data.settings).from ? tr("Joriy hisob davri: {0} dan", fmtDay(from)) : `${fmtDay(db.from + 'T12:00')} — ${fmtDay(db.to + 'T12:00')}`} actions={<>
         <PeriodPicker from={from} to={to} settings={wh.data.settings} onChange={(f, t) => { setFrom(f); setTo(t) }} />
-        <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>Excel</Button>
-        <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => window.print()}>Chop etish</Button>
+        <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv}>{tr("Excel")}</Button>
+        <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => window.print()}>{tr("Chop etish")}</Button>
       </>} />
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<CartIcon />} title="Jami savdo" value={fmtMoney(r.revenue)} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<TrendIcon />} title="Savdodan foyda" value={fmtMoney(r.profit)} valueColor={r.profit >= 0 ? 'primary.main' : 'error.main'} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<MoneyOffIcon />} title="Xarajatlar" value={fmtMoney(r.spent)} color="#E5533D" /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<BalanceIcon />} title="Sof foyda" value={fmtMoney(r.net)} color={r.net >= 0 ? '#2E9E5B' : '#E5533D'} valueColor={r.net >= 0 ? 'primary.main' : 'error.main'} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<WalletIcon />} title="Savdolar soni" value={String(r.count)} color="#C9A227" /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<InboxIcon />} title="Jami kirim (tovar)" value={fmtMoney(r.purchased)} color="#3B82F6" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<CartIcon />} title={tr("Jami savdo")} value={fmtMoney(r.revenue)} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<TrendIcon />} title={tr("Savdodan foyda")} value={fmtMoney(r.profit)} valueColor={r.profit >= 0 ? 'primary.main' : 'error.main'} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<MoneyOffIcon />} title={tr("Xarajatlar")} value={fmtMoney(r.spent)} color="#E5533D" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<BalanceIcon />} title={tr("Sof foyda")} value={fmtMoney(r.net)} color={r.net >= 0 ? '#2E9E5B' : '#E5533D'} valueColor={r.net >= 0 ? 'primary.main' : 'error.main'} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<WalletIcon />} title={tr("Savdolar soni")} value={String(r.count)} color="#C9A227" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<InboxIcon />} title={tr("Jami kirim (tovar)")} value={fmtMoney(r.purchased)} color="#3B82F6" /></Grid>
       </Grid>
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid size={{ xs: 12, lg: 8 }}>
-          <ChartCard title="Oylik savdo">
+          <ChartCard title={tr("Oylik savdo")}>
             <ResponsiveContainer>
               <BarChart data={r.monthly} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid {...cs.grid} />
@@ -126,17 +127,17 @@ export default function Reports({ wh }: { wh: Warehouse }) {
                 <YAxis {...cs.yAxis} />
                 <Tooltip {...cs.tooltip} />
                 <Legend />
-                <Bar dataKey="Savdo" fill={GREEN} radius={[6, 6, 0, 0]} maxBarSize={80} activeBar={{ fill: YELLOW }} />
-                <Bar dataKey="Foyda" fill="#9AD3B0" radius={[6, 6, 0, 0]} maxBarSize={80} activeBar={{ fill: '#FCE38A' }} />
-                <Bar dataKey="Xarajat" fill="#F2A08F" radius={[6, 6, 0, 0]} maxBarSize={80} activeBar={{ fill: '#FCE38A' }} />
+                <Bar dataKey="Savdo" name={tr("Savdo")} fill={GREEN} radius={[6, 6, 0, 0]} maxBarSize={80} activeBar={{ fill: YELLOW }} />
+                <Bar dataKey="Foyda" name={tr("Foyda")} fill="#9AD3B0" radius={[6, 6, 0, 0]} maxBarSize={80} activeBar={{ fill: '#FCE38A' }} />
+                <Bar dataKey="Xarajat" name={tr("Xarajat")} fill="#F2A08F" radius={[6, 6, 0, 0]} maxBarSize={80} activeBar={{ fill: '#FCE38A' }} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
         </Grid>
         <Grid size={{ xs: 12, lg: 4 }}>
-          <ChartCard title="To'lov usullari">
+          <ChartCard title={tr("To'lov usullari")}>
             {r.payments.length === 0 ? (
-              <Typography color="text.secondary">Ma'lumot yo'q</Typography>
+              <Typography color="text.secondary">{tr("Ma'lumot yo'q")}</Typography>
             ) : (
               <ResponsiveContainer>
                 <PieChart>
@@ -154,23 +155,23 @@ export default function Reports({ wh }: { wh: Warehouse }) {
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12 }}>
-          <ChartCard title="Kunlik savdo">
+          <ChartCard title={tr("Kunlik savdo")}>
             <ResponsiveContainer>
               <LineChart data={r.daily} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid {...cs.grid} />
                 <XAxis dataKey="name" {...cs.axis} minTickGap={20} />
                 <YAxis {...cs.yAxis} />
                 <Tooltip {...cs.tooltip} cursor={{ stroke: YELLOW, strokeWidth: 2 }} />
-                <Line type="monotone" dataKey="Savdo" stroke={GREEN} strokeWidth={2.5} dot={false}
+                <Line type="monotone" dataKey="Savdo" name={tr("Savdo")} stroke={GREEN} strokeWidth={2.5} dot={false}
                   activeDot={{ r: 6, fill: YELLOW, stroke: '#fff', strokeWidth: 2 }} />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
         </Grid>
         <Grid size={{ xs: 12, lg: 4 }}>
-          <ChartCard height={360} title="Kategoriyalar bo'yicha savdo">
+          <ChartCard height={360} title={tr("Kategoriyalar bo'yicha savdo")}>
             {r.categories.length === 0 ? (
-              <Typography color="text.secondary">Ma'lumot yo'q</Typography>
+              <Typography color="text.secondary">{tr("Ma'lumot yo'q")}</Typography>
             ) : (
               <ResponsiveContainer>
                 <PieChart>
@@ -186,15 +187,15 @@ export default function Reports({ wh }: { wh: Warehouse }) {
         </Grid>
         <Grid size={{ xs: 12, lg: 8 }}>
           <Card sx={{ p: 2.5, height: '100%' }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>Eng ko'p sotilgan tovarlar</Typography>
+            <Typography variant="h6" sx={{ mb: 2 }}>{tr("Eng ko'p sotilgan tovarlar")}</Typography>
             <Table size="small">
               <TableHead>
                 <TableRow>
                   <TableCell>#</TableCell>
-                  <TableCell>Tovar</TableCell>
-                  <TableCell align="right">Sotilgan</TableCell>
-                  <TableCell align="right">Summa</TableCell>
-                  <TableCell align="right">Foyda</TableCell>
+                  <TableCell>{tr("Tovar")}</TableCell>
+                  <TableCell align="right">{tr("Sotilgan")}</TableCell>
+                  <TableCell align="right">{tr("Summa")}</TableCell>
+                  <TableCell align="right">{tr("Foyda")}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -202,13 +203,13 @@ export default function Reports({ wh }: { wh: Warehouse }) {
                   <TableRow key={t.name} hover>
                     <TableCell>{i + 1}</TableCell>
                     <TableCell sx={{ fontWeight: 500 }}>{t.name}</TableCell>
-                    <TableCell align="right">{fmtNum(t.qty)} {t.unit}</TableCell>
+                    <TableCell align="right">{fmtNum(t.qty)} {tr(t.unit)}</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 600 }}>{fmtMoney(t.sum)}</TableCell>
                     <TableCell align="right" sx={{ color: 'primary.main' }}>{fmtMoney(t.profit)}</TableCell>
                   </TableRow>
                 ))}
                 {r.top.length === 0 && (
-                  <TableRow><TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>Tanlangan davrda savdo yo'q</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>{tr("Tanlangan davrda savdo yo'q")}</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>

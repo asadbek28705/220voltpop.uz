@@ -24,6 +24,7 @@ import PageHeader from './PageHeader'
 import StatCard from './StatCard'
 import ChartCard from './ChartCard'
 import { useChartStyle } from './charts'
+import { t as tr } from '../i18n'
 
 interface Props { wh: Warehouse; onMovement: (t: MovementType, id?: string) => void; navigate: (page: string) => void; onExpense: () => void }
 
@@ -67,42 +68,42 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
 
   return (
     <>
-      <PageHeader title="Bosh sahifa" subtitle="Bugungi holat" actions={<>
-        <Button variant="outlined" startIcon={<MoneyOffIcon />} onClick={onExpense}>Xarajat</Button>
-        <Button variant="outlined" startIcon={<AddIcon />} onClick={() => onMovement('in')}>Kirim</Button>
-        <Button variant="contained" startIcon={<CartIcon />} onClick={() => onMovement('out')}>Yangi savdo</Button>
+      <PageHeader title={tr("Bosh sahifa")} subtitle={tr("Bugungi holat")} actions={<>
+        <Button variant="outlined" startIcon={<MoneyOffIcon />} onClick={onExpense}>{tr("Xarajat")}</Button>
+        <Button variant="outlined" startIcon={<AddIcon />} onClick={() => onMovement('in')}>{tr("Kirim")}</Button>
+        <Button variant="contained" startIcon={<CartIcon />} onClick={() => onMovement('out')}>{tr("Yangi savdo")}</Button>
       </>} />
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<CartIcon />} title="Bugungi savdo" value={fmtMoney(todayRevenue)} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title="Bugungi sof foyda" value={fmtMoney(todayProfit - todayExpenses)} valueColor={todayProfit - todayExpenses >= 0 ? 'primary.main' : 'error.main'} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<WalletIcon />} title="Ombor qiymati (tannarx)" value={fmtMoney(costValue)} color="#3B82F6" /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<MoneyOffIcon />} title="Bugungi xarajat" value={fmtMoney(todayExpenses)} color="#E5533D" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<CartIcon />} title={tr("Bugungi savdo")} value={fmtMoney(todayRevenue)} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title={tr("Bugungi sof foyda")} value={fmtMoney(todayProfit - todayExpenses)} valueColor={todayProfit - todayExpenses >= 0 ? 'primary.main' : 'error.main'} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<WalletIcon />} title={tr("Ombor qiymati (tannarx)")} value={fmtMoney(costValue)} color="#3B82F6" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<MoneyOffIcon />} title={tr("Bugungi xarajat")} value={fmtMoney(todayExpenses)} color="#E5533D" /></Grid>
       </Grid>
 
       <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: 1 }}>
-        <Typography variant="h6">Joriy davr</Typography>
-        <Typography variant="body2" color="text.secondary">{fmtDay(q.from)} dan</Typography>
+        <Typography variant="h6">{tr("Joriy davr")}</Typography>
+        <Typography variant="body2" color="text.secondary">{tr('{0} dan', fmtDay(q.from))}</Typography>
         <Box sx={{ flexGrow: 1 }} />
         {totalDebt > 0 && <Chip icon={<DebtIcon />} color="error" variant="outlined" clickable onClick={() => navigate('debtors')}
-          label={`Mijozlar qarzi: ${fmtMoney(totalDebt)} (${debtors.length})`} sx={{ fontWeight: 600 }} />}
-        <Button size="small" onClick={() => navigate('reports')}>Batafsil</Button>
-        {admin && <Button size="small" color="warning" variant="outlined" startIcon={<RestartIcon />} onClick={() => setClosing(true)}>Davrni yopish</Button>}
+          label={tr("Mijozlar qarzi: {0} ({1})", fmtMoney(totalDebt), debtors.length)} sx={{ fontWeight: 600 }} />}
+        <Button size="small" onClick={() => navigate('reports')}>{tr("Batafsil")}</Button>
+        {admin && <Button size="small" color="warning" variant="outlined" startIcon={<RestartIcon />} onClick={() => setClosing(true)}>{tr("Davrni yopish")}</Button>}
       </Stack>
       {closing && <ClosePeriodDialog wh={wh} from={q.from} totals={qs} onClose={() => setClosing(false)} onDone={setToast} />}
       <Snackbar open={!!toast} autoHideDuration={5000} onClose={() => setToast('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         <Alert severity="success" variant="filled" onClose={() => setToast('')}>{toast}</Alert>
       </Snackbar>
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<CartIcon />} title="Davr savdosi" value={fmtMoney(qs.revenue)} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title="Davr foydasi" value={fmtMoney(qs.profit)} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<MoneyOffIcon />} title="Davr xarajati" value={fmtMoney(qs.spent)} color="#E5533D" /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<BalanceIcon />} title="Davr sof foydasi" value={fmtMoney(qs.net)} color={qs.net >= 0 ? '#2E9E5B' : '#E5533D'} valueColor={qs.net >= 0 ? 'primary.main' : 'error.main'} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<CartIcon />} title={tr("Davr savdosi")} value={fmtMoney(qs.revenue)} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<TrendIcon />} title={tr("Davr foydasi")} value={fmtMoney(qs.profit)} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<MoneyOffIcon />} title={tr("Davr xarajati")} value={fmtMoney(qs.spent)} color="#E5533D" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<BalanceIcon />} title={tr("Davr sof foydasi")} value={fmtMoney(qs.net)} color={qs.net >= 0 ? '#2E9E5B' : '#E5533D'} valueColor={qs.net >= 0 ? 'primary.main' : 'error.main'} /></Grid>
       </Grid>
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, lg: 8 }}>
-          <ChartCard title="Oxirgi 14 kun savdosi" height={280}>
+          <ChartCard title={tr("Oxirgi 14 kun savdosi")} height={280}>
             <ResponsiveContainer>
               <AreaChart data={last14} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                 <defs>
@@ -115,7 +116,7 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
                 <XAxis dataKey="name" {...cs.axis} />
                 <YAxis {...cs.yAxis} />
                 <Tooltip {...cs.tooltip} cursor={{ stroke: YELLOW, strokeWidth: 2 }} />
-                <Area type="monotone" dataKey="Savdo" stroke={GREEN} strokeWidth={2.5} fill="url(#g)"
+                <Area type="monotone" dataKey="Savdo" name={tr("Savdo")} stroke={GREEN} strokeWidth={2.5} fill="url(#g)"
                   activeDot={{ r: 6, fill: YELLOW, stroke: '#fff', strokeWidth: 2 }} />
               </AreaChart>
             </ResponsiveContainer>
@@ -125,18 +126,18 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
           <Card sx={{ p: 2.5, height: '100%' }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
               <WarningIcon sx={{ color: YELLOW }} />
-              <Typography variant="h6" sx={{ flexGrow: 1 }}>Kam qolganlar ({low.length})</Typography>
-              <Button size="small" onClick={() => navigate('products')}>Hammasi</Button>
+              <Typography variant="h6" sx={{ flexGrow: 1 }}>{tr("Kam qolganlar (")}{low.length})</Typography>
+              <Button size="small" onClick={() => navigate('products')}>{tr("Hammasi")}</Button>
             </Stack>
             {low.length === 0 ? (
-              <Typography color="text.secondary">Hamma tovar yetarli miqdorda</Typography>
+              <Typography color="text.secondary">{tr("Hamma tovar yetarli miqdorda")}</Typography>
             ) : (
               <List dense disablePadding>
                 {low.slice(0, 7).map((p) => (
                   <ListItem key={p.id} disableGutters
                     secondaryAction={<Chip size="small" clickable onClick={() => onMovement('in', p.id)} color={p.qty === 0 ? 'error' : 'warning'}
-                      variant="outlined" label={`${fmtNum(p.qty)} ${p.unit}`} />}>
-                    <ListItemText primary={p.name} secondary={`Minimal: ${fmtNum(p.minQty)} ${p.unit}`}
+                      variant="outlined" label={`${fmtNum(p.qty)} ${tr(p.unit)}`} />}>
+                    <ListItemText primary={p.name} secondary={tr("Minimal: {0} {1}", fmtNum(p.minQty), tr(p.unit))}
                       slotProps={{ primary: { noWrap: true, sx: { pr: 10 } } }} />
                   </ListItem>
                 ))}
@@ -147,17 +148,17 @@ export default function Dashboard({ wh, onMovement, navigate, onExpense }: Props
         <Grid size={{ xs: 12 }}>
           <Card sx={{ p: 2.5 }}>
             <Stack direction="row" alignItems="center" sx={{ mb: 1 }}>
-              <Typography variant="h6" sx={{ flexGrow: 1 }}>Oxirgi harakatlar</Typography>
-              <Button size="small" onClick={() => navigate('history')}>Hammasi</Button>
+              <Typography variant="h6" sx={{ flexGrow: 1 }}>{tr("Oxirgi harakatlar")}</Typography>
+              <Button size="small" onClick={() => navigate('history')}>{tr("Hammasi")}</Button>
             </Stack>
             {movements.length === 0 ? (
-              <Typography color="text.secondary">Hali kirim yoki chiqim yo'q</Typography>
+              <Typography color="text.secondary">{tr("Hali kirim yoki chiqim yo'q")}</Typography>
             ) : (
               <List dense disablePadding>
                 {movements.slice(0, 8).map((m) => (
                   <ListItem key={m.id} disableGutters sx={{ borderRadius: 2, px: 1, '&:hover': { bgcolor: 'action.hover' } }}>
                     <Box sx={{ width: 120, flexShrink: 0 }}>
-                      <Chip size="small" variant="outlined" label={m.type === 'in' ? 'Kirim' : m.type === 'out' ? 'Savdo' : 'Inventarizatsiya'}
+                      <Chip size="small" variant="outlined" label={m.type === 'in' ? tr("Kirim") : m.type === 'out' ? tr("Savdo") : tr("Inventarizatsiya")}
                         color={m.type === 'in' ? 'info' : m.type === 'out' ? 'success' : 'default'} />
                     </Box>
                     <ListItemText primary={`${m.productName} — ${m.type === 'adjust' && m.qty > 0 ? '+' : ''}${fmtNum(m.qty)}`}

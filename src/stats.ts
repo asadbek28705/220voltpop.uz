@@ -1,3 +1,4 @@
+import { t as tr } from './i18n'
 import type { Expense, Movement, Product, ShopSettings } from './types'
 
 const pad = (n: number) => n.toString().padStart(2, '0')
@@ -35,16 +36,16 @@ export const unitCost = (m: Movement, products: Product[]) =>
 
 export const profitOf = (m: Movement, products: Product[]) => m.qty * (m.price - unitCost(m, products))
 
-export const MONTHS = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek']
+export const MONTHS = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'].map((m) => tr(m))
 
 export const shortMoney = (n: number) =>
-  n >= 1e9 ? (n / 1e9).toFixed(1).replace('.0', '') + ' mlrd'
-    : n >= 1e6 ? (n / 1e6).toFixed(1).replace('.0', '') + ' mln'
-      : n >= 1e3 ? Math.round(n / 1e3) + ' ming' : String(Math.round(n))
+  n >= 1e9 ? (n / 1e9).toFixed(1).replace('.0', '') + ' ' + tr('mlrd')
+    : n >= 1e6 ? (n / 1e6).toFixed(1).replace('.0', '') + ' ' + tr('mln')
+      : n >= 1e3 ? Math.round(n / 1e3) + ' ' + tr('ming') : String(Math.round(n))
 
 // ---------- Chorak (3 oy): hisoblagichlar har chorak 0 dan boshlanadi ----------
 const QN = ['I', 'II', 'III', 'IV']
-const QMONTHS = ['Yanvar–Mart', 'Aprel–Iyun', 'Iyul–Sentabr', 'Oktabr–Dekabr']
+const QMONTHS = ['Yanvar–Mart', 'Aprel–Iyun', 'Iyul–Sentabr', 'Oktabr–Dekabr'].map((m) => tr(m))
 
 export interface Period { from: string; to: string; label: string; short: string }
 
@@ -56,14 +57,14 @@ export function quarter(offset = 0, base = new Date()): Period {
   const qi = Math.floor(start.getMonth() / 3)
   return {
     from: dayKey(start), to: dayKey(end),
-    label: `${start.getFullYear()} — ${QN[qi]} chorak (${QMONTHS[qi]})`,
-    short: `${QN[qi]} chorak ${start.getFullYear()}`,
+    label: tr('{0} — {1} chorak ({2})', start.getFullYear(), QN[qi], QMONTHS[qi]),
+    short: tr('{0} chorak {1}', QN[qi], start.getFullYear()),
   }
 }
 
 export function yearPeriod(offset = 0): Period {
   const y = new Date().getFullYear() + offset
-  return { from: `${y}-01-01`, to: `${y}-12-31`, label: `${y} yil`, short: `${y} yil` }
+  return { from: `${y}-01-01`, to: `${y}-12-31`, label: tr('{0} yil', y), short: tr('{0} yil', y) }
 }
 
 /** Davr chegaralarini kunlarga aylantirish (grafiklar va fayl nomi uchun). Ochiq oxir — bugun. */

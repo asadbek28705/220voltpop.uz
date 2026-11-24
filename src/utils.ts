@@ -1,7 +1,9 @@
+import { t as tr } from './i18n'
+
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 
 export const fmtMoney = (n: number) =>
-  Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + " so'm"
+  Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ' + tr("so'm")
 
 export const fmtUsd = (n: number) => '$' + (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })
 

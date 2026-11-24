@@ -4,6 +4,8 @@ import WarehouseIcon from '@mui/icons-material/WarehouseOutlined'
 import { api, attempt } from '../api'
 import type { Me } from '../auth'
 import { YELLOW } from '../theme'
+import { t as tr } from '../i18n'
+import LangSwitcher from './LangSwitcher'
 
 /** Login sahifasi. Hali foydalanuvchi yo'q bo'lsa — birinchi adminni yaratish (faqat server kompyuterida). */
 export default function Login({ me, onDone }: { me: Me; onDone: () => void }) {
@@ -18,7 +20,7 @@ export default function Login({ me, onDone }: { me: Me; onDone: () => void }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (setup && password !== password2) return setError('Parollar bir xil emas')
+    if (setup && password !== password2) return setError(tr("Parollar bir xil emas"))
     setBusy(true)
     const r = await attempt(() => setup
       ? api('POST', '/setup', { name: name.trim(), login: login.trim(), password })
@@ -30,35 +32,36 @@ export default function Login({ me, onDone }: { me: Me; onDone: () => void }) {
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', p: 2, bgcolor: 'background.default' }}>
-      <Card sx={{ p: { xs: 3, sm: 4 }, width: '100%', maxWidth: 400 }}>
+      <Card sx={{ p: { xs: 3, sm: 4 }, width: '100%', maxWidth: 400, position: 'relative' }}>
+        <Box sx={{ position: 'absolute', top: 12, right: 12 }}><LangSwitcher /></Box>
         <Stack alignItems="center" spacing={0.5} sx={{ mb: 3 }}>
           <WarehouseIcon sx={{ fontSize: 44, color: YELLOW }} />
           <Typography sx={{ fontWeight: 800, letterSpacing: 2, color: '#C9A227', fontSize: 22 }}>OMBOR</Typography>
-          <Typography variant="body2" color="text.secondary">Qurilish & Santexnika</Typography>
+          <Typography variant="body2" color="text.secondary">{tr("Qurilish & Santexnika")}</Typography>
         </Stack>
 
         {setup && !me.canSetup ? (
           <Alert severity="info">
-            Dastur hali sozlanmagan. Administrator serverda quyidagi buyruq bilan birinchi foydalanuvchini yaratishi kerak:
-            <Box component="code" sx={{ display: 'block', mt: 1, fontSize: 13 }}>npm run user -- add admin "Ism" admin</Box>
+            {tr("Dastur hali sozlanmagan. Administrator serverda quyidagi buyruq bilan birinchi foydalanuvchini yaratishi kerak:")}
+            <Box component="code" sx={{ display: 'block', mt: 1, fontSize: 13 }}>{tr("npm run user -- add admin \"Ism\" admin")}</Box>
           </Alert>
         ) : (
           <form onSubmit={submit}>
             <Stack spacing={2}>
               {setup && (
                 <>
-                  <Alert severity="info">Birinchi kirish: do'kon egasi uchun hisob yarating.</Alert>
-                  <TextField label="Ismingiz" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+                  <Alert severity="info">{tr("Birinchi kirish: do'kon egasi uchun hisob yarating.")}</Alert>
+                  <TextField label={tr("Ismingiz")} value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
                 </>
               )}
-              <TextField label="Login" value={login} onChange={(e) => setLogin(e.target.value)} required autoFocus={!setup}
+              <TextField label={tr("Login")} value={login} onChange={(e) => setLogin(e.target.value)} required autoFocus={!setup}
                 autoComplete="username" autoCapitalize="none" slotProps={{ htmlInput: { autoCorrect: 'off', spellCheck: false } }} />
-              <TextField label="Parol" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
+              <TextField label={tr("Parol")} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
                 autoComplete={setup ? 'new-password' : 'current-password'} />
-              {setup && <TextField label="Parolni takrorlang" type="password" value={password2} onChange={(e) => setPassword2(e.target.value)} required autoComplete="new-password" />}
+              {setup && <TextField label={tr("Parolni takrorlang")} type="password" value={password2} onChange={(e) => setPassword2(e.target.value)} required autoComplete="new-password" />}
               {error && <Alert severity="error">{error}</Alert>}
               <Button type="submit" variant="contained" size="large" disabled={busy} sx={{ py: 1.4 }}>
-                {setup ? 'Yaratish va kirish' : 'Kirish'}
+                {setup ? tr("Yaratish va kirish") : tr("Kirish")}
               </Button>
             </Stack>
           </form>
