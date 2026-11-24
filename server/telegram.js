@@ -113,7 +113,8 @@ export class Telegram {
     const f = lines[0]
     const total = lines.reduce((s, m) => s + m.qty * m.price, 0)
     const unit = (id) => this.store.db.prepare('SELECT unit FROM products WHERE id = ?').get(id)?.unit ?? ''
-    let t = `🛒 <b>Savdo — chek №${esc(saleId)}</b>\n`
+    // Kim sotgani sarlavhaning o'zida ko'rinadi
+    let t = `🛒 <b>Savdo — chek №${esc(saleId)}</b>\n🧑‍💼 Sotuvchi: <b>${esc(f.seller || "noma'lum")}</b>\n\n`
     t += lines.map((m, i) => `${i + 1}. ${esc(m.productName)} — ${qtyFmt(m.qty)} ${esc(unit(m.productId))} × ${money(m.price)}`).join('\n')
     t += `\n\n💰 <b>Jami: ${money(total)}</b>\n💳 To'lov: ${PAYMENT[f.payment] ?? esc(f.payment)}`
     if (f.counterparty) t += `\n👤 Mijoz: ${esc(f.counterparty)}`
@@ -123,7 +124,6 @@ export class Telegram {
       const c = this.store.customers().find((x) => x.id === f.customerId)
       if (c && c.debt > 0) t += `\n📒 Umumiy qarzi: <b>${money(c.debt)}</b>`
     }
-    if (f.seller) t += `\n🧑‍💼 Sotuvchi: ${esc(f.seller)}`
     t += `\n🕒 ${hm(f.date)}`
     this.fire(t)
     this.lowStock(lines.map((m) => m.productId))
@@ -136,7 +136,7 @@ export class Telegram {
     const f = lines[0]
     const total = lines.reduce((s, m) => s + m.qty * m.price, 0)
     const unit = (id) => this.store.db.prepare('SELECT unit FROM products WHERE id = ?').get(id)?.unit ?? ''
-    let t = `↩️ <b>Tovar qaytarildi — №${esc(returnId)}</b> (chek №${esc(f.saleId)})\n`
+    let t = `↩️ <b>Tovar qaytarildi — №${esc(returnId)}</b> (chek №${esc(f.saleId)})\n🧑‍💼 Sotuvchi: <b>${esc(f.seller || "noma'lum")}</b>\n\n`
     t += lines.map((m, i) => `${i + 1}. ${esc(m.productName)} — ${qtyFmt(m.qty)} ${esc(unit(m.productId))} × ${money(m.price)}`).join('\n')
     t += `\n\n📦 Tovar omborga qaytdi`
     t += f.payment === 'nasiya'
@@ -144,7 +144,6 @@ export class Telegram {
       : `\n💸 Pul qaytarildi: <b>${money(total)}</b> · ${PAYMENT[f.payment] ?? esc(f.payment)}`
     if (f.counterparty) t += `\n👤 Mijoz: ${esc(f.counterparty)}`
     if (f.note) t += `\n📝 Sabab: ${esc(f.note)}`
-    if (f.seller) t += `\n🧑‍💼 ${esc(f.seller)}`
     t += `\n🕒 ${hm(f.date)}`
     this.fire(t)
   }
@@ -196,11 +195,11 @@ export class Telegram {
   onCustomerTx(tx, c) {
     if (!this.ready || !tx) return
     let t = tx.type === 'pay'
-      ? `💵 <b>Qarz to'landi</b>\n👤 ${esc(c.name)}\n💰 <b>${money(tx.amount)}</b> · ${PAYMENT[tx.payment] ?? esc(tx.payment)}`
+      ? `💵 <b>Qarz to'landi</b>${tx.seller ? `\n🧑‍💼 Qabul qildi: <b>${esc(tx.seller)}</b>` : ''}\n👤 ${esc(c.name)}\n💰 <b>${money(tx.amount)}</b> · ${PAYMENT[tx.payment] ?? esc(tx.payment)}`
       : `📒 <b>Qarz yozildi</b>\n👤 ${esc(c.name)}\n💰 <b>${money(tx.amount)}</b>`
     if (tx.note) t += `\n📝 ${esc(tx.note)}`
     t += c.debt > 0 ? `\n📒 Qolgan qarz: <b>${money(c.debt)}</b>` : c.debt < 0 ? `\n✅ Oldindan to'lov (haqdor): ${money(-c.debt)}` : '\n✅ Qarz to\'liq yopildi'
-    if (tx.seller) t += `\n🧑‍💼 ${esc(tx.seller)}`
+    if (tx.seller && tx.type !== 'pay') t += `\n🧑‍💼 ${esc(tx.seller)}`
     this.fire(t)
   }
 

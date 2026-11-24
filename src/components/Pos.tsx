@@ -15,6 +15,10 @@ import { MAX_TABS } from '../hooks/useSaleTabs'
 import CloseIcon from '@mui/icons-material/Close'
 import ReturnIcon from '@mui/icons-material/AssignmentReturnOutlined'
 import ReturnDialog from './ReturnDialog'
+import DebtPayDialog from './DebtPayDialog'
+import MyReceiptsDialog from './MyReceiptsDialog'
+import ReceiptsIcon from '@mui/icons-material/ReceiptLongOutlined'
+import PayIcon from '@mui/icons-material/PaymentsOutlined'
 import type { Customer, Payment, Product } from '../types'
 import { SALE_PAYMENTS } from '../types'
 import PersonIcon from '@mui/icons-material/PersonOutline'
@@ -45,6 +49,8 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
   const setPayment = (v: Payment) => patch({ payment: v })
   const setPaidNow = (v: string) => patch({ paidNow: v })
   const [returning, setReturning] = useState(false)
+  const [debtPay, setDebtPay] = useState(false)
+  const [myReceipts, setMyReceipts] = useState(false)
   const [returnReceipt, setReturnReceipt] = useState<string | null>(null)
   const theme = useTheme()
   const mobile = useMediaQuery(theme.breakpoints.down('md'))
@@ -279,9 +285,11 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
 
   return (
     <Box sx={{ pb: mobile ? 10 : 0 }}>
-      <PageHeader title={tr("Kassa")} subtitle={tr("Shtrix-kodni skaner qiling — tovar savatga tushadi")} actions={
+      <PageHeader title={tr("Kassa")} subtitle={tr("Shtrix-kodni skaner qiling — tovar savatga tushadi")} actions={<>
+        <Button variant="outlined" startIcon={<ReceiptsIcon />} onClick={() => setMyReceipts(true)}>{tr("Bugungi cheklarim")}</Button>
+        <Button variant="outlined" startIcon={<PayIcon />} onClick={() => setDebtPay(true)}>{tr("Qarz to'lovi")}</Button>
         <Button color="warning" variant="outlined" startIcon={<ReturnIcon />} onClick={() => setReturning(true)}>{tr("Tovar qaytarish")}</Button>
-      } />
+      </>} />
       {/* Xaridor oynalari: bir xaridor bilan ishlayotganda ikkinchisi kelsa — yangi oyna */}
       <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1.5, overflowX: 'auto', pb: 0.5 }} className="no-print">
         {sale.tabs.map((x) => {
@@ -347,6 +355,8 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
       {newCustomer != null && <CustomerDialog wh={wh} initialName={newCustomer} onClose={() => setNewCustomer(null)}
         onSaved={(c) => { onCustomerChange(c.id); setCustomer('') }} />}
       {receipt && <ReceiptDialog wh={wh} saleId={receipt} justSold onClose={() => setReceipt(null)} />}
+      {debtPay && <DebtPayDialog wh={wh} onClose={() => setDebtPay(false)} />}
+      {myReceipts && <MyReceiptsDialog wh={wh} onClose={() => setMyReceipts(false)} />}
       {returning && <ReturnDialog wh={wh} onClose={() => setReturning(false)} onDone={(id) => { setReturning(false); setReturnReceipt(id) }} />}
       {returnReceipt && <ReceiptDialog wh={wh} returnId={returnReceipt} justReturned onClose={() => setReturnReceipt(null)} />}
     </Box>
