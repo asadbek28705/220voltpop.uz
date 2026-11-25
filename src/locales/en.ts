@@ -696,5 +696,6 @@ const dict: Record<string, string> = {
   "\"{0}\": bu narxda sotib bo'lmaydi — narx juda past. Administratorga murojaat qiling": "“{0}”: cannot sell at this price — too low. Contact the administrator",
   "Yangilash": "Refresh",
   "Dasturning yangi versiyasi chiqdi": "A new version is available",
+  "Cheklar soni": "Receipts",
 }
 export default dict

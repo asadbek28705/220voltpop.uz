@@ -81,7 +81,9 @@ export default function Reports({ wh }: { wh: Warehouse }) {
     for (const e of exps) { const mon = monthMap.get(dayKey(e.date).slice(0, 7)); if (mon) mon.Xarajat += e.amount }
     for (const mon of monthMap.values()) mon['Sof foyda'] = mon.Foyda - mon.Xarajat
     return {
-      revenue, profit, purchased, spent, net: profit - spent, count: sales.length,
+      revenue, profit, purchased, spent, net: profit - spent,
+      // Cheklar soni — qatorlar emas, alohida cheklar (qaytarishlar hisobga olinmaydi)
+      count: new Set(sales.filter((m) => m.type === 'out').map((m) => m.saleId)).size,
       monthly: [...monthMap.values()],
       daily: [...dayMap.values()],
       categories: [...catMap.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
@@ -93,7 +95,7 @@ export default function Reports({ wh }: { wh: Warehouse }) {
   const exportCsv = () => {
     const rows: (string | number)[][] = [
       [tr("Hisobot"), `${db.from} — ${db.to}`], [],
-      [tr("Jami savdo"), r.revenue], [tr("Savdodan foyda"), r.profit], [tr("Xarajatlar"), r.spent], [tr("Sof foyda"), r.net], [tr("Savdolar soni"), r.count], [tr("Jami kirim"), r.purchased], [],
+      [tr("Jami savdo"), r.revenue], [tr("Savdodan foyda"), r.profit], [tr("Xarajatlar"), r.spent], [tr("Sof foyda"), r.net], [tr("Cheklar soni"), r.count], [tr("Jami kirim"), r.purchased], [],
       [tr("Tovar"), tr("Sotilgan miqdor"), tr("Birlik"), tr("Summa"), tr("Foyda")],
       ...r.top.map((t) => [t.name, t.qty, tr(t.unit), t.sum, t.profit]),
     ]
@@ -113,7 +115,7 @@ export default function Reports({ wh }: { wh: Warehouse }) {
         <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<TrendIcon />} title={tr("Savdodan foyda")} value={fmtMoney(r.profit)} valueColor={r.profit >= 0 ? 'primary.main' : 'error.main'} /></Grid>
         <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<MoneyOffIcon />} title={tr("Xarajatlar")} value={fmtMoney(r.spent)} color="#E5533D" /></Grid>
         <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<BalanceIcon />} title={tr("Sof foyda")} value={fmtMoney(r.net)} color={r.net >= 0 ? '#2E9E5B' : '#E5533D'} valueColor={r.net >= 0 ? 'primary.main' : 'error.main'} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<WalletIcon />} title={tr("Savdolar soni")} value={String(r.count)} color="#C9A227" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<WalletIcon />} title={tr("Cheklar soni")} value={String(r.count)} color="#C9A227" /></Grid>
         <Grid size={{ xs: 12, sm: 6, lg: 4 }}><StatCard icon={<InboxIcon />} title={tr("Jami kirim (tovar)")} value={fmtMoney(r.purchased)} color="#3B82F6" /></Grid>
       </Grid>
 
