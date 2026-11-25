@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Alert, Box, CircularProgress, CssBaseline, Fab, Snackbar, ThemeProvider } from '@mui/material'
+import { Alert, Box, Button, CircularProgress, CssBaseline, Fab, Snackbar, ThemeProvider } from '@mui/material'
+import { useUpdateCheck } from './hooks/useUpdateCheck'
 import DashboardIcon from '@mui/icons-material/SpaceDashboardOutlined'
 import PosIcon from '@mui/icons-material/PointOfSaleOutlined'
 import CartIcon from '@mui/icons-material/ShoppingCartOutlined'
@@ -186,6 +187,9 @@ function Main({ mode, onToggleMode }: { mode: 'light' | 'dark'; onToggleMode: ()
 
   const modalOpen = !!(mv || scan || newProduct || camera || expenseOpen)
   useHardwareScanner(handleCode, !modalOpen)
+  // Yangi versiya: savat bo'sh bo'lsa — o'zi yangilanadi, aks holda tugma ko'rsatiladi
+  const updateReady = useUpdateCheck()
+  useEffect(() => { if (updateReady && sale.itemCount === 0 && !modalOpen) location.reload() }, [updateReady, sale.itemCount, modalOpen])
 
   if (wh.loading) {
     return <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}><CircularProgress /></Box>
@@ -249,6 +253,11 @@ function Main({ mode, onToggleMode }: { mode: 'light' | 'dark'; onToggleMode: ()
       )}
       {expenseOpen && <ExpenseDialog wh={wh} onClose={() => setExpenseOpen(false)} />}
       {mv && <MovementDialog wh={wh} initialType={mv.type} initialProductId={mv.productId} onClose={() => setMv(null)} />}
+      <Snackbar open={updateReady && sale.itemCount > 0} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity="info" variant="filled" action={<Button color="inherit" size="small" onClick={() => location.reload()}>{tr("Yangilash")}</Button>}>
+          {tr("Dasturning yangi versiyasi chiqdi")}
+        </Alert>
+      </Snackbar>
       <Snackbar open={!!toast} autoHideDuration={1800} onClose={() => setToast('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         <Alert severity="success" variant="filled" onClose={() => setToast('')}>{toast}</Alert>
       </Snackbar>

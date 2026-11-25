@@ -694,5 +694,7 @@ const dict: Record<string, string> = {
   "Tannarxdan past! Min: {0}": "Ниже себестоимости! Мин: {0}",
   "\"{0}\": narx tannarxdan ({1} so'm) past bo'lishi mumkin emas": "«{0}»: цена не может быть ниже себестоимости ({1} сум)",
   "\"{0}\": bu narxda sotib bo'lmaydi — narx juda past. Administratorga murojaat qiling": "«{0}»: нельзя продать по этой цене — слишком низкая. Обратитесь к администратору",
+  "Yangilash": "Обновить",
+  "Dasturning yangi versiyasi chiqdi": "Вышла новая версия программы",
 }
 export default dict
