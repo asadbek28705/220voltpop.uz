@@ -12,6 +12,7 @@ import DeleteIcon from '@mui/icons-material/DeleteOutline'
 import UpIcon from '@mui/icons-material/KeyboardArrowUp'
 import DownIcon from '@mui/icons-material/KeyboardArrowDown'
 import ExpandIcon from '@mui/icons-material/ExpandMore'
+import RemoveIcon from '@mui/icons-material/Remove'
 import type { Warehouse } from '../store'
 import type { Product, QuickGroup } from '../types'
 import { attempt } from '../api'
@@ -29,7 +30,10 @@ const match = (p: Product, q: string) => {
  * Kassadagi tezkor panel: guruh tugmalari → bosilsa guruhdagi tovar tugmalari.
  * Bir xil tovarning har xil o'lchamlarini (masalan H/P 25 fitinglari) tez urish uchun.
  */
-export default function QuickPanel({ wh, admin, onAdd }: { wh: Warehouse; admin: boolean; onAdd: (p: Product) => void }) {
+export default function QuickPanel({ wh, admin, onAdd, onRemoveOne, cart }: {
+  wh: Warehouse; admin: boolean; onAdd: (p: Product) => void; onRemoveOne: (p: Product) => void
+  cart: Map<string, { qty: number; price: number }> // savatdagi soni va narxi (tugmada ko'rsatish uchun)
+}) {
   const groups = wh.data.settings.quickPanel ?? []
   const [open, setOpen] = useState(() => localStorage.getItem('ombor-quick-open') !== '0')
   const [groupId, setGroupId] = useState<string | null>(null)
@@ -68,20 +72,54 @@ export default function QuickPanel({ wh, admin, onAdd }: { wh: Warehouse; admin:
               <ButtonBase onClick={() => setGroupId(null)} sx={{ ...tile, bgcolor: alpha(GREEN, 0.1), borderColor: alpha(GREEN, 0.35), color: 'primary.dark' }}>
                 <BackIcon fontSize="small" />{tr("Orqaga")}
               </ButtonBase>
-              {items.map((p) => (
-                <ButtonBase key={p.id} onClick={() => onAdd(p)} disabled={p.qty <= 0}
-                  sx={{ ...tile, opacity: p.qty <= 0 ? 0.45 : 1 }}>
-                  <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</span>
-                  <Typography component="span" sx={{ fontSize: 12, fontWeight: 800, color: 'primary.main' }}>{fmtMoney(p.sellPrice)}</Typography>
-                  {p.qty <= 0 && <Typography component="span" sx={{ fontSize: 10.5, color: 'error.main' }}>{tr("qolmagan")}</Typography>}
-                </ButtonBase>
-              ))}
+              {items.map((p) => {
+                const c = cart.get(p.id)
+                const n = c?.qty ?? 0
+                const over = n > p.qty
+                return (
+                  <Box key={p.id} sx={{ position: 'relative', minWidth: 0 }}>
+                    <ButtonBase onClick={() => onAdd(p)} disabled={p.qty <= 0 && n === 0}
+                      sx={{
+                        ...tile, width: '100%', height: '100%', opacity: p.qty <= 0 && n === 0 ? 0.45 : 1, pt: n ? 3.5 : 1,
+                        ...(n ? { borderColor: over ? 'error.main' : GREEN, borderWidth: 2, bgcolor: alpha(over ? '#E5484D' : GREEN, 0.07) } : {}),
+                      }}>
+                      <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</span>
+                      <Typography component="span" sx={{ fontSize: 12, fontWeight: 800, color: 'primary.main' }}>{fmtMoney(c?.price ?? p.sellPrice)}</Typography>
+                      <Typography component="span" sx={{ fontSize: 10.5, fontWeight: 600, color: p.qty <= 0 || over ? 'error.main' : 'text.secondary' }}>
+                        {p.qty <= 0 ? tr("qolmagan") : tr("qoldiq: {0} {1}", fmtNum(p.qty), tr(p.unit))}
+                      </Typography>
+                      {n > 0 && (
+                        <Typography component="span" sx={{ fontSize: 11, fontWeight: 800, color: over ? 'error.main' : 'primary.dark' }}>
+                          = {fmtMoney(n * c!.price)}
+                        </Typography>
+                      )}
+                    </ButtonBase>
+                    {n > 0 && <>
+                      {/* Savatdagi soni */}
+                      <Box sx={{
+                        position: 'absolute', top: -7, right: -5, minWidth: 26, height: 22, px: 0.75, borderRadius: 11, display: 'grid', placeItems: 'center',
+                        fontSize: 12.5, fontWeight: 900, color: '#fff', bgcolor: over ? 'error.main' : 'primary.main', boxShadow: 2, pointerEvents: 'none',
+                      }}>×{fmtNum(n)}</Box>
+                      {/* Xato urilganda bittaga kamaytirish */}
+                      <IconButton size="small" aria-label={tr("Bittaga kamaytirish")} onClick={() => onRemoveOne(p)}
+                        sx={{ position: 'absolute', top: 3, left: 3, width: 24, height: 24, bgcolor: 'background.paper', border: 1, borderColor: 'divider', '&:hover': { bgcolor: alpha('#E5484D', 0.1), color: 'error.main' } }}>
+                        <RemoveIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </>}
+                  </Box>
+                )
+              })}
               {items.length === 0 && <Typography variant="body2" color="text.secondary" sx={{ p: 1.5 }}>{tr("Guruh bo'sh")}</Typography>}
             </> : groups.map((g) => (
               <ButtonBase key={g.id} onClick={() => setGroupId(g.id)} sx={{ ...tile, bgcolor: alpha('#F2B705', 0.08), borderColor: alpha('#F2B705', 0.35) }}>
                 <FolderIcon fontSize="small" sx={{ color: '#C98E00' }} />
                 <span>{g.name}</span>
-                <Typography component="span" sx={{ fontSize: 11, color: 'text.secondary', fontWeight: 600 }}>{tr("{0} ta", g.productIds.length)}</Typography>
+                {(() => {
+                  const inCart = g.productIds.filter((id) => cart.has(id)).length
+                  return inCart
+                    ? <Typography component="span" sx={{ fontSize: 11, color: 'primary.dark', fontWeight: 800 }}>{tr("savatda {0} xil", inCart)}</Typography>
+                    : <Typography component="span" sx={{ fontSize: 11, color: 'text.secondary', fontWeight: 600 }}>{tr("{0} ta", g.productIds.length)}</Typography>
+                })()}
               </ButtonBase>
             ))}
           </Box>

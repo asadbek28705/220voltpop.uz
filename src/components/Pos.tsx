@@ -79,6 +79,7 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
     .map((it) => { const product = products.find((p) => p.id === it.productId); return { ...it, product, price: !admin && product ? product.sellPrice : it.price } })
     .filter((l): l is typeof l & { product: Product } => !!l.product)
   const total = lines.reduce((s, l) => s + l.qty * l.price, 0)
+  const inCart = useMemo(() => new Map(lines.map((l) => [l.productId, { qty: l.qty, price: l.price }])), [lines])
   const short = lines.filter((l) => l.qty > l.product.qty)
 
   const addProduct = (p: Product) => {
@@ -338,7 +339,8 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="flex-start">
         <Stack spacing={2} sx={{ flex: 1, width: '100%', minWidth: 0 }}>
           {search}
-          <QuickPanel wh={wh} admin={admin} onAdd={addProduct} />
+          <QuickPanel wh={wh} admin={admin} onAdd={addProduct} cart={inCart}
+            onRemoveOne={(p) => { const l = cart.items.find((x) => x.productId === p.id); if (!l) return; if (l.qty > 1) cart.update(p.id, { qty: l.qty - 1 }); else cart.remove(p.id) }} />
           {cartList}
         </Stack>
         <Box sx={{ width: { xs: '100%', md: 360 }, flexShrink: 0 }}>{summary}</Box>

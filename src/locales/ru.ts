@@ -678,5 +678,8 @@ const dict: Record<string, string> = {
   "qoldiq": "остаток",
   "Yuqoridan tovar qidirib qo'shing": "Найдите и добавьте товары выше",
   "Elektrika va santexnika": "Электрика и сантехника",
+  "qoldiq: {0} {1}": "остаток: {0} {1}",
+  "Bittaga kamaytirish": "Уменьшить на 1",
+  "savatda {0} xil": "в корзине: {0}",
 }
 export default dict
