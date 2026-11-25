@@ -25,6 +25,7 @@ import PersonIcon from '@mui/icons-material/PersonOutline'
 import CustomerDialog from './CustomerDialog'
 import { matchCustomer } from './Customers'
 import { attempt } from '../api'
+import { useIsAdmin } from '../auth'
 import { beep } from '../device'
 import { fmtMoney, fmtNum } from '../utils'
 import PageHeader from './PageHeader'
@@ -72,8 +73,9 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
   const [receipt, setReceipt] = useState<string | null>(null)
   useEffect(() => setError(''), [tab.id])
 
+  const admin = useIsAdmin()
   const lines = cart.items
-    .map((it) => ({ ...it, product: products.find((p) => p.id === it.productId) }))
+    .map((it) => { const product = products.find((p) => p.id === it.productId); return { ...it, product, price: !admin && product ? product.sellPrice : it.price } })
     .filter((l): l is typeof l & { product: Product } => !!l.product)
   const total = lines.reduce((s, l) => s + l.qty * l.price, 0)
   const short = lines.filter((l) => l.qty > l.product.qty)
@@ -181,9 +183,14 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
                 <IconButton size="small" onClick={() => cart.update(l.productId, { qty: l.qty + 1 })}><AddIcon fontSize="small" /></IconButton>
               </Stack>
               <Typography color="text.secondary">{tr(l.product.unit)} ×</Typography>
-              <TextField size="small" value={l.price} inputMode="decimal" sx={{ width: 160 }}
-                onChange={(e) => { const v = num(e.target.value); if (!isNaN(v)) cart.update(l.productId, { price: v }) }}
-                slotProps={{ input: { endAdornment: <InputAdornment position="end">{tr("so'm")}</InputAdornment> } }} />
+              {admin ? (
+                <TextField size="small" value={l.price} inputMode="decimal" sx={{ width: 160 }}
+                  onChange={(e) => { const v = num(e.target.value); if (!isNaN(v)) cart.update(l.productId, { price: v }) }}
+                  slotProps={{ input: { endAdornment: <InputAdornment position="end">{tr("so'm")}</InputAdornment> } }} />
+              ) : (
+                // Sotuvchi narxni o'zgartira olmaydi — tovarning sotuv narxi
+                <Typography sx={{ fontWeight: 600 }}>{fmtMoney(l.price)}</Typography>
+              )}
               <Typography sx={{ ml: 'auto !important', fontWeight: 700 }}>{fmtMoney(l.qty * l.price)}</Typography>
             </Stack>
           </Card>

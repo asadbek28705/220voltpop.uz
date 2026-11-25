@@ -155,7 +155,10 @@ app.get('/api/data', need('seller'), (req, res) => {
 
 // Sotuvchi ham qila oladigan amallar
 app.post('/api/sales', need('seller'), write((req) => {
-  const r = store.sell(req.body, seller(req))
+  const b = { ...req.body }
+  // Sotuvchi narxni o'zgartira olmaydi — har doim tovarning sotuv narxi olinadi
+  if (!isAdmin(req)) b.items = (Array.isArray(b.items) ? b.items : []).map((it) => ({ ...it, price: store.product(it.productId).sellPrice }))
+  const r = store.sell(b, seller(req))
   tg.onSale(r.saleId)
   return r
 }))
@@ -170,6 +173,7 @@ app.post('/api/movements', need('seller'), write((req) => {
   if (!isAdmin(req)) {
     if (!['in', 'out'].includes(b.type)) throw new HttpError("Bu amal uchun ruxsat yo'q", 403)
     if (b.type === 'in') { b.price = 0; b.priceUsd = 0; b.sellPrice = 0 } // kelish narxini sotuvchi ko'rmaydi — joriy narx olinadi
+    if (b.type === 'out') b.price = store.product(b.productId).sellPrice // sotuvchi narxni o'zgartira olmaydi
   }
   const r = store.addMovement(b, seller(req))
   tg.onMovement(r.movement)
