@@ -3,7 +3,7 @@ import type { Customer, Movement, ShopSettings } from '../types'
 import { paymentLabel } from '../types'
 import { fmtDate, fmtNum } from '../utils'
 import { t as tr } from '../i18n'
-import { printPrintRoot, receiptCss } from '../print'
+import { printPrintRoot, receiptCss, receiptPage } from '../print'
 
 const money = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 
@@ -94,5 +94,5 @@ export function PrintArea(props: Omit<ReceiptProps, 'lines'> & { lines: Movement
 
 export function printReceipt() {
   // Portal chizilishiga vaqt beramiz, keyin faqat chekning o'zi alohida sahifada chop etiladi
-  setTimeout(() => printPrintRoot('@page { margin: 0; }', receiptCss()), 50)
+  setTimeout(() => printPrintRoot(receiptPage(), receiptCss()), 50)
 }

@@ -20,7 +20,7 @@ function collectCss(): string {
  * @param pageCss  masalan "@page { size: 40mm 30mm; margin: 0 }"
  * @param extraCss qo'shimcha uslub (chek eni va h.k.)
  */
-export function printPrintRoot(pageCss: string, extraCss = '') {
+export function printPrintRoot(pageCss: string | ((doc: Document) => string), extraCss = '') {
   const root = document.getElementById('print-root')
   if (!root || !root.innerHTML.trim()) return
   document.getElementById('print-frame')?.remove()
@@ -32,7 +32,6 @@ export function printPrintRoot(pageCss: string, extraCss = '') {
   const doc = frame.contentDocument!
   doc.open()
   doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>&#8203;</title><style>
-    ${pageCss}
     html, body { margin: 0; padding: 0; background: #fff; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     ${collectCss()}
@@ -40,8 +39,14 @@ export function printPrintRoot(pageCss: string, extraCss = '') {
   </style></head><body>${root.innerHTML}</body></html>`)
   doc.close()
   const win = frame.contentWindow!
+  // Sahifa o'lchami: tayyor matn yoki chizilgan kontentga qarab hisoblanadi (chek uzunligi)
+  const addPage = () => {
+    const st = doc.createElement('style')
+    st.textContent = typeof pageCss === 'function' ? pageCss(doc) : pageCss
+    doc.head.appendChild(st)
+  }
   // Shriftlar yuklanishini kutib, chop etamiz
-  const go = () => { win.focus(); win.print(); setTimeout(() => frame.remove(), 1000) }
+  const go = () => { addPage(); win.focus(); win.print(); setTimeout(() => frame.remove(), 1000) }
   const fonts = (doc as Document & { fonts?: FontFaceSet }).fonts
   setTimeout(() => (fonts ? fonts.ready.then(go) : go()), 100)
 }
@@ -57,4 +62,13 @@ export function receiptCss(paper: ReceiptPaper = getReceiptPaper()) {
        .receipt .r-shop { font-size: 15px !important; } .receipt .r-huge { font-size: 17px !important; }
        .receipt .r-big { font-size: 14px !important; } .receipt .r-status { font-size: 13px !important; }`
     : `.receipt { width: 72mm !important; }`
+}
+
+/** Chek sahifasi: eni — qog'oz eni, bo'yi — chekning o'zi (ortiqcha bo'sh qog'oz chiqmaydi) */
+export function receiptPage(paper: ReceiptPaper = getReceiptPaper()) {
+  return (doc: Document) => {
+    const el = doc.querySelector('.receipt')
+    const mm = el ? Math.ceil(el.getBoundingClientRect().height * 25.4 / 96) + 3 : 200
+    return `@page { size: ${paper}mm ${Math.max(40, mm)}mm; margin: 0; } body { display: flex; justify-content: center; }`
+  }
 }
