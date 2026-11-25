@@ -59,13 +59,21 @@ export interface Movement {
 
 export interface ShopSettings {
   shopName: string
-  shopTagline?: string // chek tepasidagi kichik yozuv (masalan: Elektrika va santexnika)
+  shopTagline?: string
+  quickPanel?: QuickGroup[] // kassadagi tezkor panel // chek tepasidagi kichik yozuv (masalan: Elektrika va santexnika)
   address: string
   phone: string
   receiptFooter: string
   usdRate?: number // 1$ = ? so'm
   periods?: ClosedPeriod[] // qo'lda yopilgan hisob davrlari
   rateDate?: string
+}
+
+/** Kassa tezkor panelidagi guruh (masalan «H/P 25»): bosilsa ichidagi tovar tugmalari chiqadi */
+export interface QuickGroup {
+  id: string
+  name: string
+  productIds: string[]
 }
 
 export interface ClosedPeriod {

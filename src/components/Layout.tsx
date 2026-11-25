@@ -6,7 +6,6 @@ import {
 import MenuIcon from '@mui/icons-material/Menu'
 import DarkIcon from '@mui/icons-material/DarkModeOutlined'
 import LightIcon from '@mui/icons-material/LightModeOutlined'
-import WarehouseIcon from '@mui/icons-material/WarehouseRounded'
 import { GOLD_GRADIENT, GRADIENT, GREEN, GREEN_DARK, INK, YELLOW } from '../theme'
 import { t as tr } from '../i18n'
 import LangSwitcher from './LangSwitcher'
@@ -35,18 +34,14 @@ function Brand({ compact }: { compact?: boolean }) {
   // Nom matn rangida (och va to'q rejimga mos)
   return (
     <Stack direction="row" alignItems="center" spacing={1.5}>
-      <Box sx={{
-        width: compact ? 34 : 42, height: compact ? 34 : 42, borderRadius: compact ? 2.5 : 3, display: 'grid', placeItems: 'center', flexShrink: 0,
-        background: GOLD_GRADIENT, boxShadow: `0 6px 18px ${alpha(YELLOW, 0.35)}`,
-      }}>
-        <WarehouseIcon sx={{ color: '#1a1300', fontSize: compact ? 20 : 24 }} />
-      </Box>
+      {/* Ilova ikonkasi bilan bir xil belgi: yashil fonda oltin chaqmoq */}
+      <Box component="img" src="/icons/icon-192.png" alt="" sx={{
+        width: compact ? 34 : 42, height: compact ? 34 : 42, borderRadius: compact ? '10px' : '12px', flexShrink: 0,
+        boxShadow: `0 6px 18px ${alpha(GREEN, 0.3)}`,
+      }} />
       <Box sx={{ lineHeight: 1 }}>
-        <Stack direction="row" alignItems="center" spacing={0.75}>
-          <Typography sx={{ fontWeight: 800, letterSpacing: 1.5, fontSize: compact ? 16 : 18, color: 'text.primary' }}>OMBOR</Typography>
-          <Box component="span" sx={{ px: 0.6, py: 0.1, borderRadius: 1, fontSize: 9.5, fontWeight: 800, letterSpacing: 1, color: '#1a1300', background: GOLD_GRADIENT }}>PRO</Box>
-        </Stack>
-        {!compact && <Typography sx={{ fontSize: 11.5, color: 'text.secondary', mt: 0.3 }}>{tr("Qurilish & Santexnika")}</Typography>}
+        <Typography sx={{ fontWeight: 900, letterSpacing: 1.2, fontSize: compact ? 16 : 19, color: 'text.primary', lineHeight: 1.1 }}>220 VOLT</Typography>
+        {!compact && <Typography sx={{ fontSize: 11.5, color: 'text.secondary', mt: 0.3 }}>{tr("Elektrika va santexnika")}</Typography>}
       </Box>
     </Stack>
   )

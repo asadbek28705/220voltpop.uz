@@ -15,6 +15,7 @@ import { MAX_TABS } from '../hooks/useSaleTabs'
 import CloseIcon from '@mui/icons-material/Close'
 import ReturnIcon from '@mui/icons-material/AssignmentReturnOutlined'
 import ReturnDialog from './ReturnDialog'
+import QuickPanel from './QuickPanel'
 import DebtPayDialog from './DebtPayDialog'
 import MyReceiptsDialog from './MyReceiptsDialog'
 import ReceiptsIcon from '@mui/icons-material/ReceiptLongOutlined'
@@ -337,6 +338,7 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="flex-start">
         <Stack spacing={2} sx={{ flex: 1, width: '100%', minWidth: 0 }}>
           {search}
+          <QuickPanel wh={wh} admin={admin} onAdd={addProduct} />
           {cartList}
         </Stack>
         <Box sx={{ width: { xs: '100%', md: 360 }, flexShrink: 0 }}>{summary}</Box>

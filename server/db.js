@@ -308,6 +308,13 @@ class Store {
     return this.tx(() => {
       const next = { ...this.settings() }
       for (const k of ['shopName', 'shopTagline', 'address', 'phone', 'receiptFooter']) if (k in s) next[k] = str(s[k])
+      // Kassadagi tezkor panel: guruhlar va ulardagi tovarlar
+      if (Array.isArray(s.quickPanel)) {
+        next.quickPanel = s.quickPanel.slice(0, 200).map((g) => ({
+          id: str(g?.id) || randomUUID(), name: str(g?.name).slice(0, 60) || 'Guruh',
+          productIds: (Array.isArray(g?.productIds) ? g.productIds : []).map(str).filter(Boolean).slice(0, 300),
+        }))
+      }
       this.setMeta('settings', JSON.stringify(next))
       this.bump()
       return next

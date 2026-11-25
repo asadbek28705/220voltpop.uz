@@ -116,7 +116,7 @@ export function useWarehouse() {
     mutate<RateResult>('PUT', '/rate', { rate, updateSellPrices }), [mutate])
   const returnSale = useCallback((b: { saleId: string; items: { productId: string; qty: number }[]; payment: string; note: string }) =>
     mutate<{ returnId: string; saleId: string; total: number }>('POST', '/returns', b), [mutate])
-  const saveSettings = useCallback((s: ShopSettings) => mutate('PUT', '/settings', s), [mutate])
+  const saveSettings = useCallback((s: Partial<ShopSettings>) => mutate('PUT', '/settings', s), [mutate])
   const replaceAll = useCallback((d: WarehouseData) => mutate('POST', '/import', d), [mutate])
   const reset = useCallback(() => mutate('POST', '/reset'), [mutate])
   const clearAll = useCallback(() => mutate('POST', '/clear'), [mutate])

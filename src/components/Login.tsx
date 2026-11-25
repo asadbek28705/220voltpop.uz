@@ -2,7 +2,6 @@ import { useState } from 'react'
 import {
   Alert, Box, Button, CircularProgress, IconButton, InputAdornment, Stack, TextField, Typography, alpha,
 } from '@mui/material'
-import WarehouseIcon from '@mui/icons-material/WarehouseRounded'
 import PersonIcon from '@mui/icons-material/PersonOutlineRounded'
 import LockIcon from '@mui/icons-material/LockOutlined'
 import EyeIcon from '@mui/icons-material/VisibilityOutlined'
@@ -15,7 +14,7 @@ import ChartIcon from '@mui/icons-material/InsightsOutlined'
 import ShieldIcon from '@mui/icons-material/VerifiedUserOutlined'
 import { api, attempt } from '../api'
 import type { Me } from '../auth'
-import { GOLD_GRADIENT, GRADIENT, GREEN, YELLOW } from '../theme'
+import { GRADIENT, GREEN, YELLOW } from '../theme'
 import { t as tr } from '../i18n'
 import LangSwitcher from './LangSwitcher'
 import Rings from './Rings'
@@ -56,15 +55,10 @@ export default function Login({ me, onDone }: { me: Me; onDone: () => void }) {
 
   const logo = (
     <Stack direction="row" alignItems="center" spacing={1.5}>
-      <Box sx={{ width: 48, height: 48, borderRadius: 3.5, display: 'grid', placeItems: 'center', background: GOLD_GRADIENT, boxShadow: `0 10px 24px ${alpha(YELLOW, 0.4)}` }}>
-        <WarehouseIcon sx={{ color: '#1a1300', fontSize: 28 }} />
-      </Box>
+      <Box component="img" src="/icons/icon-192.png" alt="" sx={{ width: 52, height: 52, borderRadius: '14px', boxShadow: `0 10px 24px ${alpha(GREEN, 0.35)}` }} />
       <Box>
-        <Stack direction="row" alignItems="center" spacing={0.75}>
-          <Typography sx={{ fontWeight: 800, letterSpacing: 2, fontSize: 21, color: 'text.primary' }}>OMBOR</Typography>
-          <Box component="span" sx={{ px: 0.7, py: 0.15, borderRadius: 1, fontSize: 10, fontWeight: 800, letterSpacing: 1, color: '#1a1300', background: GOLD_GRADIENT }}>PRO</Box>
-        </Stack>
-        <Typography sx={{ fontSize: 12.5, color: 'text.secondary' }}>{tr("Qurilish & Santexnika")}</Typography>
+        <Typography sx={{ fontWeight: 900, letterSpacing: 1.5, fontSize: 23, color: 'text.primary', lineHeight: 1.1 }}>220 VOLT</Typography>
+        <Typography sx={{ fontSize: 12.5, color: 'text.secondary' }}>{tr("Elektrika va santexnika")}</Typography>
       </Box>
     </Stack>
   )

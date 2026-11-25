@@ -115,7 +115,7 @@ export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSell
           <TextField size="small" label={tr("Manzil")} value={shop.address} onChange={s('address')} />
           <TextField size="small" label={tr("Telefon")} value={shop.phone} onChange={s('phone')} />
           <TextField size="small" label={tr("Chek pastidagi yozuv")} value={shop.receiptFooter} onChange={s('receiptFooter')} />
-          <Button variant="contained" sx={{ alignSelf: 'flex-start' }} onClick={() => run(() => wh.saveSettings(shop), tr("Chek ma'lumotlari saqlandi"))}>{tr("Saqlash")}</Button>
+          <Button variant="contained" sx={{ alignSelf: 'flex-start' }} onClick={() => run(() => wh.saveSettings({ shopName: shop.shopName, shopTagline: shop.shopTagline ?? '', address: shop.address, phone: shop.phone, receiptFooter: shop.receiptFooter }), tr("Chek ma'lumotlari saqlandi"))}>{tr("Saqlash")}</Button>
         </Stack>
       </Paper>
 
