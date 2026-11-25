@@ -16,6 +16,8 @@ import CloseIcon from '@mui/icons-material/Close'
 import ReturnIcon from '@mui/icons-material/AssignmentReturnOutlined'
 import ReturnDialog from './ReturnDialog'
 import QuickPanel from './QuickPanel'
+import PreCheckDialog from './PreCheckDialog'
+import PreIcon from '@mui/icons-material/ReceiptOutlined'
 import DebtPayDialog from './DebtPayDialog'
 import MyReceiptsDialog from './MyReceiptsDialog'
 import ReceiptsIcon from '@mui/icons-material/ReceiptLongOutlined'
@@ -26,7 +28,7 @@ import PersonIcon from '@mui/icons-material/PersonOutline'
 import CustomerDialog from './CustomerDialog'
 import { matchCustomer } from './Customers'
 import { attempt } from '../api'
-import { useIsAdmin } from '../auth'
+import { useIsAdmin, useMe } from '../auth'
 import { beep } from '../device'
 import { fmtMoney, fmtNum } from '../utils'
 import PageHeader from './PageHeader'
@@ -51,6 +53,8 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
   const setPayment = (v: Payment) => patch({ payment: v })
   const setPaidNow = (v: string) => patch({ paidNow: v })
   const [returning, setReturning] = useState(false)
+  const [preCheck, setPreCheck] = useState(false)
+  const me = useMe()
   const [debtPay, setDebtPay] = useState(false)
   const [myReceipts, setMyReceipts] = useState(false)
   const [returnReceipt, setReturnReceipt] = useState<string | null>(null)
@@ -294,6 +298,7 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
             {busy ? tr("Saqlanmoqda...") : tr("Sotish")}
           </Button>
         )}
+        <Button variant="outlined" disabled={!lines.length} startIcon={<PreIcon />} onClick={() => setPreCheck(true)}>{tr("Prichek")}</Button>
         {lines.length > 0 && <Button color="inherit" onClick={() => confirm(tr("Savat tozalansinmi?")) && cart.clear()}>{tr("Savatni tozalash")}</Button>}
       </Stack>
     </Card>
@@ -373,6 +378,8 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
       {newCustomer != null && <CustomerDialog wh={wh} initialName={newCustomer} onClose={() => setNewCustomer(null)}
         onSaved={(c) => { onCustomerChange(c.id); setCustomer('') }} />}
       {receipt && <ReceiptDialog wh={wh} saleId={receipt} justSold onClose={() => setReceipt(null)} />}
+      {preCheck && <PreCheckDialog lines={lines} settings={wh.data.settings} seller={me.user?.name}
+        customer={selected ? selected.name : customer.trim() || undefined} onClose={() => setPreCheck(false)} />}
       {debtPay && <DebtPayDialog wh={wh} onClose={() => setDebtPay(false)} />}
       {myReceipts && <MyReceiptsDialog wh={wh} onClose={() => setMyReceipts(false)} />}
       {returning && <ReturnDialog wh={wh} onClose={() => setReturning(false)} onDone={(id) => { setReturning(false); setReturnReceipt(id) }} />}

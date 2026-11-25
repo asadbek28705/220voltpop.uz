@@ -697,5 +697,12 @@ const dict: Record<string, string> = {
   "Yangilash": "Refresh",
   "Dasturning yangi versiyasi chiqdi": "A new version is available",
   "Cheklar soni": "Receipts",
+  "PRICHEK": "PRE-CHECK",
+  "(to'lov cheki emas)": "(not a payment receipt)",
+  "To'lanmagan": "Unpaid",
+  "Narxlar bugungi kun uchun amal qiladi": "Prices valid for today",
+  "Savdo yozilmaydi, ombordagi qoldiq o'zgarmaydi.": "No sale is recorded; stock does not change.",
+  "Prichekni chop etish": "Print pre-check",
+  "Prichek": "Pre-check",
 }
 export default dict
