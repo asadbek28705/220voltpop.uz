@@ -270,6 +270,15 @@ app.post('/api/telegram/report', admin, tgAction(() => tg.send(tg.dayReport(new 
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Topilmadi' }))
 
+// Android ilova faylini saytdan yuklab olish: data/220volt.apk
+app.get('/220volt.apk', (_req, res) => {
+  const f = join(DATA_DIR, '220volt.apk')
+  if (!existsSync(f)) return res.status(404).send('Ilova hali yuklanmagan')
+  res.setHeader('Content-Type', 'application/vnd.android.package-archive')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.download(f, '220-Volt-Pop.apk')
+})
+
 // Android ilova (TWA) shu sayt bilan bog'langanini tasdiqlash: data/assetlinks.json
 app.get('/.well-known/assetlinks.json', (_req, res) => {
   const f = join(DATA_DIR, 'assetlinks.json')

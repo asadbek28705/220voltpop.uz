@@ -11,6 +11,7 @@ import Users from './Users'
 import { useMe } from '../auth'
 import { api } from '../api'
 import LogoutIcon from '@mui/icons-material/Logout'
+import AndroidIcon from '@mui/icons-material/Android'
 import { t as tr } from '../i18n'
 
 export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSellerChange: (name: string) => void }) {
@@ -56,6 +57,22 @@ export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSell
     <Stack spacing={2} sx={{ maxWidth: 760 }}>
       <PageHeader title={tr("Sozlamalar")} subtitle={admin ? tr("Hisob, xodimlar, chek, Telegram va ma'lumotlar") : tr("Hisobingiz")} />
       {msg && <Alert severity={msg.ok ? 'success' : 'error'} onClose={() => setMsg(null)}>{msg.text}</Alert>}
+
+      {/* Android ilova — ilovaning o'zida ochilganda ko'rsatilmaydi */}
+      {!window.matchMedia('(display-mode: standalone)').matches && (
+        <Paper variant="outlined" sx={{ p: 2.5 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
+            <Box component="img" src="/icons/icon-192.png" alt="" sx={{ width: 56, height: 56, borderRadius: 3, flexShrink: 0 }} />
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography variant="h6">{tr("Telefon uchun ilova")}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {tr("Android: APK faylni yuklab oling va o'rnating. iPhone: Safari'da «Ulashish» → «Ekranga qo'shish».")}
+              </Typography>
+            </Box>
+            <Button variant="contained" href="/220volt.apk" startIcon={<AndroidIcon />} sx={{ flexShrink: 0 }}>{tr("Android ilovani yuklab olish")}</Button>
+          </Stack>
+        </Paper>
+      )}
 
       {me.demo ? (
         <Paper variant="outlined" sx={{ p: 2.5 }}>

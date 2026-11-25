@@ -632,5 +632,8 @@ const dict: Record<string, string> = {
   "{0}–{1} / {2}": "{0}–{1} of {2}",
   "{0} tadan {1} tasi ko'rsatilgan": "Showing {1} of {0}",
   "Yana ko'rsatish": "Show more",
+  "Telefon uchun ilova": "Phone app",
+  "Android: APK faylni yuklab oling va o'rnating. iPhone: Safari'da «Ulashish» → «Ekranga qo'shish».": "Android: download and install the APK. iPhone: in Safari tap Share → Add to Home Screen.",
+  "Android ilovani yuklab olish": "Download Android app",
 }
 export default dict
