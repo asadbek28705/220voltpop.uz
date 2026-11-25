@@ -139,6 +139,9 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
         filterOptions={(opts, { inputValue }) => {
           const s = inputValue.trim().toLowerCase()
           if (!s) return []
+          // Artikul yoki shtrix-kod aynan mos kelsa — faqat o'sha tovar (620 yozilsa 1620, 6201 chiqmaydi)
+          const exact = opts.filter((p) => p.sku.toLowerCase() === s || p.barcode.toLowerCase() === s)
+          if (exact.length) return exact
           return opts.filter((p) => p.name.toLowerCase().includes(s) || p.sku.toLowerCase().includes(s) || p.barcode.includes(s)).slice(0, 30)
         }}
         getOptionLabel={(p) => (typeof p === 'string' ? p : p.name)}

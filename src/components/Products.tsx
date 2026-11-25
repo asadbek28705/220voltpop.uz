@@ -50,6 +50,9 @@ export default function Products({ wh, onMovement, currency }: Props) {
   useEffect(() => setPage(0), [dq, cat, lowOnly, currency])
   const list = useMemo(() => {
     const s = dq.trim().toLowerCase()
+    // Artikul yoki shtrix-kod aynan mos kelsa — faqat o'sha tovar
+    const exact = s ? products.filter((p) => p.sku.toLowerCase() === s || p.barcode.toLowerCase() === s) : []
+    if (exact.length) return exact
     return products
       .filter((p) => !cat || p.category === cat)
       .filter((p) => !lowOnly || p.qty <= p.minQty)
