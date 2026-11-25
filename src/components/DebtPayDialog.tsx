@@ -12,7 +12,7 @@ import { PAYMENTS, paymentLabel } from '../types'
 import { attempt } from '../api'
 import { fmtDate, fmtMoney } from '../utils'
 import { matchCustomer } from './Customers'
-import { printReceipt } from './Receipt'
+import { ReceiptHeader, printReceipt } from './Receipt'
 import { t as tr } from '../i18n'
 
 const num = (s: string) => Number(s.replace(/\s/g, '').replace(',', '.'))
@@ -22,9 +22,7 @@ const money = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\
 function PayReceipt({ tx, customer, settings }: { tx: CustomerTx; customer: Customer; settings: ShopSettings }) {
   return (
     <div className="receipt">
-      <div className="r-center r-shop">{settings.shopName || tr("Do'kon")}</div>
-      {settings.address && <div className="r-center r-small">{settings.address}</div>}
-      {settings.phone && <div className="r-center">{tr("Tel:")} {settings.phone}</div>}
+      <ReceiptHeader settings={settings} />
       <div className="r-sep2" />
       <div className="r-center r-huge">{tr("QARZ TO'LOVI")}</div>
       <div className="r-row"><span>{tr("Sana")}</span><span>{fmtDate(tx.date)}</span></div>

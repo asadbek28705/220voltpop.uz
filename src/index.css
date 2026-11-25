@@ -23,6 +23,12 @@
 .receipt .r-status { border: 2px solid #000; border-radius: 4px; padding: 6px 4px; margin: 10px 0; text-align: center; font-size: 17px; font-weight: 800; text-transform: uppercase; }
 .receipt .r-status.r-inv { background: #000; color: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .receipt .r-small { font-size: 13px; }
+.receipt .r-head { text-align: center; padding-top: 1mm; }
+.receipt .r-brand { display: flex; align-items: center; justify-content: center; gap: 1.5mm; font-family: 'Arial Black', Arial, sans-serif; font-size: 27px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; line-height: 1.05; }
+.receipt .r-bolt { width: 7.5mm; height: 7.5mm; flex-shrink: 0; fill: #000; }
+.receipt .r-tagline { display: flex; align-items: center; gap: 2mm; margin: 1.2mm 0 1.5mm; font-size: 11.5px; font-weight: 700; letter-spacing: 2.2px; text-transform: uppercase; }
+.receipt .r-tagline::before, .receipt .r-tagline::after { content: ''; flex: 1; border-top: 1.5px solid #000; }
+.receipt .r-tagline span { white-space: nowrap; }
 .receipt .r-sign { margin-top: 14px; }
 
 /* Ekranda chekni ko'rsatish (oldindan ko'rish oynasida) */

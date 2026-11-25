@@ -111,6 +111,7 @@ export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSell
         <Typography variant="h6" gutterBottom>{tr("Chek ma'lumotlari")}</Typography>
         <Stack spacing={2}>
           <TextField size="small" label={tr("Do'kon nomi")} value={shop.shopName} onChange={s('shopName')} />
+          <TextField size="small" label={tr("Do'kon shiori (chekda nom ostida)")} value={shop.shopTagline ?? ''} onChange={s('shopTagline')} placeholder={tr("Masalan: Elektrika va santexnika")} />
           <TextField size="small" label={tr("Manzil")} value={shop.address} onChange={s('address')} />
           <TextField size="small" label={tr("Telefon")} value={shop.phone} onChange={s('phone')} />
           <TextField size="small" label={tr("Chek pastidagi yozuv")} value={shop.receiptFooter} onChange={s('receiptFooter')} />

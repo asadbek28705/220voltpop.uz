@@ -307,7 +307,7 @@ class Store {
   saveSettings(s) {
     return this.tx(() => {
       const next = { ...this.settings() }
-      for (const k of ['shopName', 'address', 'phone', 'receiptFooter']) if (k in s) next[k] = str(s[k])
+      for (const k of ['shopName', 'shopTagline', 'address', 'phone', 'receiptFooter']) if (k in s) next[k] = str(s[k])
       this.setMeta('settings', JSON.stringify(next))
       this.bump()
       return next

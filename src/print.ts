@@ -60,7 +60,9 @@ export function receiptCss(paper: ReceiptPaper = getReceiptPaper()) {
   return paper === '58'
     ? `.receipt { width: 48mm !important; font-size: 12px !important; padding: 1mm 0 6mm !important; }
        .receipt .r-shop { font-size: 15px !important; } .receipt .r-huge { font-size: 17px !important; }
-       .receipt .r-big { font-size: 14px !important; } .receipt .r-status { font-size: 13px !important; }`
+       .receipt .r-big { font-size: 14px !important; } .receipt .r-status { font-size: 13px !important; }
+       .receipt .r-brand { font-size: 20px !important; } .receipt .r-bolt { width: 5.5mm !important; height: 5.5mm !important; }
+       .receipt .r-tagline { font-size: 9px !important; letter-spacing: 1.2px !important; }`
     : `.receipt { width: 72mm !important; }`
 }
 

@@ -59,6 +59,7 @@ export interface Movement {
 
 export interface ShopSettings {
   shopName: string
+  shopTagline?: string // chek tepasidagi kichik yozuv (masalan: Elektrika va santexnika)
   address: string
   phone: string
   receiptFooter: string

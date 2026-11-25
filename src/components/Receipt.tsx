@@ -7,6 +7,22 @@ import { printPrintRoot, receiptCss, receiptPage } from '../print'
 
 const money = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 
+/** Chek tepasi: chaqmoq belgisi, katta nom, ikki tomoni chiziqli shior, manzil va telefon */
+export function ReceiptHeader({ settings }: { settings: ShopSettings }) {
+  const name = settings.shopName || tr("Do'kon")
+  return (
+    <div className="r-head">
+      <div className="r-brand">
+        <svg className="r-bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 1.5 4 13.5h6.5L9 22.5l10-13h-6.8z" /></svg>
+        <span>{name}</span>
+      </div>
+      {settings.shopTagline && <div className="r-tagline"><span>{settings.shopTagline}</span></div>}
+      {settings.address && <div className="r-center r-small">{settings.address}</div>}
+      {settings.phone && <div className="r-center r-small">{tr("Tel:")} {settings.phone}</div>}
+    </div>
+  )
+}
+
 /** To'lov holati — chekda katta ramkada chiqadi */
 function payStatus(payment: string | null | undefined, kind: 'sale' | 'return') {
   if (kind === 'return') {
@@ -39,9 +55,7 @@ export function Receipt({ lines, settings, paid, kind = 'sale', customer, return
   const nasiya = first.payment === 'nasiya'
   return (
     <div className="receipt">
-      <div className="r-center r-shop">{settings.shopName || tr("Do'kon")}</div>
-      {settings.address && <div className="r-center r-small">{settings.address}</div>}
-      {settings.phone && <div className="r-center">{tr("Tel:")} {settings.phone}</div>}
+      <ReceiptHeader settings={settings} />
       <div className="r-sep2" />
       {ret ? <>
         <div className="r-center r-huge">{tr("QAYTARISH")} №{first.batchId}</div>

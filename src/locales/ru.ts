@@ -655,5 +655,7 @@ const dict: Record<string, string> = {
   "Masshtab (Scale): 100%": "Масштаб (Scale): 100%",
   "«Sarlavha va pastki yozuvlar» (Headers and footers) — belgini olib tashlang": "Снимите галочку «Колонтитулы» (Headers and footers)",
   "Chek qog'ozi:": "Ширина чека:",
+  "Do'kon shiori (chekda nom ostida)": "Слоган магазина (под названием в чеке)",
+  "Masalan: Elektrika va santexnika": "Например: Электрика и сантехника",
 }
 export default dict
