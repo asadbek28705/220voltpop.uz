@@ -15,18 +15,11 @@ import { fmtMoney, fmtNum } from '../utils'
 import PageHeader from './PageHeader'
 import { LABEL_FORMATS, Label, type LabelFormat } from './Label'
 import { t as tr } from '../i18n'
+import { printPrintRoot } from '../print'
 
-/** Chop etish: etiketkalarni maxsus joyga chiqarib, sahifa o'lchamini etiketkaga moslaymiz */
-function printLabels(onDone: () => void) {
-  document.body.classList.add('printing-receipt')
-  const done = () => {
-    document.body.classList.remove('printing-receipt')
-    document.getElementById('label-page-style')?.remove()
-    window.removeEventListener('afterprint', done)
-    onDone()
-  }
-  window.addEventListener('afterprint', done)
-  setTimeout(() => window.print(), 150)
+/** Chop etish: etiketkalar chizilgach, faqat ular alohida sahifada (etiketka o'lchamida) printerga yuboriladi */
+function printLabels(pageCss: string, onDone: () => void) {
+  setTimeout(() => { printPrintRoot(pageCss); onDone() }, 200)
 }
 
 function LabelSheets({ items, format, showPrice, shopName, rotate }: { items: Product[]; format: LabelFormat; showPrice: boolean; shopName?: string; rotate?: boolean }) {
@@ -116,14 +109,11 @@ export default function Labels({ wh }: { wh: Warehouse }) {
 
   const print = () => {
     localStorage.setItem('ombor-label-format', format.key)
-    const style = document.createElement('style')
-    style.id = 'label-page-style'
-    style.textContent = format.sheet
+    const pageCss = format.sheet
       ? '@page { size: A4; margin: 0; }'
       : rotate ? `@page { size: ${format.height}mm ${format.width}mm; margin: 0; }` : `@page { size: ${format.width}mm ${format.height}mm; margin: 0; }`
-    document.head.appendChild(style)
     setPrinting(true)
-    printLabels(() => setPrinting(false))
+    printLabels(pageCss, () => setPrinting(false))
   }
 
   return (

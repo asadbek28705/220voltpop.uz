@@ -35,7 +35,7 @@
   body.printing-receipt #print-root { display: block !important; }
   body.printing-receipt { margin: 0; }
 }
-@page { margin: 4mm; }
+@page { margin: 0; }
 
 /* ---- Shtrix-kod etiketkalari ---- */
 .label {

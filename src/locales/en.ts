@@ -654,5 +654,6 @@ const dict: Record<string, string> = {
   "Chekkalar (Margins): Yo'q (None)": "Margins: None",
   "Masshtab (Scale): 100%": "Scale: 100%",
   "«Sarlavha va pastki yozuvlar» (Headers and footers) — belgini olib tashlang": "Untick “Headers and footers”",
+  "Chek qog'ozi:": "Receipt paper:",
 }
 export default dict

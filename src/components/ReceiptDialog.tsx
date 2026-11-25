@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, Stack } from '@mui/material'
+import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
+import { getReceiptPaper, setReceiptPaper, type ReceiptPaper } from '../print'
 import PrintIcon from '@mui/icons-material/PrintOutlined'
 import CheckIcon from '@mui/icons-material/CheckCircleRounded'
 import ReturnIcon from '@mui/icons-material/AssignmentReturnOutlined'
@@ -26,6 +27,7 @@ export default function ReceiptDialog({ wh, saleId, returnId: initialReturn, jus
     ? wh.data.movements.filter((m) => m.type === 'return' && m.batchId === returnId)
     : wh.data.movements.filter((m) => m.type === 'out' && m.saleId === saleId)
   const [printing, setPrinting] = useState(false)
+  const [paper, setPaper] = useState<ReceiptPaper>(getReceiptPaper)
   const paid = kind === 'sale' ? wh.data.customerTx.filter((t) => t.saleId === saleId && t.type === 'pay').reduce((s, t) => s + t.amount, 0) : 0
   const returned = kind === 'sale' ? wh.data.movements.filter((m) => m.type === 'return' && m.saleId === saleId).reduce((s, m) => s + m.qty * m.price, 0) : 0
   const soldQty = lines.reduce((s, m) => s + m.qty, 0)
@@ -52,6 +54,13 @@ export default function ReceiptDialog({ wh, saleId, returnId: initialReturn, jus
             <Receipt lines={lines} {...props} />
           </Box>
         )}
+        <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} sx={{ mt: 2 }} className="no-print">
+          <Typography variant="body2" color="text.secondary">{tr("Chek qog'ozi:")}</Typography>
+          <ToggleButtonGroup size="small" exclusive value={paper} onChange={(_, v) => { if (v) { setPaper(v); setReceiptPaper(v) } }}>
+            <ToggleButton value="80" sx={{ px: 1.5 }}>80 mm</ToggleButton>
+            <ToggleButton value="58" sx={{ px: 1.5 }}>58 mm</ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2, flexWrap: 'wrap', gap: 1 }}>
         {canReturn && !justSold && (
