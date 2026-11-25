@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "220 Volt Pop — Ombor va Kassa",
+  "short_name": "220 Volt",
+  "description": "Do'kon boshqaruvi: kassa, ombor, mijozlar va hisobotlar",
+  "lang": "uz",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F3F5F9",
+  "theme_color": "#16A363",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -270,10 +270,17 @@ app.post('/api/telegram/report', admin, tgAction(() => tg.send(tg.dayReport(new 
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Topilmadi' }))
 
+// Android ilova (TWA) shu sayt bilan bog'langanini tasdiqlash: data/assetlinks.json
+app.get('/.well-known/assetlinks.json', (_req, res) => {
+  const f = join(DATA_DIR, 'assetlinks.json')
+  if (!existsSync(f)) return res.status(404).json([])
+  res.type('application/json').send(readFileSync(f, 'utf8'))
+})
+
 // ---------- Frontend (npm run build dan keyin) ----------
 const dist = join(ROOT, 'dist')
 if (!DEV && existsSync(dist)) {
-  app.use(express.static(dist, { index: false, maxAge: '7d', setHeaders: (res, path) => { if (path.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache') } }))
+  app.use(express.static(dist, { index: false, maxAge: '7d', setHeaders: (res, path) => { if (/\.(html|webmanifest)$|sw\.js$/.test(path)) res.setHeader('Cache-Control', 'no-cache') } }))
   app.get(/^\/(?!api\/).*/, (_req, res) => { res.setHeader('Cache-Control', 'no-cache'); res.sendFile(join(dist, 'index.html')) })
 }
 
