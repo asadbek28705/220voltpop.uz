@@ -30,8 +30,7 @@ function PayReceipt({ tx, customer, settings }: { tx: CustomerTx; customer: Cust
       <div className="r-row"><span>{tr("Mijoz")}</span><span className="r-bold">{customer.name}</span></div>
       {customer.phone && <div className="r-row"><span>{tr("Telefon")}</span><span>{customer.phone}</span></div>}
       <div className="r-sep" />
-      <div className="r-row r-huge"><span>{tr("TO'LANDI:")}</span><span>{money(tx.amount)}</span></div>
-      <div className="r-center r-small">{tr("so'm")}</div>
+      <div className="r-row r-huge"><span>{tr("TO'LANDI:")}</span><span>{money(tx.amount)} <small style={{ fontSize: '60%' }}>{tr("so'm")}</small></span></div>
       <div className="r-status">{paymentLabel(tx.payment)}</div>
       {customer.debt > 0
         ? <div className="r-row r-big r-bold"><span>{tr("Qolgan qarz")}</span><span>{money(customer.debt)}</span></div>

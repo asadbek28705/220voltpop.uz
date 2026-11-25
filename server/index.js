@@ -274,6 +274,14 @@ app.post('/api/telegram/report', admin, tgAction(() => tg.send(tg.dayReport(new 
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Topilmadi' }))
 
+// Windows: chekda brauzer sana/manzilini o'chiradigan sozlama fayli (yuklab olinadi)
+app.get('/chek-sozlash.reg', (_req, res) => {
+  const f = join(ROOT, 'public', 'chek-sozlash.reg')
+  if (!existsSync(f)) return res.status(404).end()
+  res.setHeader('Cache-Control', 'no-cache')
+  res.download(f, 'chek-sozlash.reg')
+})
+
 // Android ilova faylini saytdan yuklab olish: data/220volt.apk
 app.get('/220volt.apk', (_req, res) => {
   const f = join(DATA_DIR, '220volt.apk')

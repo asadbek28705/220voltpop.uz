@@ -681,5 +681,10 @@ const dict: Record<string, string> = {
   "qoldiq: {0} {1}": "stock: {0} {1}",
   "Bittaga kamaytirish": "Remove one",
   "savatda {0} xil": "{0} in cart",
+  "Chekda sana va sayt manzili chiqyaptimi?": "Date and site address on the receipt?",
+  "Sozlash faylini yuklab oling": "Download the fix file",
+  "Chek printeri sozlamasi (Windows)": "Receipt printer setup (Windows)",
+  "Chek va etiketkada tepada sana, pastda sayt manzili chiqsa — kassa kompyuterida shu faylni yuklab, ikki marta bosing → «Ha» → «OK», keyin brauzerni yopib qayta oching. Qog'oz tejaladi.": "If the date and site address print on receipts, download this file on the till PC, double-click → Yes → OK, then restart the browser.",
+  "Sozlash faylini yuklab olish": "Download fix file",
 }
 export default dict

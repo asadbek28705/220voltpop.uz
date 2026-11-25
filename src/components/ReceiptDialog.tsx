@@ -61,6 +61,9 @@ export default function ReceiptDialog({ wh, saleId, returnId: initialReturn, jus
             <ToggleButton value="58" sx={{ px: 1.5 }}>58 mm</ToggleButton>
           </ToggleButtonGroup>
         </Stack>
+        <Typography variant="caption" color="text.secondary" component="div" sx={{ textAlign: 'center', mt: 1 }} className="no-print">
+          {tr("Chekda sana va sayt manzili chiqyaptimi?")} <a href="/chek-sozlash.reg" style={{ color: 'inherit', fontWeight: 700 }}>{tr("Sozlash faylini yuklab oling")}</a>
+        </Typography>
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2, flexWrap: 'wrap', gap: 1 }}>
         {canReturn && !justSold && (

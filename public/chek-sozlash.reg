@@ -1,0 +1,22 @@
+Windows Registry Editor Version 5.00
+
+; 220 Volt kassa: chek va etiketkalarda brauzer sana, sarlavha va sayt manzilini chiqarmasin
+; (Chrome, Edge, Yandex brauzer uchun "Kolontitullar" ochiriladi)
+
+[HKEY_CURRENT_USER\Software\Policies\Google\Chrome]
+"PrintHeaderFooter"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome]
+"PrintHeaderFooter"=dword:00000000
+
+[HKEY_CURRENT_USER\Software\Policies\Microsoft\Edge]
+"PrintHeaderFooter"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge]
+"PrintHeaderFooter"=dword:00000000
+
+[HKEY_CURRENT_USER\Software\Policies\YandexBrowser]
+"PrintHeaderFooter"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\YandexBrowser]
+"PrintHeaderFooter"=dword:00000000

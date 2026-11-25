@@ -681,5 +681,10 @@ const dict: Record<string, string> = {
   "qoldiq: {0} {1}": "остаток: {0} {1}",
   "Bittaga kamaytirish": "Уменьшить на 1",
   "savatda {0} xil": "в корзине: {0}",
+  "Chekda sana va sayt manzili chiqyaptimi?": "В чеке печатаются дата и адрес сайта?",
+  "Sozlash faylini yuklab oling": "Скачайте файл настройки",
+  "Chek printeri sozlamasi (Windows)": "Настройка чекового принтера (Windows)",
+  "Chek va etiketkada tepada sana, pastda sayt manzili chiqsa — kassa kompyuterida shu faylni yuklab, ikki marta bosing → «Ha» → «OK», keyin brauzerni yopib qayta oching. Qog'oz tejaladi.": "Если на чеке сверху печатается дата, а снизу адрес сайта — скачайте этот файл на кассовом компьютере, дважды нажмите → «Да» → «OK» и перезапустите браузер. Бумага экономится.",
+  "Sozlash faylini yuklab olish": "Скачать файл настройки",
 }
 export default dict

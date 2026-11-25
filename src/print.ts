@@ -70,7 +70,7 @@ export function receiptCss(paper: ReceiptPaper = getReceiptPaper()) {
 export function receiptPage(paper: ReceiptPaper = getReceiptPaper()) {
   return (doc: Document) => {
     const el = doc.querySelector('.receipt')
-    const mm = el ? Math.ceil(el.getBoundingClientRect().height * 25.4 / 96) + 3 : 200
+    const mm = el ? Math.ceil(el.getBoundingClientRect().height * 25.4 / 96) + 1 : 200
     return `@page { size: ${paper}mm ${Math.max(40, mm)}mm; margin: 0; } body { display: flex; justify-content: center; }`
   }
 }

@@ -76,8 +76,7 @@ export function Receipt({ lines, settings, paid, kind = 'sale', customer, return
       ))}
       <div className="r-sep" />
       <div className="r-row r-small"><span>{tr("Tovarlar")}</span><span>{tr("{0} xil", lines.length)}</span></div>
-      <div className="r-row r-huge"><span>{ret ? tr("QAYTARILDI:") : tr('JAMI:')}</span><span>{money(total)}</span></div>
-      <div className="r-center r-small">{tr("so'm")}</div>
+      <div className="r-row r-huge"><span>{ret ? tr("QAYTARILDI:") : tr('JAMI:')}</span><span>{money(total)} <small style={{ fontSize: '60%' }}>{tr("so'm")}</small></span></div>
 
       <div className={'r-status' + (nasiya && !ret ? ' r-inv' : '')}>{payStatus(first.payment, kind)}</div>
       {!ret && <div className="r-row"><span>{tr("To'lov turi")}</span><span className="r-bold">{paymentLabel(first.payment)}</span></div>}

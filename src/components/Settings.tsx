@@ -12,6 +12,7 @@ import { useMe } from '../auth'
 import { api } from '../api'
 import LogoutIcon from '@mui/icons-material/Logout'
 import AndroidIcon from '@mui/icons-material/Android'
+import PrintIcon from '@mui/icons-material/PrintOutlined'
 import { t as tr } from '../i18n'
 
 export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSellerChange: (name: string) => void }) {
@@ -73,6 +74,15 @@ export default function Settings({ wh, onSellerChange }: { wh: Warehouse; onSell
           </Stack>
         </Paper>
       )}
+
+      {/* Kassa kompyuteri: chekda brauzerning sana/manzil yozuvlarini o'chirish */}
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Typography variant="h6">{tr("Chek printeri sozlamasi (Windows)")}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>
+          {tr("Chek va etiketkada tepada sana, pastda sayt manzili chiqsa — kassa kompyuterida shu faylni yuklab, ikki marta bosing → «Ha» → «OK», keyin brauzerni yopib qayta oching. Qog'oz tejaladi.")}
+        </Typography>
+        <Button variant="outlined" href="/chek-sozlash.reg" startIcon={<PrintIcon />}>{tr("Sozlash faylini yuklab olish")}</Button>
+      </Paper>
 
       {me.demo ? (
         <Paper variant="outlined" sx={{ p: 2.5 }}>
