@@ -65,6 +65,7 @@ export class Telegram {
     if (!data.ok) {
       const err = new Error(data.description ?? 'Telegram xatosi')
       err.retryAfter = data.parameters?.retry_after
+      err.migrateTo = data.parameters?.migrate_to_chat_id // guruh supergroup'ga aylangan — yangi ID
       throw err
     }
     return data.result
@@ -91,6 +92,12 @@ export class Telegram {
         try {
           return await this.call('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true })
         } catch (e) {
+          // Guruh ID o'zgargan bo'lsa — sozlamani o'zi yangilab, qayta yuboradi
+          if (e.migrateTo) {
+            if (String(chatId) === String(this.cfg.chatId)) this.setCfg({ chatId: String(e.migrateTo) })
+            chatId = e.migrateTo
+            continue
+          }
           if (e.retryAfter) await new Promise((r) => setTimeout(r, (e.retryAfter + 1) * 1000))
           else if (attempt === 2) throw e
           else await new Promise((r) => setTimeout(r, 2000))
