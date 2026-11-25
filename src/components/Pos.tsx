@@ -284,7 +284,7 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
   )
 
   return (
-    <Box sx={{ pb: mobile ? 10 : 0 }}>
+    <Box sx={{ pb: mobile ? 'calc(80px + env(safe-area-inset-bottom))' : 0 }}>
       <PageHeader title={tr("Kassa")} subtitle={tr("Shtrix-kodni skaner qiling — tovar savatga tushadi")} actions={<>
         <Button variant="outlined" startIcon={<ReceiptsIcon />} onClick={() => setMyReceipts(true)}>{tr("Bugungi cheklarim")}</Button>
         <Button variant="outlined" startIcon={<PayIcon />} onClick={() => setDebtPay(true)}>{tr("Qarz to'lovi")}</Button>
@@ -337,7 +337,7 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
 
       {mobile && (
         <Paper elevation={8} className="no-print"
-          sx={{ position: 'fixed', left: 0, right: 0, bottom: 0, p: 1.5, zIndex: 20, borderRadius: 0, borderTop: 1, borderColor: 'divider' }}>
+          sx={{ position: 'fixed', left: 0, right: 0, bottom: 0, p: 1.5, pb: 'calc(12px + env(safe-area-inset-bottom))', zIndex: 20, borderRadius: 0, borderTop: 1, borderColor: 'divider' }}>
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <Box sx={{ flexGrow: 1 }}>
               <Typography variant="caption" color="text.secondary">{tr("Jami")}</Typography>

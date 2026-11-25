@@ -10,6 +10,7 @@ import WarehouseIcon from '@mui/icons-material/WarehouseRounded'
 import { GOLD_GRADIENT, GRADIENT, GREEN, GREEN_DARK, INK, YELLOW } from '../theme'
 import { t as tr } from '../i18n'
 import LangSwitcher from './LangSwitcher'
+import InstallBanner from './InstallBanner'
 
 export interface NavItem { key: string; label: string; icon: ReactNode; admin?: boolean }
 export interface NavGroup { title?: string; items: NavItem[] }
@@ -64,7 +65,7 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
     : { text: '#475569', strong: '#0F172A', muted: '#94A3B8', icon: '#94A3B8', hover: alpha(GREEN, 0.06), line: '#E7EAF0', card: '#F8FAFC', cardBorder: '#E7EAF0' }
   const sidebar = (
     <Box sx={{
-      width: WIDTH, height: '100%', display: 'flex', flexDirection: 'column', color: sb.text,
+      width: WIDTH, height: '100%', display: 'flex', flexDirection: 'column', color: sb.text, pt: 'env(safe-area-inset-top)', pb: 'env(safe-area-inset-bottom)',
       background: dark
         ? `radial-gradient(120% 60% at 0% 0%, ${alpha(GREEN, 0.22)} 0%, transparent 60%), linear-gradient(180deg, #0E1626 0%, ${INK} 100%)`
         : `radial-gradient(120% 40% at 0% 0%, ${alpha(GREEN, 0.10)} 0%, transparent 60%), radial-gradient(100% 30% at 100% 100%, ${alpha(YELLOW, 0.10)} 0%, transparent 60%), #FFFFFF`,
@@ -148,7 +149,7 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
         {/* Yuqori panel: shaffof, orqasi xiralashgan */}
         <Stack direction="row" alignItems="center" spacing={1.25} className="no-print"
           sx={{
-            height: 68, px: { xs: 2, md: 4 }, position: 'sticky', top: 0, zIndex: 10,
+            height: 'calc(68px + env(safe-area-inset-top))', pt: 'env(safe-area-inset-top)', px: { xs: 2, md: 4 }, position: 'sticky', top: 0, zIndex: 10,
             bgcolor: alpha(theme.palette.background.paper, dark ? 0.96 : 0.97),
             borderBottom: 1, borderColor: 'divider',
           }}>
@@ -169,7 +170,10 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
             {(seller || 'S').charAt(0).toUpperCase()}
           </Avatar>
         </Stack>
-        <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1600, mx: 'auto' }}>{children}</Box>
+        <Box sx={{ p: { xs: 2, md: 4 }, pl: { xs: 'max(16px, env(safe-area-inset-left))' }, pr: { xs: 'max(16px, env(safe-area-inset-right))' }, maxWidth: 1600, mx: 'auto' }}>
+          <InstallBanner />
+          {children}
+        </Box>
       </Box>
     </Box>
   )

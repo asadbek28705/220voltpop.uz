@@ -209,7 +209,7 @@ export default function Receive({ wh, list, onUnknownCode, onDone }: Props) {
 
       {mobile && (
         <Paper elevation={8} className="no-print"
-          sx={{ position: 'fixed', left: 0, right: 0, bottom: 0, p: 1.5, zIndex: 20, borderRadius: 0, borderTop: 1, borderColor: 'divider' }}>
+          sx={{ position: 'fixed', left: 0, right: 0, bottom: 0, p: 1.5, pb: 'calc(12px + env(safe-area-inset-bottom))', zIndex: 20, borderRadius: 0, borderTop: 1, borderColor: 'divider' }}>
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <Box sx={{ flexGrow: 1 }}>
               <Typography variant="caption" color="text.secondary">{admin ? tr("Jami ({0} xil)", lines.length) : tr("Tovar turlari")}</Typography>

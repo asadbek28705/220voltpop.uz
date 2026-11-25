@@ -635,5 +635,16 @@ const dict: Record<string, string> = {
   "Telefon uchun ilova": "Приложение для телефона",
   "Android: APK faylni yuklab oling va o'rnating. iPhone: Safari'da «Ulashish» → «Ekranga qo'shish».": "Android: скачайте и установите APK. iPhone: в Safari «Поделиться» → «На экран Домой».",
   "Android ilovani yuklab olish": "Скачать приложение Android",
+  "iPhone'ga ilova qilib o'rnating": "Установите как приложение на iPhone",
+  "Android ilovasini o'rnating": "Установите приложение Android",
+  "Kompyuterga ilova qilib o'rnating": "Установите как приложение на компьютер",
+  "Safari pastidagi": "Внизу Safari нажмите",
+  "«Ulashish»": "«Поделиться»",
+  "tugmasini bosing": "",
+  "«Ekranga qo'shish»": "«На экран Домой»",
+  "ni tanlang": "",
+  "«Qo'shish»": "«Добавить»",
+  "Ekranda ⚡ belgisi bilan turadi, to'liq ekranda ochiladi.": "Иконка ⚡ на экране, открывается на весь экран.",
+  "O'rnatish": "Установить",
 }
 export default dict
