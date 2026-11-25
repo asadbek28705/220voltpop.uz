@@ -391,7 +391,7 @@ class Store {
   }
 
   /** Kirim / chiqim / inventarizatsiya (bitta tovar) */
-  addMovement(b, seller) {
+  addMovement(b, seller, showCost = true) {
     return this.tx(() => {
       const prod = this.product(b.productId)
       const type = b.type
@@ -407,6 +407,7 @@ class Store {
         usd = this.inPrice(prod, b)
         price = usd ? usd.price : price > 0 ? price : prod.buyPrice
       }
+      if (type === 'out') this.checkMinPrice(prod, price, showCost)
       const v = this.bump()
       let saleId = null
       if (type === 'out') saleId = this.nextReceipt()
@@ -447,8 +448,20 @@ class Store {
     return String(n)
   }
 
+  /**
+   * Sotuv narxi tannarxdan (kelgan narxdan) past bo'lmasligi kerak.
+   * showCost — admin uchun xabarda tannarx ko'rsatiladi; sotuvchiga tannarx oshkor qilinmaydi.
+   */
+  checkMinPrice(p, price, showCost) {
+    if (p.buyPrice > 0 && price < p.buyPrice - 1e-9) {
+      throw new HttpError(showCost
+        ? `"${p.name}": narx tannarxdan (${Math.round(p.buyPrice)} so'm) past bo'lishi mumkin emas`
+        : `"${p.name}": bu narxda sotib bo'lmaydi — narx juda past. Administratorga murojaat qiling`)
+    }
+  }
+
   /** Savatdagi bir nechta tovarni bitta chek bilan sotish. Hammasi yoki hech biri. */
-  sell(b, seller) {
+  sell(b, seller, showCost = true) {
     return this.tx(() => {
       const items = Array.isArray(b.items) ? b.items : []
       if (items.length === 0) throw new HttpError("Savat bo'sh")
@@ -465,6 +478,7 @@ class Store {
         if (q > p.qty + 1e-9) throw new HttpError(`"${p.name}" omborda yetarli emas: ${p.qty} ${p.unit} bor`)
         prods.set(pid, p)
       }
+      for (const it of items) this.checkMinPrice(prods.get(it.productId), num(it.price), showCost)
       const payment = str(b.payment) || 'naqd'
       const cust = b.customerId ? this.customer(b.customerId) : null
       if (payment === 'nasiya' && !cust) throw new HttpError('Nasiya uchun mijozni tanlang')

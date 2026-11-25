@@ -45,6 +45,8 @@ const SERVER_PATTERNS: [RegExp, string][] = [
   [/^Bu artikul "(.+)" tovarida ishlatilgan$/, 'Bu artikul "{0}" tovarida ishlatilgan'],
   [/^Mijozda (.+) so'm qarz bor — avval qarzni yoping$/, "Mijozda {0} so'm qarz bor — avval qarzni yoping"],
   [/^Telegram: (.+)$/, 'Telegram: {0}'],
+  [/^"(.+)": narx tannarxdan \((.+) so'm\) past bo'lishi mumkin emas$/, "\"{0}\": narx tannarxdan ({1} so'm) past bo'lishi mumkin emas"],
+  [/^"(.+)": bu narxda sotib bo'lmaydi — narx juda past\. Administratorga murojaat qiling$/, "\"{0}\": bu narxda sotib bo'lmaydi — narx juda past. Administratorga murojaat qiling"],
   [/^"(.+)": ko'pi bilan (.+) ta qaytarish mumkin$/, "\"{0}\": ko'pi bilan {1} ta qaytarish mumkin"],
 ]
 export function tServer(msg: string): string {

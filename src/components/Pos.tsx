@@ -81,6 +81,8 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
   const total = lines.reduce((s, l) => s + l.qty * l.price, 0)
   const inCart = useMemo(() => new Map(lines.map((l) => [l.productId, { qty: l.qty, price: l.price }])), [lines])
   const short = lines.filter((l) => l.qty > l.product.qty)
+  // Tannarxdan (kelgan narxdan) arzon sotib bo'lmaydi — admin narxni o'zgartirganda ogohlantiramiz
+  const belowCost = lines.filter((l) => l.product.buyPrice > 0 && l.price < l.product.buyPrice)
 
   const addProduct = (p: Product) => {
     if (p.qty <= 0) { beep(false); setError(tr("\"{0}\" omborda qolmagan", p.name)); return }
@@ -98,6 +100,7 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
     setError('')
     if (!lines.length) return
     if (short.length) return setError(tr("Omborda yetarli bo'lmagan tovarlar bor"))
+    if (belowCost.length) return setError(tr("«{0}» narxi tannarxdan ({1}) past — sotib bo'lmaydi", belowCost[0].product.name, fmtMoney(belowCost[0].product.buyPrice)))
     if (payment === 'nasiya' && !selected) return setError(tr("Nasiya uchun mijozni tanlang yoki yangi mijoz qo'shing"))
     const paid = payment === 'nasiya' ? Math.round(num(paidNow) || 0) : 0
     if (paid >= total && paid > 0) return setError(tr("To'liq to'layapti — naqd yoki kartani tanlang"))
@@ -187,6 +190,8 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
               <Typography color="text.secondary">{tr(l.product.unit)} ×</Typography>
               {admin ? (
                 <TextField size="small" value={l.price} inputMode="decimal" sx={{ width: 160 }}
+                  error={l.product.buyPrice > 0 && l.price < l.product.buyPrice}
+                  helperText={l.product.buyPrice > 0 && l.price < l.product.buyPrice ? tr("Tannarxdan past! Min: {0}", fmtMoney(l.product.buyPrice)) : undefined}
                   onChange={(e) => { const v = num(e.target.value); if (!isNaN(v)) cart.update(l.productId, { price: v }) }}
                   slotProps={{ input: { endAdornment: <InputAdornment position="end">{tr("so'm")}</InputAdornment> } }} />
               ) : (

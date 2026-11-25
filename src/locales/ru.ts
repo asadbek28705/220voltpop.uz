@@ -690,5 +690,9 @@ const dict: Record<string, string> = {
   "▲ Yuqoriga": "▲ Вверх",
   "▼ Pastga": "▼ Вниз",
   "Yozuv keyingi etiketkaga o'tib ketsa — «Yuqoriga», oldingisiga chiqsa — «Pastga». 1 bosish = 1 mm.": "Если печать заходит на следующую этикетку — «Вверх», на предыдущую — «Вниз». 1 нажатие = 1 мм.",
+  "«{0}» narxi tannarxdan ({1}) past — sotib bo'lmaydi": "Цена «{0}» ниже себестоимости ({1}) — продавать нельзя",
+  "Tannarxdan past! Min: {0}": "Ниже себестоимости! Мин: {0}",
+  "\"{0}\": narx tannarxdan ({1} so'm) past bo'lishi mumkin emas": "«{0}»: цена не может быть ниже себестоимости ({1} сум)",
+  "\"{0}\": bu narxda sotib bo'lmaydi — narx juda past. Administratorga murojaat qiling": "«{0}»: нельзя продать по этой цене — слишком низкая. Обратитесь к администратору",
 }
 export default dict
