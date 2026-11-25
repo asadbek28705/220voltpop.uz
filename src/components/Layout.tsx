@@ -49,7 +49,8 @@ function Brand({ compact }: { compact?: boolean }) {
 
 export default function Layout({ groups, active, onNavigate, mode, onToggleMode, online, seller, role, cartCount, children }: Props) {
   const theme = useTheme()
-  const desktop = useMediaQuery(theme.breakpoints.up('md'))
+  // Doimiy yon menyu faqat keng ekranda (≥1200px). Kassa monitorlarida (1024×768) menyu ☰ orqali ochiladi
+  const desktop = useMediaQuery(theme.breakpoints.up('lg'))
   const [open, setOpen] = useState(false)
   const dark = mode === 'dark'
   const roleLabel = role === 'admin' ? tr('egasi') : role === 'demo' ? 'demo' : tr('sotuvchi')
@@ -161,7 +162,7 @@ export default function Layout({ groups, active, onNavigate, mode, onToggleMode,
             {dark ? <LightIcon fontSize="small" /> : <DarkIcon fontSize="small" />}
           </IconButton>
           <Avatar onClick={() => onNavigate('settings')}
-            sx={{ display: { xs: 'none', sm: 'flex', md: 'none' }, width: 36, height: 36, fontSize: 15, fontWeight: 800, cursor: 'pointer', background: GRADIENT }}>
+            sx={{ display: { xs: 'none', sm: 'flex', lg: 'none' }, width: 36, height: 36, fontSize: 15, fontWeight: 800, cursor: 'pointer', background: GRADIENT }}>
             {(seller || 'S').charAt(0).toUpperCase()}
           </Avatar>
         </Stack>

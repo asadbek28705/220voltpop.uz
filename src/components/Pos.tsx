@@ -122,6 +122,8 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
       <Autocomplete
         freeSolo fullWidth
         options={products}
+        // Natijalar ro'yxati qidiruv maydonidan kengroq — nom va narx to'liq ko'rinsin
+        slotProps={{ popper: { placement: 'bottom-start', sx: { minWidth: 'min(560px, calc(100vw - 24px))' } } }}
         inputValue={input}
         onInputChange={(_, v, reason) => reason !== 'reset' && setInput(v)}
         value={null}
@@ -138,12 +140,12 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
         getOptionLabel={(p) => (typeof p === 'string' ? p : p.name)}
         renderOption={(props, p) => (
           <li {...props} key={p.id}>
-            <Stack direction="row" justifyContent="space-between" sx={{ width: '100%' }} spacing={2}>
-              <Box>
-                <Typography>{p.name}</Typography>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ width: '100%' }} spacing={2}>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography sx={{ overflowWrap: 'anywhere' }}>{p.name}</Typography>
                 <Typography variant="caption" color="text.secondary">{p.sku} · {tr('{0} {1} bor', fmtNum(p.qty), tr(p.unit))}</Typography>
               </Box>
-              <Typography sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{fmtMoney(p.sellPrice)}</Typography>
+              <Typography sx={{ fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>{fmtMoney(p.sellPrice)}</Typography>
             </Stack>
           </li>
         )}
@@ -348,7 +350,7 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
             onRemoveOne={(p) => { const l = cart.items.find((x) => x.productId === p.id); if (!l) return; if (l.qty > 1) cart.update(p.id, { qty: l.qty - 1 }); else cart.remove(p.id) }} />
           {cartList}
         </Stack>
-        <Box sx={{ width: { xs: '100%', md: 360 }, flexShrink: 0 }}>{summary}</Box>
+        <Box sx={{ width: { xs: '100%', md: 320, lg: 360 }, flexShrink: 0 }}>{summary}</Box>
       </Stack>
 
       {mobile && (
