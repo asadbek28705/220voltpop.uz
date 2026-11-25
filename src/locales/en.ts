@@ -686,5 +686,9 @@ const dict: Record<string, string> = {
   "Chek printeri sozlamasi (Windows)": "Receipt printer setup (Windows)",
   "Chek va etiketkada tepada sana, pastda sayt manzili chiqsa — kassa kompyuterida shu faylni yuklab, ikki marta bosing → «Ha» → «OK», keyin brauzerni yopib qayta oching. Qog'oz tejaladi.": "If the date and site address print on receipts, download this file on the till PC, double-click → Yes → OK, then restart the browser.",
   "Sozlash faylini yuklab olish": "Download fix file",
+  "Etiketka boshidan siljib chiqsa (mm)": "If print is shifted from label start (mm)",
+  "▲ Yuqoriga": "▲ Up",
+  "▼ Pastga": "▼ Down",
+  "Yozuv keyingi etiketkaga o'tib ketsa — «Yuqoriga», oldingisiga chiqsa — «Pastga». 1 bosish = 1 mm.": "If print runs onto the next label press Up, onto the previous press Down. 1 click = 1 mm.",
 }
 export default dict

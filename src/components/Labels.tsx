@@ -22,7 +22,7 @@ function printLabels(pageCss: string, onDone: () => void) {
   setTimeout(() => { printPrintRoot(pageCss); onDone() }, 200)
 }
 
-function LabelSheets({ items, format, showPrice, shopName, rotate }: { items: Product[]; format: LabelFormat; showPrice: boolean; shopName?: string; rotate?: boolean }) {
+function LabelSheets({ items, format, showPrice, shopName, rotate, offset = 0 }: { items: Product[]; format: LabelFormat; showPrice: boolean; shopName?: string; rotate?: boolean; offset?: number }) {
   if (!format.sheet) {
     // Printer qog'ozi tik (masalan 30×40) bo'lsa — etiketkani 90° burib, sahifaga joylaymiz
     if (rotate) {
@@ -30,7 +30,7 @@ function LabelSheets({ items, format, showPrice, shopName, rotate }: { items: Pr
         <div className="labels-roll">
           {items.map((p, i) => (
             <div key={i} className="label-rot" style={{ width: `${format.height}mm`, height: `${format.width}mm` }}>
-              <div style={{ position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: `translateX(${format.height}mm) rotate(90deg)` }}>
+              <div style={{ position: 'absolute', top: `${offset}mm`, left: 0, transformOrigin: 'top left', transform: `translateX(${format.height}mm) rotate(90deg)` }}>
                 <Label product={p} format={format} showPrice={showPrice} shopName={shopName} />
               </div>
             </div>
@@ -40,7 +40,14 @@ function LabelSheets({ items, format, showPrice, shopName, rotate }: { items: Pr
     }
     return (
       <div className="labels-roll">
-        {items.map((p, i) => <Label key={i} product={p} format={format} showPrice={showPrice} shopName={shopName} />)}
+        {items.map((p, i) => offset ? (
+          // Printer etiketka boshini aniq topmasa — kontentni yuqoriga/pastga suramiz
+          <div key={i} className="label-rot" style={{ width: `${format.width}mm`, height: `${format.height}mm` }}>
+            <div style={{ position: 'absolute', top: `${offset}mm`, left: 0 }}>
+              <Label product={p} format={format} showPrice={showPrice} shopName={shopName} />
+            </div>
+          </div>
+        ) : <Label key={i} product={p} format={format} showPrice={showPrice} shopName={shopName} />)}
       </div>
     )
   }
@@ -71,6 +78,8 @@ export default function Labels({ wh }: { wh: Warehouse }) {
   const [showPrice, setShowPrice] = useState(true)
   const [showShop, setShowShop] = useState(false)
   const [rotate, setRotate] = useState(() => localStorage.getItem('ombor-label-rotate') === '1')
+  const [offset, setOffsetState] = useState(() => Number(localStorage.getItem('ombor-label-offset')) || 0)
+  const setOffset = (v: number) => { const x = Math.max(-15, Math.min(15, Math.round(v * 2) / 2)); setOffsetState(x); localStorage.setItem('ombor-label-offset', String(x)) }
   const [printing, setPrinting] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const admin = useIsAdmin()
@@ -212,6 +221,19 @@ export default function Labels({ wh }: { wh: Warehouse }) {
             </Button>
             {selected.length > 0 && <Button color="inherit" onClick={() => setCopies({})}>{tr("Tanlovni tozalash")}</Button>}
             {!format.sheet && (
+              <Box>
+                <Typography variant="body2">{tr("Etiketka boshidan siljib chiqsa (mm)")}</Typography>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+                  <Button variant="outlined" size="small" onClick={() => setOffset(offset - 1)} sx={{ minWidth: 0, px: 1.25 }}>{tr("▲ Yuqoriga")}</Button>
+                  <TextField size="small" value={offset} inputMode="decimal" onChange={(e) => setOffset(Number(e.target.value.replace(',', '.')) || 0)}
+                    sx={{ width: 76 }} slotProps={{ htmlInput: { style: { textAlign: 'center', fontWeight: 700 } } }} />
+                  <Button variant="outlined" size="small" onClick={() => setOffset(offset + 1)} sx={{ minWidth: 0, px: 1.25 }}>{tr("▼ Pastga")}</Button>
+                  {offset !== 0 && <Button size="small" onClick={() => setOffset(0)}>0</Button>}
+                </Stack>
+                <Typography variant="caption" color="text.secondary">{tr("Yozuv keyingi etiketkaga o'tib ketsa — «Yuqoriga», oldingisiga chiqsa — «Pastga». 1 bosish = 1 mm.")}</Typography>
+              </Box>
+            )}
+            {!format.sheet && (
               <FormControlLabel control={<Switch checked={rotate} onChange={(e) => { setRotate(e.target.checked); localStorage.setItem('ombor-label-rotate', e.target.checked ? '1' : '0') }} />}
                 label={<Box><Typography variant="body2">{tr("Etiketka yon tomonga chiqyapti")}</Typography><Typography variant="caption" color="text.secondary">{tr("Printerda qog'oz tik ({0}×{1}) bo'lsa yoqing", format.height, format.width)}</Typography></Box>} />
             )}
@@ -230,7 +252,7 @@ export default function Labels({ wh }: { wh: Warehouse }) {
       </Stack>
 
       {printing && createPortal(
-        <LabelSheets items={items} format={format} showPrice={showPrice} shopName={showShop ? settings.shopName : undefined} rotate={!format.sheet && rotate} />,
+        <LabelSheets items={items} format={format} showPrice={showPrice} shopName={showShop ? settings.shopName : undefined} rotate={!format.sheet && rotate} offset={format.sheet ? 0 : offset} />,
         document.getElementById('print-root')!,
       )}
     </>
