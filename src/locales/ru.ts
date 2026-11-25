@@ -646,5 +646,13 @@ const dict: Record<string, string> = {
   "«Qo'shish»": "«Добавить»",
   "Ekranda ⚡ belgisi bilan turadi, to'liq ekranda ochiladi.": "Иконка ⚡ на экране, открывается на весь экран.",
   "O'rnatish": "Установить",
+  "Etiketka yon tomonga chiqyapti": "Этикетка печатается боком",
+  "Printerda qog'oz tik ({0}×{1}) bo'lsa yoqing": "Включите, если в принтере бумага вертикальная ({0}×{1})",
+  "Chop etish oynasida:": "В окне печати:",
+  "Printer: termoprinteringiz (Xprinter va h.k.)": "Принтер: ваш термопринтер (Xprinter и т.п.)",
+  "Qog'oz o'lchami: {0}×{1} mm": "Размер бумаги: {0}×{1} мм",
+  "Chekkalar (Margins): Yo'q (None)": "Поля (Margins): Нет (None)",
+  "Masshtab (Scale): 100%": "Масштаб (Scale): 100%",
+  "«Sarlavha va pastki yozuvlar» (Headers and footers) — belgini olib tashlang": "Снимите галочку «Колонтитулы» (Headers and footers)",
 }
 export default dict

@@ -29,8 +29,22 @@ function printLabels(onDone: () => void) {
   setTimeout(() => window.print(), 150)
 }
 
-function LabelSheets({ items, format, showPrice, shopName }: { items: Product[]; format: LabelFormat; showPrice: boolean; shopName?: string }) {
+function LabelSheets({ items, format, showPrice, shopName, rotate }: { items: Product[]; format: LabelFormat; showPrice: boolean; shopName?: string; rotate?: boolean }) {
   if (!format.sheet) {
+    // Printer qog'ozi tik (masalan 30×40) bo'lsa — etiketkani 90° burib, sahifaga joylaymiz
+    if (rotate) {
+      return (
+        <div className="labels-roll">
+          {items.map((p, i) => (
+            <div key={i} className="label-rot" style={{ width: `${format.height}mm`, height: `${format.width}mm` }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: `translateX(${format.height}mm) rotate(90deg)` }}>
+                <Label product={p} format={format} showPrice={showPrice} shopName={shopName} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )
+    }
     return (
       <div className="labels-roll">
         {items.map((p, i) => <Label key={i} product={p} format={format} showPrice={showPrice} shopName={shopName} />)}
@@ -63,6 +77,7 @@ export default function Labels({ wh }: { wh: Warehouse }) {
   const [formatKey, setFormatKey] = useState(() => localStorage.getItem('ombor-label-format') ?? 't58x40')
   const [showPrice, setShowPrice] = useState(true)
   const [showShop, setShowShop] = useState(false)
+  const [rotate, setRotate] = useState(() => localStorage.getItem('ombor-label-rotate') === '1')
   const [printing, setPrinting] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const admin = useIsAdmin()
@@ -105,7 +120,7 @@ export default function Labels({ wh }: { wh: Warehouse }) {
     style.id = 'label-page-style'
     style.textContent = format.sheet
       ? '@page { size: A4; margin: 0; }'
-      : `@page { size: ${format.width}mm ${format.height}mm; margin: 0; }`
+      : rotate ? `@page { size: ${format.height}mm ${format.width}mm; margin: 0; }` : `@page { size: ${format.width}mm ${format.height}mm; margin: 0; }`
     document.head.appendChild(style)
     setPrinting(true)
     printLabels(() => setPrinting(false))
@@ -206,15 +221,26 @@ export default function Labels({ wh }: { wh: Warehouse }) {
               {tr("Chop etish")}
             </Button>
             {selected.length > 0 && <Button color="inherit" onClick={() => setCopies({})}>{tr("Tanlovni tozalash")}</Button>}
-            <Typography variant="caption" color="text.secondary">
-              {tr("Chop etish oynasida printeringizni tanlang, \"Masshtab\" 100% va \"Chekkalar\" — \"Yo'q\" bo'lsin.")}
-            </Typography>
+            {!format.sheet && (
+              <FormControlLabel control={<Switch checked={rotate} onChange={(e) => { setRotate(e.target.checked); localStorage.setItem('ombor-label-rotate', e.target.checked ? '1' : '0') }} />}
+                label={<Box><Typography variant="body2">{tr("Etiketka yon tomonga chiqyapti")}</Typography><Typography variant="caption" color="text.secondary">{tr("Printerda qog'oz tik ({0}×{1}) bo'lsa yoqing", format.height, format.width)}</Typography></Box>} />
+            )}
+            <Alert severity="info" icon={false} sx={{ '& ul': { m: 0, pl: 2.25 } }}>
+              <b>{tr("Chop etish oynasida:")}</b>
+              <ul>
+                <li>{tr("Printer: termoprinteringiz (Xprinter va h.k.)")}</li>
+                {!format.sheet && <li>{tr("Qog'oz o'lchami: {0}×{1} mm", format.width, format.height)}</li>}
+                <li>{tr("Chekkalar (Margins): Yo'q (None)")}</li>
+                <li>{tr("Masshtab (Scale): 100%")}</li>
+                <li>{tr("«Sarlavha va pastki yozuvlar» (Headers and footers) — belgini olib tashlang")}</li>
+              </ul>
+            </Alert>
           </Stack>
         </Card>
       </Stack>
 
       {printing && createPortal(
-        <LabelSheets items={items} format={format} showPrice={showPrice} shopName={showShop ? settings.shopName : undefined} />,
+        <LabelSheets items={items} format={format} showPrice={showPrice} shopName={showShop ? settings.shopName : undefined} rotate={!format.sheet && rotate} />,
         document.getElementById('print-root')!,
       )}
     </>
