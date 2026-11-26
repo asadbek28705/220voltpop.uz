@@ -704,5 +704,12 @@ const dict: Record<string, string> = {
   "Savdo yozilmaydi, ombordagi qoldiq o'zgarmaydi.": "No sale is recorded; stock does not change.",
   "Prichekni chop etish": "Print pre-check",
   "Prichek": "Pre-check",
+  "Tovarlar ro'yxati": "Product list",
+  "Nomi, artikul yoki shtrix-kod": "Name, SKU or barcode",
+  "Barcha kategoriyalar": "All categories",
+  "Faqat bori": "In stock only",
+  "Yana ko'rsatish ({0} ta qoldi)": "Show more ({0} left)",
+  "Savatga qo'shish": "Add to cart",
+  "«{0}»: omborda faqat {1} {2} bor": "«{0}»: only {1} {2} in stock",
 }
 export default dict

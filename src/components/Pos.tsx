@@ -16,6 +16,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import ReturnIcon from '@mui/icons-material/AssignmentReturnOutlined'
 import ReturnDialog from './ReturnDialog'
 import QuickPanel from './QuickPanel'
+import PosProductList from './PosProductList'
 import PreCheckDialog from './PreCheckDialog'
 import PreIcon from '@mui/icons-material/ReceiptOutlined'
 import DebtPayDialog from './DebtPayDialog'
@@ -90,9 +91,16 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
 
   const addProduct = (p: Product) => {
     if (p.qty <= 0) { beep(false); setError(tr("\"{0}\" omborda qolmagan", p.name)); return }
+    const have = cart.items.find((x) => x.productId === p.id)?.qty ?? 0
+    if (have + 1 > p.qty) { beep(false); setError(tr("«{0}»: omborda faqat {1} {2} bor", p.name, fmtNum(p.qty), tr(p.unit))); return }
     cart.add(p)
     beep(true)
     setError('')
+  }
+  const removeOne = (p: Product) => {
+    const l = cart.items.find((x) => x.productId === p.id)
+    if (!l) return
+    if (l.qty > 1) cart.update(p.id, { qty: l.qty - 1 }); else cart.remove(p.id)
   }
   const addByCode = (code: string) => {
     const p = wh.findByCode(code)
@@ -354,8 +362,8 @@ export default function Pos({ wh, sale, onUnknownCode }: Props) {
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="flex-start">
         <Stack spacing={2} sx={{ flex: 1, width: '100%', minWidth: 0 }}>
           {search}
-          <QuickPanel wh={wh} admin={admin} onAdd={addProduct} cart={inCart}
-            onRemoveOne={(p) => { const l = cart.items.find((x) => x.productId === p.id); if (!l) return; if (l.qty > 1) cart.update(p.id, { qty: l.qty - 1 }); else cart.remove(p.id) }} />
+          <QuickPanel wh={wh} admin={admin} onAdd={addProduct} cart={inCart} onRemoveOne={removeOne} />
+          <PosProductList products={products} cart={inCart} onAdd={addProduct} onRemoveOne={removeOne} />
           {cartList}
         </Stack>
         <Box sx={{ width: { xs: '100%', md: 320, lg: 360 }, flexShrink: 0 }}>{summary}</Box>
